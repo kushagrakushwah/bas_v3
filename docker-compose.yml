@@ -1,0 +1,26 @@
+version: '3.8'
+
+services:
+  bas-engine:
+    build: 
+      context: ./bas_engine
+    ports:
+      - "8000:8000"
+    environment:
+      - ENVIRONMENT=dev
+      - PYTHONPATH=/app
+    volumes:
+      # FIX: Mount the local folder to the new path inside the container
+      - ./bas_engine:/app/bas_engine
+
+  dashboard:
+    build:
+      context: ./dashboard
+    ports:
+      - "8501:8501"
+    environment:
+      - API_URL=http://bas-engine:8000
+    volumes:
+      - ./dashboard:/app
+    depends_on:
+      - bas-engine

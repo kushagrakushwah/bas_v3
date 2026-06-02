@@ -1,0 +1,130 @@
+# Python
+
+**pycache**/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.mypy_cache/
+
+# Virtual Environments
+
+venv/
+env/
+.venv/
+
+# Environment Files
+
+.env
+.env.local
+.env.*
+!.env.example
+
+# Streamlit (legacy)
+
+.streamlit/
+
+# Logs
+
+*.log
+logs/
+
+# Reports
+
+*.pdf
+
+# OS Files
+
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE
+
+.vscode/
+.idea/
+
+# Kubernetes Secrets
+
+secrets.yaml
+*.pem
+*.key
+*.crt
+
+# Build Artifacts
+
+dist/
+build/
+
+# Temporary
+
+tmp/
+temp/
+
+# Next.js
+
+secureforge-frontend/node_modules/
+secureforge-frontend/.next/
+secureforge-frontend/out/
+
+# NPM
+
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Coverage
+
+coverage/
+.coverage
+
+# Database
+
+*.db
+*.sqlite
+*.sqlite3
+
+# Docker
+
+docker-data/
+
+# ELK
+
+elasticsearch-data/
+kibana-data/
+
+# Generated Reports
+
+reports/
+exports/
+
+# GitHub
+
+.github/workflows/*.local.yml
+
+# Terraform
+
+.terraform/
+*.tfstate
+*.tfstate.*
+
+# Mac/Linux
+
+*.swp
+*.swo
+
+# Windows
+
+$RECYCLE.BIN/
+
+# SecureForge Legacy Dashboard
+
+dashboard_legacy/
+
+# Next.js Cache
+
+secureforge-frontend/.turbo/
+
+# TypeScript
+
+*.tsbuildinfo
