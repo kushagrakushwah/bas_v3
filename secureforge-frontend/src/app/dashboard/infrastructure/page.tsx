@@ -31,6 +31,14 @@ export default function InfrastructurePage() {
 
   useEffect(() => {
     loadInfrastructure();
+
+    const interval = setInterval(() => {
+      loadInfrastructure();
+    }, 10000); // every 10 seconds
+
+    return () => {
+      clearInterval(interval);
+    };
   }, []);
 
   async function loadInfrastructure() {
