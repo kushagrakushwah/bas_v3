@@ -95,7 +95,7 @@ PAYLOADS = [
 
 class WAFEvasionModule(BaseAttackModule):
 
-    MODULE_NAME = "waf_evasion"
+    MODULE_NAME = "waf_detection"
 
     DESCRIPTION = (
         "Fast adaptive WAF intelligence engine"

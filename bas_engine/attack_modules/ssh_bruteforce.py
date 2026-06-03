@@ -162,7 +162,7 @@ class SSHBruteForceModule(BaseAttackModule):
 
             "password_file",
 
-            "attack_modules/wordlists/passwords.txt"
+            "bas_engine/attack_modules/wordlists/passwords.txt"
         )
 
         passwords = list(
