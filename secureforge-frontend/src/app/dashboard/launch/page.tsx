@@ -35,7 +35,9 @@ export default function LaunchPage() {
   const [portRange, setPortRange] = useState("1-1000");
   const [timingProfile, setTimingProfile] = useState("T4");
   const [subnetDiscovery, setSubnetDiscovery] = useState(false);
+  const [requestCount, setRequestCount] = useState(500);
 
+  const [concurrency, setConcurrency] = useState(50);
   const [modules, setModules] = useState<AttackModule[]>([]);
   const [selectedModules, setSelectedModules] = useState<string[]>([]);
   const [loadingModules, setLoadingModules] = useState(true);
@@ -91,6 +93,35 @@ export default function LaunchPage() {
       setLaunching(true);
       setMessage("");
 
+      const options: any = {};
+
+      if (
+        selectedModules.includes(
+          "nmap_scan"
+        )
+      ) {
+        options.nmap_scan = {
+          profile: scanProfile,
+          ports: portRange,
+          timing: timingProfile,
+          subnet_scan:
+            subnetDiscovery,
+        };
+      }
+
+      if (
+        selectedModules.includes(
+          "impact_sim"
+        )
+      ) {
+        options.impact_sim = {
+          request_count:
+            requestCount,
+          concurrency:
+            concurrency,
+        };
+      }
+
       const payload = {
         name: jobLabel,
         target,
@@ -99,14 +130,7 @@ export default function LaunchPage() {
         metadata: {
           live_mode: liveMode,
         },
-        options: {
-          nmap_scan: {
-            profile: scanProfile,
-            ports: portRange,
-            timing: timingProfile,
-            subnet_scan: subnetDiscovery,
-          },
-        },
+        options,
       };
 
       const result = await api.launchSimulation(payload);
@@ -252,7 +276,67 @@ export default function LaunchPage() {
             </div>
           </div>
         )}
+        {selectedModules.includes("impact_sim") && (
+          <div className="mt-8">
+            <h3 className="text-lg font-semibold mb-4">
+              Impact Simulation Configuration
+            </h3>
 
+            <div className="grid md:grid-cols-2 gap-6">
+
+              <div>
+                <label className="text-sm text-white/50">
+                  Request Count
+                </label>
+
+                <input
+                  type="number"
+                  value={requestCount}
+                  onChange={(e) =>
+                    setRequestCount(
+                      Number(e.target.value)
+                    )
+                  }
+                  className="
+                    mt-2
+                    w-full
+                    rounded-2xl
+                    border
+                    border-white/10
+                    bg-black/30
+                    p-4
+                  "
+                />
+              </div>
+
+              <div>
+                <label className="text-sm text-white/50">
+                  Concurrency
+                </label>
+
+                <input
+                  type="number"
+                  value={concurrency}
+                  onChange={(e) =>
+                    setConcurrency(
+                      Number(e.target.value)
+                    )
+                  }
+                  className="
+                    mt-2
+                    w-full
+                    rounded-2xl
+                    border
+                    border-white/10
+                    bg-black/30
+                    p-4
+                  "
+                />
+              </div>
+
+            </div>
+          </div>
+        )}
         <div className="mt-8">
           <h3 className="text-lg font-semibold mb-4">Attack Modules</h3>
 

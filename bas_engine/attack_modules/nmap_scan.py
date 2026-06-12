@@ -1,3 +1,4 @@
+from bas_engine.core.network.dns_resolver import DNSResolver
 """
 Network Reconnaissance / Port Scan Module
 MITRE ATT&CK: T1046 — Network Service Discovery
@@ -369,6 +370,9 @@ class NmapScanModule(BaseAttackModule):
     # -----------------------------------------------------------------------
 
     async def execute(self) -> List[Finding]:
+        resolved = await DNSResolver.resolve(self.target)
+
+        self.target = resolved.ip
         findings: List[Finding] = []
 
         # Read options from self.options (dict passed in from simulation config)

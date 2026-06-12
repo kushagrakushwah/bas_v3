@@ -1,3 +1,4 @@
+from bas_engine.core.network.dns_resolver import DNSResolver
 """
 Credential Dumping Module
 MITRE ATT&CK: T1003 — OS Credential Dumping
@@ -172,3 +173,4 @@ class CredentialDumpingModule(BaseAttackModule):
             ))
 
         return findings
+

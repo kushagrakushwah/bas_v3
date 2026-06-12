@@ -1,3 +1,4 @@
+from bas_engine.core.network.dns_resolver import DNSResolver
 """
 Lateral Movement Module
 MITRE ATT&CK: T1021 — Remote Services
@@ -101,3 +102,4 @@ class LateralMovementModule(BaseAttackModule):
             ))
 
         return findings
+

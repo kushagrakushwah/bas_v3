@@ -1,3 +1,4 @@
+from bas_engine.core.network.dns_resolver import DNSResolver
 """
 Recon & Exposure Module
 =======================
@@ -17,7 +18,9 @@ import aiohttp
 import re
 import random
 from typing import List
-
+from bas_engine.attack_modules.utils.endpoint_validator import (
+    is_real_endpoint
+)
 from bas_engine.attack_modules.base import BaseAttackModule
 from bas_engine.models.simulation import Finding, Severity
 
@@ -97,6 +100,24 @@ class ReconExposureModule(BaseAttackModule):
         "/log",
         "/access.log",
         "/error.log",
+            # Juice Shop
+        "/api",
+        "/rest",
+        "/rest/products",
+        "/rest/user",
+
+        "/api/users",
+        "/api/v1/users",
+        "/api/students",
+        "/users.csv",
+        "/users.json",
+        "/students.csv",
+        "/backup.zip",
+        "/database_backup.sql",
+        "/logs",
+        "/log",
+        "/access.log",
+        "/error.log",
     ]
 
     PII_PATTERNS = [
@@ -115,10 +136,13 @@ class ReconExposureModule(BaseAttackModule):
 
     LATERAL_PROBE_PATHS = [
         "/admin",
+        "/rest/admin",
+
         "/manager",
         "/console",
         "/phpmyadmin",
         "/wp-admin",
+
         "/.env",
         "/config",
         "/backup",
@@ -140,6 +164,11 @@ class ReconExposureModule(BaseAttackModule):
     MANIFEST_PATHS = [
         "/package.json",
         "/package-lock.json",
+
+        "/swagger",
+        "/api-docs",
+        "/openapi.json",
+
         "/requirements.txt",
         "/Pipfile",
         "/Gemfile",
@@ -154,6 +183,8 @@ class ReconExposureModule(BaseAttackModule):
     SCRIPT_PATHS = [
         "/",
         "/index.html",
+        "/robots.txt",
+        "/ftp",
         "/moodle/",
         "/mail/",
     ]
@@ -235,7 +266,13 @@ class ReconExposureModule(BaseAttackModule):
             url = target.rstrip("/") + path
             try:
                 async with session.get(url, allow_redirects=False) as resp:
-                    if resp.status == 200:
+                    real = await is_real_endpoint(
+                        session,
+                        target,
+                        path
+                    )
+
+                    if real:
                         body = await resp.text(errors="replace")
                         for pattern, desc in self.CREDENTIAL_PATTERNS:
                             if re.search(pattern, body, re.IGNORECASE):
@@ -286,7 +323,13 @@ class ReconExposureModule(BaseAttackModule):
             url = target.rstrip("/") + login_path
             try:
                 async with session.get(url, allow_redirects=True) as resp:
-                    if resp.status == 200:
+                    real = await is_real_endpoint(
+                        session,
+                        target,
+                        path
+                    )
+
+                    if real:
                         findings.append(self.finding(
                             title       = f"Login Endpoint Found: {login_path}",
                             description = (
@@ -344,7 +387,13 @@ class ReconExposureModule(BaseAttackModule):
             url = target.rstrip("/") + path
             try:
                 async with session.get(url, allow_redirects=False) as resp:
-                    if resp.status == 200:
+                    real = await is_real_endpoint(
+                        session,
+                        target,
+                        path
+                    )
+
+                    if real:
                         body      = await resp.text(errors="replace")
                         body_size = len(body)
 
@@ -510,7 +559,13 @@ class ReconExposureModule(BaseAttackModule):
             url = target.rstrip("/") + path
             try:
                 async with session.get(url, allow_redirects=False) as resp:
-                    if resp.status == 200:
+                    real = await is_real_endpoint(
+                        session,
+                        target,
+                        path
+                    )
+
+                    if real:
                         body = await resp.text(errors="replace")
 
                         findings.append(self.finding(
@@ -559,7 +614,13 @@ class ReconExposureModule(BaseAttackModule):
             url = target.rstrip("/") + path
             try:
                 async with session.get(url, allow_redirects=True, ssl=False) as resp:
-                    if resp.status == 200:
+                    real = await is_real_endpoint(
+                        session,
+                        target,
+                        path
+                    )
+
+                    if real:
                         body = await resp.text(errors="replace")
                         for pattern in self.SUSPICIOUS_SCRIPT_PATTERNS:
                             matches = re.findall(pattern, body, re.IGNORECASE)

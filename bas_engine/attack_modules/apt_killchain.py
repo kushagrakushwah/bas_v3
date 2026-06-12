@@ -1,3 +1,4 @@
+from bas_engine.core.network.dns_resolver import DNSResolver
 """
 Adaptive APT Kill Chain v3
 Enterprise Adaptive BAS Engine
@@ -25,7 +26,9 @@ from urllib.parse import (
     urlparse,
     urljoin,
 )
-
+from bas_engine.attack_modules.utils.endpoint_validator import (
+    is_real_endpoint
+)
 from .base import BaseAttackModule
 from bas_engine.models.simulation import Severity
 
@@ -955,8 +958,13 @@ class APTKillChainModule(BaseAttackModule):
                         f"[{status}] {url}"
                     )
 
-                    if status == 200:
+                    real = await is_real_endpoint(
+                        session,
+                        self.target,
+                        path
+                    )
 
+                    if real:
                         accessible.append(url)
 
             except Exception as e:
@@ -1038,8 +1046,13 @@ class APTKillChainModule(BaseAttackModule):
                         f"[{status}] {url}"
                     )
 
-                    if status == 200:
+                    real = await is_real_endpoint(
+                        session,
+                        self.target,
+                        path
+                    )
 
+                    if real:
                         risky.append(url)
 
             except Exception as e:

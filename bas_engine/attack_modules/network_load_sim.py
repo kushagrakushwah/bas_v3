@@ -1,3 +1,4 @@
+from bas_engine.core.network.dns_resolver import DNSResolver
 """
 Network Load Simulation Module
 MITRE ATT&CK: T1498 — Network Denial of Service (simulation only)
@@ -130,3 +131,4 @@ class NetworkLoadSimModule(BaseAttackModule):
             ))
 
         return findings
+

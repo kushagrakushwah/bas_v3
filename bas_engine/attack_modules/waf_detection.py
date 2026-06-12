@@ -1,4 +1,5 @@
-﻿import aiohttp
+from bas_engine.core.network.dns_resolver import DNSResolver
+import aiohttp
 import asyncio
 import urllib.parse
 
@@ -376,6 +377,9 @@ class WAFEvasionModule(BaseAttackModule):
     # =====================================================
 
     async def execute(self):
+        resolved = await DNSResolver.resolve(self.target)
+
+        self.target = resolved.url
 
         findings = []
 

@@ -1,3 +1,4 @@
+from bas_engine.core.network.dns_resolver import DNSResolver
 """
 Ransomware Simulation Module
 MITRE ATT&CK: T1486 — Data Encrypted for Impact
@@ -143,3 +144,4 @@ class RansomwareSimModule(BaseAttackModule):
                 await asyncio.sleep(0.2)
 
         return findings
+

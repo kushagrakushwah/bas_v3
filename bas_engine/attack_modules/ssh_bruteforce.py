@@ -1,3 +1,4 @@
+from bas_engine.core.network.dns_resolver import DNSResolver
 """
 Adaptive SSH Brute Force Module v8
 Enterprise BAS Credential Attack Engine

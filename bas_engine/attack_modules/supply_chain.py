@@ -1,3 +1,4 @@
+from bas_engine.core.network.dns_resolver import DNSResolver
 """
 Supply Chain Attack Module
 MITRE ATT&CK: T1195 — Supply Chain Compromise
@@ -171,3 +172,4 @@ class SupplyChainModule(BaseAttackModule):
             ))
 
         return findings
+

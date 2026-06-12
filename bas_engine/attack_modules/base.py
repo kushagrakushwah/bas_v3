@@ -1,3 +1,4 @@
+from bas_engine.core.network.dns_resolver import DNSResolver
 """
 BaseAttackModule — abstract base class every attack module must extend.
 """

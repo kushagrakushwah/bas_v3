@@ -1,3 +1,4 @@
+from bas_engine.core.network.dns_resolver import DNSResolver
 """
 Privilege Escalation Module
 MITRE ATT&CK: T1068 — Exploitation for Privilege Escalation

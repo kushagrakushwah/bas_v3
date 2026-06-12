@@ -1,3 +1,4 @@
+from bas_engine.core.network.dns_resolver import DNSResolver
 """
 OWASP Web Attacks Module
 MITRE ATT&CK: T1190 — Exploit Public-Facing Application

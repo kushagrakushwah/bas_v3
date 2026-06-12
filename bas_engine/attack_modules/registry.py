@@ -1,3 +1,4 @@
+
 from .ssh_bruteforce import SSHBruteForceModule
 from .owasp_web import OWASPWebModule
 from .privilege_escalation import PrivEscModule
@@ -19,3 +20,4 @@ MODULE_REGISTRY = {
     NmapScanModule.MODULE_NAME:           NmapScanModule,
     APTKillChainModule.MODULE_NAME:       APTKillChainModule,
 }
+

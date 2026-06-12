@@ -1,3 +1,4 @@
+from bas_engine.core.network.dns_resolver import DNSResolver
 """
 Data Exfiltration Module
 MITRE ATT&CK: T1041 — Exfiltration Over C2 Channel
@@ -157,3 +158,4 @@ class DataExfiltrationModule(BaseAttackModule):
             ))
 
         return findings
+

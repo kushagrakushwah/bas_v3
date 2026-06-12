@@ -1,3 +1,4 @@
+from bas_engine.core.network.dns_resolver import DNSResolver
 """
 Impact Simulation Module
 ========================
@@ -23,7 +24,9 @@ import aiohttp
 import random
 import time
 from typing import List
-
+from bas_engine.attack_modules.utils.endpoint_validator import (
+    is_real_endpoint
+)
 from bas_engine.attack_modules.base import BaseAttackModule
 from bas_engine.models.simulation import Finding, Severity
 
@@ -174,8 +177,16 @@ class ImpactSimModule(BaseAttackModule):
                 url = target.rstrip("/") + path
                 try:
                     async with session.get(url, allow_redirects=False) as resp:
-                        if resp.status in (200, 403):
-                            discovered.append(path)
+                        if resp.status in (200,403):
+
+                            real = await is_real_endpoint(
+                                session,
+                                target,
+                                path
+                            )
+
+                            if real:
+                                discovered.append(path)
                 except Exception as e:
                     self.logger.debug(f"Discovery probe {url}: {e}")
                 await asyncio.sleep(0.2)
@@ -228,7 +239,13 @@ class ImpactSimModule(BaseAttackModule):
                 url = target.rstrip("/") + path
                 try:
                     async with session.get(url, allow_redirects=False) as resp:
-                        if resp.status != 404:
+                        real = await is_real_endpoint(
+                            session,
+                            target,
+                            path
+                        )
+
+                        if real:
                             c2_reachable += 1
                             findings.append(self.finding(
                                 title       = f"Potential C2 Endpoint Reachable: {path}",
