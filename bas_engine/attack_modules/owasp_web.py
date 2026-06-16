@@ -1,4 +1,3 @@
-from bas_engine.core.network.dns_resolver import DNSResolver
 """
 OWASP Web Attacks Module
 MITRE ATT&CK: T1190 — Exploit Public-Facing Application
@@ -80,9 +79,8 @@ class OWASPWebModule(BaseAttackModule):
 
     async def execute(self) -> List[Finding]:
         findings: List[Finding] = []
-        target = self.target
-        if not target.startswith(("http://", "https://")):
-            target = f"http://{target}"
+        resolved = await self.resolve_target()
+        target = self.build_target_url(resolved, default_scheme="http")
 
         timeout = aiohttp.ClientTimeout(total=10)
         connector = aiohttp.TCPConnector(ssl=False)

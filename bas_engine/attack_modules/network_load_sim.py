@@ -1,4 +1,3 @@
-from bas_engine.core.network.dns_resolver import DNSResolver
 """
 Network Load Simulation Module
 MITRE ATT&CK: T1498 — Network Denial of Service (simulation only)
@@ -29,9 +28,10 @@ class NetworkLoadSimModule(BaseAttackModule):
 
     async def execute(self) -> List[Finding]:
         findings: List[Finding] = []
-        target = self.target
+        resolved = await self.resolve_target()
+        target = resolved.original
         if not target.startswith(("http://", "https://")):
-            target = f"https://{target}"
+            target = f"https://{resolved.hostname or resolved.ip or target}"
 
         port        = int(self.options.get("port", 443))
         req_count   = int(self.options.get("request_count", 50))

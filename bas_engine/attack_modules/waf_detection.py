@@ -1,4 +1,3 @@
-from bas_engine.core.network.dns_resolver import DNSResolver
 import aiohttp
 import asyncio
 import urllib.parse
@@ -111,9 +110,9 @@ class WAFEvasionModule(BaseAttackModule):
     # URL GENERATION
     # =====================================================
 
-    def build_target_urls(self):
+    def build_target_urls(self, target: str):
 
-        parsed = urlparse(self.target)
+        parsed = urlparse(target)
 
         base = f"{parsed.scheme}://{parsed.netloc}"
 
@@ -221,6 +220,8 @@ class WAFEvasionModule(BaseAttackModule):
     async def baseline_analysis(
         self,
         session
+        ,
+        target: str,
     ):
 
         analysis = {
@@ -236,7 +237,7 @@ class WAFEvasionModule(BaseAttackModule):
 
             async with session.get(
 
-                self.target,
+                target,
 
                 ssl=False,
 
@@ -377,9 +378,9 @@ class WAFEvasionModule(BaseAttackModule):
     # =====================================================
 
     async def execute(self):
-        resolved = await DNSResolver.resolve(self.target)
+        resolved = await self.resolve_target()
 
-        self.target = resolved.url
+        target = self.build_target_url(resolved, default_scheme="http")
 
         findings = []
 
@@ -406,7 +407,8 @@ class WAFEvasionModule(BaseAttackModule):
             # =================================================
 
             baseline = await self.baseline_analysis(
-                session
+                session,
+                target,
             )
 
             print(
@@ -429,7 +431,7 @@ class WAFEvasionModule(BaseAttackModule):
 
                         description=(
                             f"Could not reach "
-                            f"{self.target}"
+                            f"{target}"
                         ),
 
                         severity=Severity.MEDIUM,
@@ -446,7 +448,7 @@ class WAFEvasionModule(BaseAttackModule):
             # URLS
             # =================================================
 
-            urls = self.build_target_urls()
+            urls = self.build_target_urls(target)
 
             # =================================================
             # ATTACK LOOP
@@ -666,8 +668,8 @@ class WAFEvasionModule(BaseAttackModule):
 
         intelligence = {
 
-            "target":
-                self.target,
+                "target":
+                    target,
 
             "reachable":
                 baseline.get(

@@ -13,13 +13,7 @@ import SimulationStatusBadge from "@/components/SimulationStatusBadge";
 import MetricCard from "@/components/MetricCard";
 import PageHeader from "@/components/ui/PageHeader";
 import { api } from "@/lib/api";
-
-interface AttackModule {
-  id: string;
-  description: string;
-  tactic: string;
-  mitre_ids: string[];
-}
+import type { AttackModule, Simulation, SimulationRequest } from "@/types/index";
 
 export default function LaunchPage() {
   const [target, setTarget] = useState("");
@@ -29,19 +23,27 @@ export default function LaunchPage() {
   );
 
   const [parallel, setParallel] = useState(true);
-
   const [liveMode, setLiveMode] = useState(false);
+
+  // ── Nmap options ────────────────────────────────────────────
   const [scanProfile, setScanProfile] = useState("standard");
   const [portRange, setPortRange] = useState("1-1000");
   const [timingProfile, setTimingProfile] = useState("T4");
   const [subnetDiscovery, setSubnetDiscovery] = useState(false);
-  const [requestCount, setRequestCount] = useState(500);
 
+  // ── Impact sim options ──────────────────────────────────────
+  const [requestCount, setRequestCount] = useState(500);
   const [concurrency, setConcurrency] = useState(50);
+
+  // ── SSH / Webmail brute force options ───────────────────────
+  const [sshAuthType, setSshAuthType] = useState<"ssh" | "webmail">("ssh");
+  const [webmailLoginUrl, setWebmailLoginUrl] = useState("");
+
+  // ── Module state ────────────────────────────────────────────
   const [modules, setModules] = useState<AttackModule[]>([]);
   const [selectedModules, setSelectedModules] = useState<string[]>([]);
   const [loadingModules, setLoadingModules] = useState(true);
-  const [simulations, setSimulations] = useState<any[]>([]);
+  const [simulations, setSimulations] = useState<Simulation[]>([]);
   const [launching, setLaunching] = useState(false);
   const [message, setMessage] = useState("");
 
@@ -63,9 +65,7 @@ export default function LaunchPage() {
 
   function toggleModule(id: string) {
     setSelectedModules((prev) =>
-      prev.includes(id)
-        ? prev.filter((item) => item !== id)
-        : [...prev, id]
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
     );
   }
 
@@ -93,36 +93,35 @@ export default function LaunchPage() {
       setLaunching(true);
       setMessage("");
 
-      const options: any = {};
+      const options: SimulationRequest["options"] = {};
 
-      if (
-        selectedModules.includes(
-          "nmap_scan"
-        )
-      ) {
+      if (selectedModules.includes("nmap_scan")) {
         options.nmap_scan = {
           profile: scanProfile,
           ports: portRange,
           timing: timingProfile,
-          subnet_scan:
-            subnetDiscovery,
+          subnet_scan: subnetDiscovery,
         };
       }
 
-      if (
-        selectedModules.includes(
-          "impact_sim"
-        )
-      ) {
+      if (selectedModules.includes("impact_sim")) {
         options.impact_sim = {
-          request_count:
-            requestCount,
-          concurrency:
-            concurrency,
+          request_count: requestCount,
+          concurrency: concurrency,
         };
       }
 
-      const payload = {
+      if (selectedModules.includes("ssh_bruteforce")) {
+        options.ssh_bruteforce = {
+          auth_type: sshAuthType,
+          ...(sshAuthType === "webmail" && webmailLoginUrl
+            ? { webmail_login_url: webmailLoginUrl }
+            : {}),
+        };
+      }
+
+      // live_mode goes inside metadata — not at the top level
+      const payload: SimulationRequest = {
         name: jobLabel,
         target,
         modules: selectedModules,
@@ -153,12 +152,9 @@ export default function LaunchPage() {
         description="Configure and dispatch BAS attack simulations."
       />
 
+      {/* ── Metric strip ──────────────────────────────────── */}
       <div className="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-5 gap-4">
-        <MetricCard
-          title="Modules"
-          value={modules.length}
-          icon={Shield}
-        />
+        <MetricCard title="Modules" value={modules.length} icon={Shield} />
 
         <MetricCard
           title="Selected"
@@ -188,16 +184,14 @@ export default function LaunchPage() {
         />
       </div>
 
+      {/* ── Main config card ──────────────────────────────── */}
       <div className="glass-card p-8">
-        <h2 className="text-2xl font-bold mb-8">
-          Simulation Configuration
-        </h2>
+        <h2 className="text-2xl font-bold mb-8">Simulation Configuration</h2>
 
+        {/* Name + Target */}
         <div className="grid md:grid-cols-2 gap-6">
           <div>
-            <label className="text-sm text-white/50">
-              Simulation Name
-            </label>
+            <label className="text-sm text-white/50">Simulation Name</label>
             <input
               value={jobLabel}
               onChange={(e) => setJobLabel(e.target.value)}
@@ -216,6 +210,7 @@ export default function LaunchPage() {
           </div>
         </div>
 
+        {/* ── Nmap options ─────────────────────────────────── */}
         {selectedModules.includes("nmap_scan") && (
           <div className="mt-8">
             <h3 className="text-lg font-semibold mb-4">
@@ -276,6 +271,8 @@ export default function LaunchPage() {
             </div>
           </div>
         )}
+
+        {/* ── Impact sim options ───────────────────────────── */}
         {selectedModules.includes("impact_sim") && (
           <div className="mt-8">
             <h3 className="text-lg font-semibold mb-4">
@@ -283,60 +280,108 @@ export default function LaunchPage() {
             </h3>
 
             <div className="grid md:grid-cols-2 gap-6">
-
               <div>
-                <label className="text-sm text-white/50">
-                  Request Count
-                </label>
-
+                <label className="text-sm text-white/50">Request Count</label>
                 <input
                   type="number"
                   value={requestCount}
-                  onChange={(e) =>
-                    setRequestCount(
-                      Number(e.target.value)
-                    )
-                  }
-                  className="
-                    mt-2
-                    w-full
-                    rounded-2xl
-                    border
-                    border-white/10
-                    bg-black/30
-                    p-4
-                  "
+                  onChange={(e) => setRequestCount(Number(e.target.value))}
+                  className="mt-2 w-full rounded-2xl border border-white/10 bg-black/30 p-4"
                 />
               </div>
 
               <div>
-                <label className="text-sm text-white/50">
-                  Concurrency
-                </label>
-
+                <label className="text-sm text-white/50">Concurrency</label>
                 <input
                   type="number"
                   value={concurrency}
-                  onChange={(e) =>
-                    setConcurrency(
-                      Number(e.target.value)
-                    )
-                  }
-                  className="
-                    mt-2
-                    w-full
-                    rounded-2xl
-                    border
-                    border-white/10
-                    bg-black/30
-                    p-4
-                  "
+                  onChange={(e) => setConcurrency(Number(e.target.value))}
+                  className="mt-2 w-full rounded-2xl border border-white/10 bg-black/30 p-4"
                 />
               </div>
-
             </div>
           </div>
         )}
+
+        {/* ── SSH / Webmail brute force options ────────────── */}
+        {selectedModules.includes("ssh_bruteforce") && (
+          <div className="mt-8 rounded-2xl border border-white/10 bg-white/[0.03] p-6">
+            <h3 className="text-lg font-semibold mb-1">
+              Credential Attack Configuration
+            </h3>
+            <p className="text-sm text-white/40 mb-6">
+              Choose the authentication protocol to brute force.
+            </p>
+
+            {/* Radio toggle */}
+            <div className="flex gap-6 mb-6">
+              {(["ssh", "webmail"] as const).map((type) => (
+                <label
+                  key={type}
+                  className="flex items-center gap-3 cursor-pointer"
+                  onClick={() => setSshAuthType(type)}
+                >
+                  <div
+                    className={`
+                      w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all
+                      ${
+                        sshAuthType === type
+                          ? "border-purple-500 bg-purple-500"
+                          : "border-white/30 bg-transparent"
+                      }
+                    `}
+                  >
+                    {sshAuthType === type && (
+                      <div className="w-2 h-2 rounded-full bg-white" />
+                    )}
+                  </div>
+                  <span
+                    className={`text-sm font-medium ${
+                      sshAuthType === type ? "text-white" : "text-white/50"
+                    }`}
+                  >
+                    {type === "ssh" ? "SSH" : "Webmail / Roundcube"}
+                  </span>
+                </label>
+              ))}
+            </div>
+
+            {/* SSH info pill */}
+            {sshAuthType === "ssh" && (
+              <div className="rounded-xl border border-blue-500/20 bg-blue-500/10 px-4 py-3 text-sm text-blue-300">
+                Attempts SSH password auth against port 22 (or custom
+                ssh_port). Uses asyncssh with adaptive concurrency and
+                fail2ban awareness.
+              </div>
+            )}
+
+            {/* Webmail extra fields */}
+            {sshAuthType === "webmail" && (
+              <div className="space-y-4">
+                <div className="rounded-xl border border-amber-500/20 bg-amber-500/10 px-4 py-3 text-sm text-amber-300">
+                  Performs HTTP POST brute force against a Roundcube / webmail
+                  login page. Leave the URL blank to auto-derive from Target +{" "}
+                  <code className="font-mono">/roundcube/</code>.
+                </div>
+
+                <div>
+                  <label className="text-sm text-white/50">
+                    Webmail Login URL{" "}
+                    <span className="text-white/30">(optional override)</span>
+                  </label>
+                  <input
+                    value={webmailLoginUrl}
+                    onChange={(e) => setWebmailLoginUrl(e.target.value)}
+                    placeholder="https://mail.example.com/roundcube/"
+                    className="mt-2 w-full rounded-2xl border border-white/10 bg-black/30 p-4 text-sm"
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ── Module grid ──────────────────────────────────── */}
         <div className="mt-8">
           <h3 className="text-lg font-semibold mb-4">Attack Modules</h3>
 
@@ -352,11 +397,7 @@ export default function LaunchPage() {
                     key={module.id}
                     onClick={() => toggleModule(module.id)}
                     className={`
-                      text-left
-                      rounded-2xl
-                      border
-                      p-5
-                      transition-all
+                      text-left rounded-2xl border p-5 transition-all
                       ${
                         active
                           ? "border-purple-500 bg-purple-500/10"
@@ -373,6 +414,24 @@ export default function LaunchPage() {
                     <div className="mt-3 text-xs text-purple-300">
                       {module.tactic}
                     </div>
+
+                    {/* Auth type badge — only on ssh_bruteforce when active */}
+                    {module.id === "ssh_bruteforce" && active && (
+                      <div className="mt-3">
+                        <span
+                          className={`
+                            inline-block rounded-full px-2 py-0.5 text-xs font-medium
+                            ${
+                              sshAuthType === "ssh"
+                                ? "bg-blue-500/20 text-blue-300"
+                                : "bg-amber-500/20 text-amber-300"
+                            }
+                          `}
+                        >
+                          {sshAuthType === "ssh" ? "SSH" : "Webmail"}
+                        </span>
+                      </div>
+                    )}
                   </button>
                 );
               })}
@@ -380,6 +439,7 @@ export default function LaunchPage() {
           )}
         </div>
 
+        {/* ── Flags row ────────────────────────────────────── */}
         <div className="mt-8 flex gap-6">
           <label className="flex items-center gap-2">
             <input
@@ -410,15 +470,9 @@ export default function LaunchPage() {
           onClick={handleLaunch}
           disabled={launching}
           className="
-            mt-8
-            w-full
-            rounded-2xl
-            bg-gradient-to-r
-            from-purple-600
-            to-blue-600
-            py-5
-            font-bold
-            transition-all
+            mt-8 w-full rounded-2xl
+            bg-gradient-to-r from-purple-600 to-blue-600
+            py-5 font-bold transition-all
           "
         >
           <div className="flex items-center justify-center gap-3">
@@ -427,13 +481,12 @@ export default function LaunchPage() {
             ) : (
               <Play className="w-5 h-5" />
             )}
-
             {launching ? "Launching..." : "Dispatch Simulation"}
           </div>
         </button>
       </div>
 
-      {/* Active Simulations */}
+      {/* ── Active Simulations ───────────────────────────── */}
       <div className="glass-card p-8">
         <h2 className="text-2xl font-bold mb-6">Active Simulations</h2>
 
@@ -451,17 +504,13 @@ export default function LaunchPage() {
             <tbody>
               {simulations.map((simulation) => (
                 <tr
-                  key={simulation.id}
-                  className="
-                    border-b
-                    border-white/5
-                    hover:bg-white/[0.03]
-                  "
+                  key={simulation.id ?? simulation.simulation_id}
+                  className="border-b border-white/5 hover:bg-white/[0.03]"
                 >
-                  <td className="p-4">{simulation.name}</td>
+                  <td className="p-4">{simulation.name ?? "—"}</td>
                   <td className="p-4">{simulation.target}</td>
                   <td className="p-4">
-                    {simulation.modules?.join(", ")}
+                    {simulation.modules?.join(", ") ?? "—"}
                   </td>
                   <td className="p-4">
                     <SimulationStatusBadge status={simulation.status} />

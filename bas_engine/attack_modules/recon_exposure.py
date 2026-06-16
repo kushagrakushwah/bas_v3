@@ -1,4 +1,3 @@
-from bas_engine.core.network.dns_resolver import DNSResolver
 """
 Recon & Exposure Module
 =======================
@@ -18,10 +17,9 @@ import aiohttp
 import re
 import random
 from typing import List
-from bas_engine.attack_modules.utils.endpoint_validator import (
-    is_real_endpoint
-)
+from urllib.parse import urlparse
 from bas_engine.attack_modules.base import BaseAttackModule
+from bas_engine.attack_modules.utils.endpoint_discovery import EndpointDiscoveryEngine
 from bas_engine.models.simulation import Finding, Severity
 
 
@@ -199,6 +197,41 @@ class ReconExposureModule(BaseAttackModule):
         r'<script[^>]+src=["\']https?://(?!cdnjs|unpkg|jsdelivr|ajax\.googleapis)([^"\']+)["\']',
     ]
 
+    def _dedupe_urls(self, urls):
+        seen = set()
+        deduped = []
+        for item in urls:
+            url = item[0] if isinstance(item, tuple) else item
+            if url not in seen:
+                seen.add(url)
+                deduped.append(item)
+        return deduped
+
+    def _route_candidates(self, target, discovered_urls, fallback_paths, keywords, minimum=3, fallback_limit=None, allow_fallback=True):
+        selected = []
+        target_base = target.rstrip("/")
+
+        for url in discovered_urls:
+            path = urlparse(url).path.lower()
+            if any(keyword in path for keyword in keywords):
+                selected.append((url, "discovery"))
+
+        if allow_fallback and len(selected) < minimum:
+            for path in fallback_paths[: fallback_limit or len(fallback_paths)]:
+                selected.append((target_base + path, "fallback"))
+
+        return self._dedupe_urls(selected)
+
+    async def _discover_routes(self, session, target):
+        engine = EndpointDiscoveryEngine(
+            session,
+            target,
+            max_endpoints=40,
+            max_depth=1,
+            timeout=6.0,
+        )
+        return await engine.discover()
+
     # =========================================================
     # MAIN EXECUTE
     # =========================================================
@@ -206,9 +239,8 @@ class ReconExposureModule(BaseAttackModule):
     async def execute(self) -> List[Finding]:
         findings: List[Finding] = []
 
-        target = self.target
-        if not target.startswith(("http://", "https://")):
-            target = f"https://{target}"
+        resolved = await self.resolve_target()
+        target = self.build_target_url(resolved, default_scheme="https")
 
         connector = aiohttp.TCPConnector(ssl=False)
         timeout   = aiohttp.ClientTimeout(total=10)
@@ -219,24 +251,31 @@ class ReconExposureModule(BaseAttackModule):
             headers={"User-Agent": "SecureForge-BAS/1.0 (authorized security testing)"},
         ) as session:
 
-            findings.extend(await self._stage_credential_dumping(session, target))
-            findings.extend(await self._stage_data_exfiltration(session, target))
-            findings.extend(await self._stage_lateral_movement(session, target))
-            findings.extend(await self._stage_supply_chain(session, target))
+            discovered_routes = self._dedupe_urls(await self._discover_routes(session, target))
+            discovery_sparse = len(discovered_routes) < 5
+
+            findings.extend(await self._stage_credential_dumping(session, target, discovered_routes, discovery_sparse))
+            findings.extend(await self._stage_data_exfiltration(session, target, discovered_routes, discovery_sparse))
+            findings.extend(await self._stage_lateral_movement(session, target, discovered_routes, discovery_sparse))
+            findings.extend(await self._stage_supply_chain(session, target, discovered_routes, discovery_sparse))
 
         # Final summary finding
         findings.append(self.finding(
             title       = "Recon & Exposure Scan Complete",
             description = (
                 f"Completed 4 exposure stages against {target}. "
+                f"Route discovery yielded {len(discovered_routes)} candidate endpoint(s). "
                 f"Total findings generated: {len(findings)}. "
                 "Stages covered: Credential Exposure, Data Exfiltration, "
                 "Lateral Movement Vectors, Supply Chain Risks."
             ),
             severity    = Severity.INFO,
             mitre_id    = "T1595",
-            evidence    = f"4 stages executed against {target}",
+            evidence    = f"4 stages executed against {target}; discovered_routes={len(discovered_routes)}",
             remediation = "Review all findings above and prioritise CRITICAL and HIGH severity items.",
+            raw_data    = {"discovered_routes": len(discovered_routes), "discovery_sparse": discovery_sparse, "provenance": "mixed"},
+            mode        = "live",
+            evidence_type = "target-derived",
         ))
 
         return findings
@@ -249,6 +288,8 @@ class ReconExposureModule(BaseAttackModule):
         self,
         session: aiohttp.ClientSession,
         target: str,
+        discovered_routes,
+        discovery_sparse: bool,
     ) -> List[Finding]:
 
         findings: List[Finding] = []
@@ -262,17 +303,20 @@ class ReconExposureModule(BaseAttackModule):
         self.logger.info("[recon_exposure] Stage 1: Credential file exposure")
 
         # Config file probe
-        for path in self.CREDENTIAL_PATHS:
-            url = target.rstrip("/") + path
+        credential_candidates = self._route_candidates(
+            target,
+            discovered_routes,
+            self.CREDENTIAL_PATHS,
+            ("env", "config", "git", "credential", "secret", "backup", "dump", "database"),
+            minimum=5,
+            allow_fallback=discovery_sparse,
+        )
+
+        for url, source in credential_candidates:
+            path = urlparse(url).path or url
             try:
                 async with session.get(url, allow_redirects=False) as resp:
-                    real = await is_real_endpoint(
-                        session,
-                        target,
-                        path
-                    )
-
-                    if real:
+                    if resp.status == 200:
                         body = await resp.text(errors="replace")
                         for pattern, desc in self.CREDENTIAL_PATTERNS:
                             if re.search(pattern, body, re.IGNORECASE):
@@ -292,7 +336,9 @@ class ReconExposureModule(BaseAttackModule):
                                         "3. Add sensitive file patterns to .htaccess deny rules.\n"
                                         "4. Scan web root for other exposed config files."
                                     ),
-                                    raw_data    = {"path": path, "pattern": pattern},
+                                    raw_data    = {"path": path, "pattern": pattern, "source": source},
+                                    mode        = "live",
+                                    evidence_type = "target-derived" if source == "discovery" else "fallback-heuristic",
                                 ))
                                 break
 
@@ -311,6 +357,9 @@ class ReconExposureModule(BaseAttackModule):
                                 f"1. Move {path} outside the web root entirely.\n"
                                 "2. Do not rely solely on 403 blocks for sensitive files."
                             ),
+                                raw_data    = {"path": path, "source": source},
+                                mode        = "live",
+                                evidence_type = "target-derived" if source == "discovery" else "fallback-heuristic",
                         ))
             except Exception as e:
                 self.logger.debug(f"Credential probe {url}: {e}")
@@ -318,18 +367,21 @@ class ReconExposureModule(BaseAttackModule):
             await asyncio.sleep(0.2)
 
         # Login endpoint probe
-        login_paths = ["/admin/login", "/login", "/moodle/login/index.php", "/mail/"]
-        for login_path in login_paths[:2]:
-            url = target.rstrip("/") + login_path
+        login_candidates = self._route_candidates(
+            target,
+            discovered_routes,
+            ["/admin/login", "/login", "/moodle/login/index.php", "/mail/"],
+            ("login", "signin", "auth", "mail"),
+            minimum=2,
+            fallback_limit=2,
+            allow_fallback=discovery_sparse,
+        )
+
+        for url, source in login_candidates[:4]:
+            login_path = urlparse(url).path or url
             try:
                 async with session.get(url, allow_redirects=True) as resp:
-                    real = await is_real_endpoint(
-                        session,
-                        target,
-                        path
-                    )
-
-                    if real:
+                    if resp.status == 200:
                         findings.append(self.finding(
                             title       = f"Login Endpoint Found: {login_path}",
                             description = (
@@ -346,6 +398,9 @@ class ReconExposureModule(BaseAttackModule):
                                 "3. Enable MFA on all login endpoints.\n"
                                 "4. Monitor login endpoints for brute force patterns."
                             ),
+                            raw_data    = {"path": login_path, "source": source},
+                            mode        = "live",
+                            evidence_type = "target-derived" if source == "discovery" else "fallback-heuristic",
                         ))
             except Exception as e:
                 self.logger.debug(f"Login probe {url}: {e}")
@@ -359,6 +414,9 @@ class ReconExposureModule(BaseAttackModule):
                 mitre_id    = "T1003",
                 evidence    = f"Probed {len(self.CREDENTIAL_PATHS)} paths on {target}",
                 remediation = "Continue regular credential hygiene audits.",
+                raw_data    = {"mode": "live", "evidence_type": "target-derived"},
+                mode        = "live",
+                evidence_type = "target-derived",
             ))
 
         return findings
@@ -371,6 +429,8 @@ class ReconExposureModule(BaseAttackModule):
         self,
         session: aiohttp.ClientSession,
         target: str,
+        discovered_routes,
+        discovery_sparse: bool,
     ) -> List[Finding]:
 
         findings: List[Finding] = []
@@ -383,17 +443,20 @@ class ReconExposureModule(BaseAttackModule):
 
         self.logger.info("[recon_exposure] Stage 2: Data exfiltration vectors")
 
-        for path in self.EXFIL_PATHS:
-            url = target.rstrip("/") + path
+        exfil_candidates = self._route_candidates(
+            target,
+            discovered_routes,
+            self.EXFIL_PATHS,
+            ("api", "rest", "data", "export", "download", "report", "user", "student", "log", "backup", "files", "csv", "json"),
+            minimum=4,
+            allow_fallback=discovery_sparse,
+        )
+
+        for url, source in exfil_candidates:
+            path = urlparse(url).path or url
             try:
                 async with session.get(url, allow_redirects=False) as resp:
-                    real = await is_real_endpoint(
-                        session,
-                        target,
-                        path
-                    )
-
-                    if real:
+                    if resp.status == 200:
                         body      = await resp.text(errors="replace")
                         body_size = len(body)
 
@@ -433,7 +496,9 @@ class ReconExposureModule(BaseAttackModule):
                                         "3. Apply rate limiting to prevent bulk data extraction.\n"
                                         "4. Audit all API endpoints for excessive data exposure."
                                     ),
-                                    raw_data    = {"path": path, "pattern": pattern, "size": body_size},
+                                    raw_data    = {"path": path, "pattern": pattern, "size": body_size, "source": source},
+                                    mode        = "live",
+                                    evidence_type = "target-derived" if source == "discovery" else "fallback-heuristic",
                                 ))
                                 break
 
@@ -452,6 +517,9 @@ class ReconExposureModule(BaseAttackModule):
                                     "2. Implement pagination to limit response sizes.\n"
                                     "3. Add rate limiting."
                                 ),
+                                raw_data    = {"path": path, "size": body_size, "source": source},
+                                mode        = "live",
+                                evidence_type = "target-derived" if source == "discovery" else "fallback-heuristic",
                             ))
 
             except Exception as e:
@@ -467,6 +535,9 @@ class ReconExposureModule(BaseAttackModule):
                 mitre_id    = "T1041",
                 evidence    = f"Probed {len(self.EXFIL_PATHS)} paths on {target}",
                 remediation = "Continue regular API security audits and access control reviews.",
+                raw_data    = {"mode": "live", "evidence_type": "target-derived"},
+                mode        = "live",
+                evidence_type = "target-derived",
             ))
 
         return findings
@@ -479,6 +550,8 @@ class ReconExposureModule(BaseAttackModule):
         self,
         session: aiohttp.ClientSession,
         target: str,
+        discovered_routes,
+        discovery_sparse: bool,
     ) -> List[Finding]:
 
         findings: List[Finding] = []
@@ -491,8 +564,17 @@ class ReconExposureModule(BaseAttackModule):
 
         self.logger.info("[recon_exposure] Stage 3: Lateral movement vectors")
 
-        for path in self.LATERAL_PROBE_PATHS:
-            url = target.rstrip("/") + path
+        lateral_candidates = self._route_candidates(
+            target,
+            discovered_routes,
+            self.LATERAL_PROBE_PATHS,
+            ("admin", "manage", "dashboard", "console", "phpmyadmin", "wp-admin", "config", "backup"),
+            minimum=3,
+            allow_fallback=discovery_sparse,
+        )
+
+        for url, source in lateral_candidates:
+            path = urlparse(url).path or url
             try:
                 async with session.get(url, allow_redirects=False) as resp:
                     if resp.status in (200, 301, 302, 403):
@@ -515,7 +597,9 @@ class ReconExposureModule(BaseAttackModule):
                                 "3. Deploy host-based IDS to detect unusual internal connections.\n"
                                 "4. Disable SMB/WMI if not required in your environment."
                             ),
-                            raw_data    = {"path": path, "status": resp.status, "method": method},
+                            raw_data    = {"path": path, "status": resp.status, "method": method, "source": source},
+                            mode        = "live",
+                            evidence_type = "target-derived" if source == "discovery" else "fallback-heuristic",
                         ))
             except Exception as e:
                 self.logger.debug(f"Lateral probe {url}: {e}")
@@ -530,6 +614,9 @@ class ReconExposureModule(BaseAttackModule):
                 mitre_id    = "T1021",
                 evidence    = f"Probed {len(self.LATERAL_PROBE_PATHS)} paths on {target}",
                 remediation = "Continue monitoring for internal east-west traffic anomalies.",
+                raw_data    = {"mode": "live", "evidence_type": "target-derived"},
+                mode        = "live",
+                evidence_type = "target-derived",
             ))
 
         return findings
@@ -542,6 +629,8 @@ class ReconExposureModule(BaseAttackModule):
         self,
         session: aiohttp.ClientSession,
         target: str,
+        discovered_routes,
+        discovery_sparse: bool,
     ) -> List[Finding]:
 
         findings: List[Finding] = []
@@ -555,17 +644,20 @@ class ReconExposureModule(BaseAttackModule):
         self.logger.info("[recon_exposure] Stage 4: Supply chain risks")
 
         # Manifest file exposure
-        for path in self.MANIFEST_PATHS:
-            url = target.rstrip("/") + path
+        manifest_candidates = self._route_candidates(
+            target,
+            discovered_routes,
+            self.MANIFEST_PATHS,
+            ("package", "requirements", "pipfile", "gemfile", "composer", "pom", "gradle", "npmrc", "yarn", "swagger", "openapi", "api", "rest"),
+            minimum=4,
+            allow_fallback=discovery_sparse,
+        )
+
+        for url, source in manifest_candidates:
+            path = urlparse(url).path or url
             try:
                 async with session.get(url, allow_redirects=False) as resp:
-                    real = await is_real_endpoint(
-                        session,
-                        target,
-                        path
-                    )
-
-                    if real:
+                    if resp.status == 200:
                         body = await resp.text(errors="replace")
 
                         findings.append(self.finding(
@@ -584,7 +676,9 @@ class ReconExposureModule(BaseAttackModule):
                                 "2. Move manifests outside web root.\n"
                                 "3. Add to .htaccess: <Files package.json> deny from all </Files>"
                             ),
-                            raw_data    = {"path": path, "size": len(body)},
+                            raw_data    = {"path": path, "size": len(body), "source": source},
+                            mode        = "live",
+                            evidence_type = "target-derived" if source == "discovery" else "fallback-heuristic",
                         ))
 
                         for pattern, desc in self.VULNERABLE_PATTERNS:
@@ -604,23 +698,30 @@ class ReconExposureModule(BaseAttackModule):
                                         "2. Use tools like 'npm audit' or 'safety check' regularly.\n"
                                         "3. Subscribe to security advisories for your dependencies."
                                     ),
+                                    raw_data    = {"path": path, "source": source},
+                                    mode        = "live",
+                                    evidence_type = "target-derived" if source == "discovery" else "fallback-heuristic",
                                 ))
             except Exception as e:
                 self.logger.debug(f"Manifest probe {url}: {e}")
             await asyncio.sleep(0.2)
 
         # Third-party script analysis
-        for path in self.SCRIPT_PATHS[:2]:
-            url = target.rstrip("/") + path
+        script_candidates = self._route_candidates(
+            target,
+            discovered_routes,
+            self.SCRIPT_PATHS[:2],
+            ("index", "html", "mail", "moodle", "admin", "dashboard", "root"),
+            minimum=2,
+            fallback_limit=2,
+            allow_fallback=discovery_sparse,
+        )
+
+        for url, source in script_candidates:
+            path = urlparse(url).path or url
             try:
                 async with session.get(url, allow_redirects=True, ssl=False) as resp:
-                    real = await is_real_endpoint(
-                        session,
-                        target,
-                        path
-                    )
-
-                    if real:
+                    if resp.status == 200:
                         body = await resp.text(errors="replace")
                         for pattern in self.SUSPICIOUS_SCRIPT_PATTERNS:
                             matches = re.findall(pattern, body, re.IGNORECASE)
@@ -641,6 +742,9 @@ class ReconExposureModule(BaseAttackModule):
                                         "2. Self-host critical JavaScript dependencies.\n"
                                         "3. Implement a strict Content-Security-Policy."
                                     ),
+                                    raw_data    = {"path": path, "source": source},
+                                    mode        = "live",
+                                    evidence_type = "target-derived" if source == "discovery" else "fallback-heuristic",
                                 ))
             except Exception as e:
                 self.logger.debug(f"Script probe {url}: {e}")
@@ -654,6 +758,9 @@ class ReconExposureModule(BaseAttackModule):
                 mitre_id    = "T1195",
                 evidence    = f"Probed {len(self.MANIFEST_PATHS)} manifest paths on {target}",
                 remediation = "Continue regular dependency audits and SRI checks.",
+                raw_data    = {"mode": "live", "evidence_type": "target-derived"},
+                mode        = "live",
+                evidence_type = "target-derived",
             ))
 
         return findings

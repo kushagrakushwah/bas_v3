@@ -1,4 +1,3 @@
-from bas_engine.core.network.dns_resolver import DNSResolver
 """
 Data Exfiltration Module
 MITRE ATT&CK: T1041 — Exfiltration Over C2 Channel
@@ -58,9 +57,10 @@ class DataExfiltrationModule(BaseAttackModule):
 
     async def execute(self) -> List[Finding]:
         findings: List[Finding] = []
-        target = self.target
+        resolved = await self.resolve_target()
+        target = resolved.original
         if not target.startswith(("http://", "https://")):
-            target = f"https://{target}"
+            target = f"https://{resolved.hostname or resolved.ip or target}"
 
         self.logger.info(f"[data_exfiltration] Starting against {target}")
 

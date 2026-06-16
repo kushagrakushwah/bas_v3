@@ -1,4 +1,3 @@
-from bas_engine.core.network.dns_resolver import DNSResolver
 """
 Adaptive APT Kill Chain v3
 Enterprise Adaptive BAS Engine
@@ -224,9 +223,9 @@ class APTKillChainModule(BaseAttackModule):
     # URL HELPERS
     # =====================================================
 
-    def normalize_url(self, path):
+    def normalize_url(self, path, target):
 
-        parsed = urlparse(self.target)
+        parsed = urlparse(target)
 
         base = f"{parsed.scheme}://{parsed.netloc}"
 
@@ -238,6 +237,7 @@ class APTKillChainModule(BaseAttackModule):
         self,
 
         url,
+        target,
     ):
 
         try:
@@ -246,7 +246,7 @@ class APTKillChainModule(BaseAttackModule):
 
                 urlparse(url).netloc
                 ==
-                urlparse(self.target).netloc
+                urlparse(target).netloc
             )
 
         except:
@@ -362,6 +362,7 @@ class APTKillChainModule(BaseAttackModule):
         state,
 
         url,
+        target,
     ):
 
         if len(
@@ -403,7 +404,7 @@ class APTKillChainModule(BaseAttackModule):
                         href
                     )
 
-                    if not self.same_domain(full):
+                    if not self.same_domain(full, target):
                         continue
 
                     if full in state.discovery["links"]:
@@ -428,6 +429,7 @@ class APTKillChainModule(BaseAttackModule):
         session,
 
         state,
+        target,
     ):
 
         print(
@@ -438,7 +440,7 @@ class APTKillChainModule(BaseAttackModule):
 
         for path in COMMON_DISCOVERY_PATHS:
 
-            url = self.normalize_url(path)
+            url = self.normalize_url(path, target)
 
             try:
 
@@ -581,6 +583,8 @@ class APTKillChainModule(BaseAttackModule):
                         session,
                         state,
                         url
+                        ,
+                        target
                     )
 
             except Exception as e:
@@ -926,6 +930,8 @@ class APTKillChainModule(BaseAttackModule):
         session,
 
         state,
+
+        target,
     ):
 
         print(
@@ -936,7 +942,7 @@ class APTKillChainModule(BaseAttackModule):
 
         for path in COMMON_ADMIN_PATHS:
 
-            url = self.normalize_url(path)
+            url = self.normalize_url(path, target)
 
             try:
 
@@ -960,7 +966,7 @@ class APTKillChainModule(BaseAttackModule):
 
                     real = await is_real_endpoint(
                         session,
-                        self.target,
+                        target,
                         path
                     )
 
@@ -1014,6 +1020,8 @@ class APTKillChainModule(BaseAttackModule):
         session,
 
         state,
+
+        target,
     ):
 
         print(
@@ -1024,7 +1032,7 @@ class APTKillChainModule(BaseAttackModule):
 
         for path in COMMON_PERSISTENCE_PATHS:
 
-            url = self.normalize_url(path)
+            url = self.normalize_url(path, target)
 
             try:
 
@@ -1048,7 +1056,7 @@ class APTKillChainModule(BaseAttackModule):
 
                     real = await is_real_endpoint(
                         session,
-                        self.target,
+                        target,
                         path
                     )
 
@@ -1101,6 +1109,10 @@ class APTKillChainModule(BaseAttackModule):
 
         state = KillChainState()
 
+        resolved = await self.resolve_target()
+
+        target = resolved.original
+
         print("\n" + "=" * 60)
 
         print(
@@ -1108,7 +1120,7 @@ class APTKillChainModule(BaseAttackModule):
         )
 
         print(
-            f"TARGET: {self.target}"
+            f"TARGET: {target}"
         )
 
         print("=" * 60)
@@ -1126,6 +1138,8 @@ class APTKillChainModule(BaseAttackModule):
             await self.stage_recon(
                 session,
                 state
+                ,
+                target
             )
 
             await self.stage_login_attack(
@@ -1146,11 +1160,15 @@ class APTKillChainModule(BaseAttackModule):
             await self.stage_priv_esc(
                 session,
                 state
+                ,
+                target
             )
 
             await self.stage_persistence(
                 session,
                 state
+                ,
+                target
             )
 
         # =================================================

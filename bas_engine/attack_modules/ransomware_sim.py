@@ -1,4 +1,3 @@
-from bas_engine.core.network.dns_resolver import DNSResolver
 """
 Ransomware Simulation Module
 MITRE ATT&CK: T1486 — Data Encrypted for Impact
@@ -47,9 +46,8 @@ class RansomwareSimModule(BaseAttackModule):
 
     async def execute(self) -> List[Finding]:
         findings: List[Finding] = []
-        target = self.target
-        if not target.startswith(("http://", "https://")):
-            target = f"https://{target}"
+        resolved = await self.resolve_target()
+        target = self.build_target_url(resolved, default_scheme="https")
 
         self.logger.info(f"[ransomware_sim] Starting against {target}")
 
@@ -91,7 +89,9 @@ class RansomwareSimModule(BaseAttackModule):
                         "2. Implement file integrity monitoring on critical directories.\n"
                         "3. Maintain offline/immutable backups."
                     ),
-                    raw_data    = {"discovered_paths": discovered},
+                    raw_data    = {"discovered_paths": discovered, "mode": "simulation", "evidence_type": "simulation"},
+                    mode        = "simulation",
+                    evidence_type = "simulation",
                 ))
 
             # Stage 2: Mock encryption staging (simulation only)
@@ -113,6 +113,9 @@ class RansomwareSimModule(BaseAttackModule):
                     "3. Enable file activity monitoring and alert on mass file renames.\n"
                     "4. Test backup restoration procedures regularly."
                 ),
+                raw_data    = {"mode": "simulation", "evidence_type": "simulation"},
+                mode        = "simulation",
+                evidence_type = "simulation",
             ))
 
             # Stage 3: C2 beacon simulation
@@ -137,7 +140,9 @@ class RansomwareSimModule(BaseAttackModule):
                                     "2. Implement DNS filtering and egress firewall rules.\n"
                                     "3. Monitor for unusual outbound HTTP/S traffic patterns."
                                 ),
-                                raw_data    = {"path": path, "status": resp.status},
+                                raw_data    = {"path": path, "status": resp.status, "mode": "simulation", "evidence_type": "simulation"},
+                                mode        = "simulation",
+                                evidence_type = "simulation",
                             ))
                 except Exception as e:
                     self.logger.debug(f"C2 probe {url}: {e}")

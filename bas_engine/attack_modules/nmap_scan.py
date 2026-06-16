@@ -1,4 +1,3 @@
-from bas_engine.core.network.dns_resolver import DNSResolver
 """
 Network Reconnaissance / Port Scan Module
 MITRE ATT&CK: T1046 — Network Service Discovery
@@ -370,10 +369,12 @@ class NmapScanModule(BaseAttackModule):
     # -----------------------------------------------------------------------
 
     async def execute(self) -> List[Finding]:
-        resolved = await DNSResolver.resolve(self.target)
-
-        self.target = resolved.ip
         findings: List[Finding] = []
+
+        resolved = await self.resolve_target()
+        raw_target = resolved.original.strip()
+        target, is_cidr = self._parse_target(raw_target)
+        resolved_ip = resolved.ip
 
         # Read options from self.options (dict passed in from simulation config)
         all_options = getattr(self, "options", {}) or {}
@@ -425,8 +426,6 @@ class NmapScanModule(BaseAttackModule):
         )
         subnet_scan  = options.get("subnet_scan", False)  # force subnet mode
 
-        target, is_cidr = self._parse_target(self.target)
-
         ports = self._get_ports(profile, custom_ports)
         self.logger.info(
             f"[nmap_scan] Target={target} | Profile={profile} | "
@@ -476,7 +475,7 @@ class NmapScanModule(BaseAttackModule):
         # SINGLE HOST MODE
         # ------------------------------------------------------------------
         else:
-            resolved_ip = self._resolve(target) if not self._is_ip(target) else target
+            resolved_ip = resolved_ip or (self._resolve(target) if not self._is_ip(target) else target)
             if not resolved_ip:
                 findings.append(self.finding(
                     title       = f"DNS Resolution Failed: {target}",

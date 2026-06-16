@@ -1,4 +1,3 @@
-from bas_engine.core.network.dns_resolver import DNSResolver
 """
 Lateral Movement Module
 MITRE ATT&CK: T1021 — Remote Services
@@ -44,9 +43,10 @@ class LateralMovementModule(BaseAttackModule):
 
     async def execute(self) -> List[Finding]:
         findings: List[Finding] = []
-        target = self.target
+        resolved = await self.resolve_target()
+        target = resolved.original
         if not target.startswith(("http://", "https://")):
-            target = f"https://{target}"
+            target = f"https://{resolved.hostname or resolved.ip or target}"
 
         self.logger.info(f"[lateral_movement] Starting against {target}")
 

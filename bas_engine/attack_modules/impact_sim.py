@@ -1,4 +1,3 @@
-from bas_engine.core.network.dns_resolver import DNSResolver
 """
 Impact Simulation Module
 ========================
@@ -76,9 +75,8 @@ class ImpactSimModule(BaseAttackModule):
     async def execute(self) -> List[Finding]:
         findings: List[Finding] = []
 
-        target = self.target
-        if not target.startswith(("http://", "https://")):
-            target = f"https://{target}"
+        resolved = await self.resolve_target()
+        target = self.build_target_url(resolved, default_scheme="https")
 
         # Stage results used for the combined summary finding
         ransomware_results = await self._stage_ransomware(target)
@@ -133,12 +131,15 @@ class ImpactSimModule(BaseAttackModule):
                 "5. Enable file integrity monitoring on storage directories."
             ),
             raw_data    = {
+                "provenance": "mixed",
                 "c2_reachable":      c2_reachable,
                 "files_discovered":  files_discovered,
                 "rate_limit_absent": rate_limit_absent,
                 "req_count":         req_count,
                 "block_rate":        round(block_rate, 1),
             },
+            mode        = "simulation",
+            evidence_type = "mixed",
         ))
 
         return findings
@@ -210,6 +211,8 @@ class ImpactSimModule(BaseAttackModule):
                         "3. Maintain offline/immutable backups."
                     ),
                     raw_data    = {"discovered_paths": discovered},
+                    mode        = "simulation",
+                    evidence_type = "simulation",
                 ))
 
             # --- Mock encryption staging ---
@@ -231,6 +234,9 @@ class ImpactSimModule(BaseAttackModule):
                     "3. Enable file activity monitoring and alert on mass file renames.\n"
                     "4. Test backup restoration procedures regularly."
                 ),
+                raw_data    = {"mode": "simulation", "evidence_type": "simulation"},
+                mode        = "simulation",
+                evidence_type = "simulation",
             ))
 
             # --- C2 beacon ---
@@ -262,7 +268,9 @@ class ImpactSimModule(BaseAttackModule):
                                     "2. Implement DNS filtering and egress firewall rules.\n"
                                     "3. Monitor for unusual outbound HTTP/S traffic patterns."
                                 ),
-                                raw_data    = {"path": path, "status": resp.status},
+                                raw_data    = {"path": path, "status": resp.status, "mode": "simulation", "evidence_type": "simulation"},
+                                mode        = "simulation",
+                                evidence_type = "simulation",
                             ))
                 except Exception as e:
                     self.logger.debug(f"C2 probe {url}: {e}")

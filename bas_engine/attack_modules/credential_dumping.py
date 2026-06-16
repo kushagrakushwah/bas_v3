@@ -1,4 +1,3 @@
-from bas_engine.core.network.dns_resolver import DNSResolver
 """
 Credential Dumping Module
 MITRE ATT&CK: T1003 — OS Credential Dumping
@@ -66,9 +65,10 @@ class CredentialDumpingModule(BaseAttackModule):
 
     async def execute(self) -> List[Finding]:
         findings: List[Finding] = []
-        target = self.target
+        resolved = await self.resolve_target()
+        target = resolved.original
         if not target.startswith(("http://", "https://")):
-            target = f"https://{target}"
+            target = f"https://{resolved.hostname or resolved.ip or target}"
 
         self.logger.info(f"[credential_dumping] Starting against {target}")
 
