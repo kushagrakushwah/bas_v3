@@ -43,5 +43,7 @@ services:
     environment:
       - NEXT_PUBLIC_API_URL=http://localhost:8000
       - ELASTICSEARCH_URL=http://elasticsearch:9200
+      - NEXTAUTH_URL=http://localhost:3001
+      - NEXTAUTH_SECRET=secureforge-super-secret-key-12345
     depends_on:
       - bas-engine
