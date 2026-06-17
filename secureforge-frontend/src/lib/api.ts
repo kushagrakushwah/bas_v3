@@ -1,4 +1,4 @@
-﻿const API_BASE =
+export const API_BASE =
   process.env.NEXT_PUBLIC_API_URL ||
   "http://localhost:8000";
 
@@ -40,10 +40,7 @@ export const api = {
   },
 
   getWebSocketUrl() {
-    return (
-      API_BASE.replace("http", "ws") +
-      "/ws/events"
-    );
+    return "ws://localhost:8000/ws/events";
   },
   getMetrics() {
     return request<any>(
@@ -106,6 +103,31 @@ export const api = {
       {
         method: "POST",
         body: JSON.stringify(payload),
+      }
+    );
+  },
+
+  getIntegrations() {
+    return request<any[]>(
+      "/api/v1/integrations/"
+    );
+  },
+
+  createIntegration(data: { name: string; type: string; target: string }) {
+    return request<any>(
+      "/api/v1/integrations/",
+      {
+        method: "POST",
+        body: JSON.stringify(data),
+      }
+    );
+  },
+
+  deleteIntegration(id: string) {
+    return request<any>(
+      `/api/v1/integrations/${id}`,
+      {
+        method: "DELETE",
       }
     );
   },

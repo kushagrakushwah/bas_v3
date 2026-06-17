@@ -63,19 +63,14 @@ class BaseAttackModule(ABC):
     # INIT
     # =====================================================
 
-    def __init__(
-
-        self,
-        target: str,
-        options: dict,
-        sim_id: str,
-    ):
+    def __init__(self, target: str, options: dict = None, sim_id: str = None, event_bus=None):
 
         self.target = target
 
-        self.options = options
+        self.options = options or {}
 
-        self.sim_id = sim_id
+        self.sim_id = sim_id or str(uuid.uuid4())
+        self.event_bus = event_bus
         self._resolved_target: Optional[ResolvedTarget] = None
 
         self.logger = logging.getLogger(
@@ -104,40 +99,37 @@ class BaseAttackModule(ABC):
     # =====================================================
 
     async def emit_event(
-
         self,
-
         event_type: str,
-
         message: str,
-
         metadata: dict = None,
     ):
+        # Print to terminal for visibility
+        self.logger.info(f"[{event_type}] {message}")
 
-        try:
-
-            await manager.broadcast(
-
-                self.sim_id,
-
-                EventStream.build_event(
-
-                    simulation_id=self.sim_id,
-
-                    event_type=event_type,
-
-                    message=message,
-
-                    metadata=metadata or {},
+        if self.event_bus:
+            await self.event_bus.publish(
+                "raw_event",
+                {
+                    "event_type": event_type,
+                    "message": message,
+                    "metadata": metadata or {},
+                    "simulation_id": self.sim_id
+                }
+            )
+        else:
+            try:
+                await manager.broadcast(
+                    self.sim_id,
+                    EventStream.build_event(
+                        simulation_id=self.sim_id,
+                        event_type=event_type,
+                        message=message,
+                        metadata=metadata or {},
+                    )
                 )
-            )
-
-        except Exception as e:
-
-            self.logger.warning(
-
-                f"Event emit failed: {e}"
-            )
+            except Exception as e:
+                self.logger.warning(f"Event emit failed: {e}")
 
     async def resolve_target(self) -> ResolvedTarget:
 

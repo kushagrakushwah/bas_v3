@@ -1,6 +1,24 @@
 version: '3.8'
 
 services:
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: secureforge
+      POSTGRES_PASSWORD: secureforge
+      POSTGRES_DB: secureforge
+    ports:
+      - "5432:5432"
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.10.2
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - ES_JAVA_OPTS=-Xms512m -Xmx512m
+    ports:
+      - "9200:9200"
+
   bas-engine:
     build: 
       context: ./bas_engine
@@ -9,18 +27,21 @@ services:
     environment:
       - ENVIRONMENT=dev
       - PYTHONPATH=/app
+      - DATABASE_URL=postgresql+asyncpg://secureforge:secureforge@postgres:5432/secureforge
+      - ELASTICSEARCH_URL=http://elasticsearch:9200
     volumes:
-      # FIX: Mount the local folder to the new path inside the container
       - ./bas_engine:/app/bas_engine
+    depends_on:
+      - postgres
+      - elasticsearch
 
   dashboard:
     build:
-      context: ./dashboard
+      context: ./secureforge-frontend
     ports:
-      - "8501:8501"
+      - "3001:3000"
     environment:
-      - API_URL=http://bas-engine:8000
-    volumes:
-      - ./dashboard:/app
+      - NEXT_PUBLIC_API_URL=http://localhost:8000
+      - ELASTICSEARCH_URL=http://elasticsearch:9200
     depends_on:
       - bas-engine

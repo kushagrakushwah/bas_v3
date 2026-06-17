@@ -8,6 +8,8 @@ import {
   Plus,
   AlertCircle,
   CheckCircle2,
+  Trash2,
+  X
 } from "lucide-react";
 
 import { api } from "@/lib/api";
@@ -39,9 +41,19 @@ const mockIntegrations = [
   },
 ];
 
+const typeToIcon = {
+  Webhook: Webhook,
+  SMTP: Mail,
+  API: Bell,
+} as Record<string, any>;
+
 export default function AlertsPage() {
   const [simulations, setSimulations] =
     useState<any[]>([]);
+  const [integrations, setIntegrations] =
+    useState<any[]>([]);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [newInt, setNewInt] = useState({ name: "", type: "Webhook", target: "" });
   const events = useEvents();
 
   useEffect(() => {
@@ -54,6 +66,32 @@ export default function AlertsPage() {
         await api.getSimulations();
 
       setSimulations(data);
+
+      const integrationsData =
+        await api.getIntegrations();
+
+      setIntegrations(integrationsData);
+    } catch (err) {
+      console.error(err);
+    }
+  }
+
+  async function handleCreate(e: React.FormEvent) {
+    e.preventDefault();
+    try {
+      const created = await api.createIntegration(newInt);
+      setIntegrations([...integrations, created]);
+      setIsModalOpen(false);
+      setNewInt({ name: "", type: "Webhook", target: "" });
+    } catch (err) {
+      console.error(err);
+    }
+  }
+
+  async function handleDelete(id: string) {
+    try {
+      await api.deleteIntegration(id);
+      setIntegrations(integrations.filter((i) => i.id !== id));
     } catch (err) {
       console.error(err);
     }
@@ -157,7 +195,10 @@ export default function AlertsPage() {
           </p>
         </div>
 
-        <button className="flex items-center gap-2 px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-md text-sm font-semibold transition-colors">
+        <button 
+          onClick={() => setIsModalOpen(true)}
+          className="flex items-center gap-2 px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-md text-sm font-semibold transition-colors"
+        >
           <Plus className="w-4 h-4" />
           New Integration
         </button>
@@ -217,13 +258,13 @@ export default function AlertsPage() {
             Configured Endpoints
           </h2>
 
-          {mockIntegrations.map(
+          {integrations.map(
             (
               integration,
               idx
             ) => {
               const Icon =
-                integration.icon;
+                typeToIcon[integration.type] || Bell;
 
               return (
                 <div
@@ -257,18 +298,27 @@ export default function AlertsPage() {
                     </div>
                   </div>
 
-                  {integration.status ===
-                  "Active" ? (
-                    <span className="flex items-center gap-1 text-xs text-emerald-500 bg-emerald-950/40 px-2 py-1 rounded border border-emerald-900/50">
-                      <CheckCircle2 className="w-3 h-3" />
-                      Active
-                    </span>
-                  ) : (
-                    <span className="flex items-center gap-1 text-xs text-red-500 bg-red-950/40 px-2 py-1 rounded border border-red-900/50">
-                      <AlertCircle className="w-3 h-3" />
-                      Failed
-                    </span>
-                  )}
+                  <div className="flex items-center gap-4">
+                    {integration.status ===
+                    "Active" ? (
+                      <span className="flex items-center gap-1 text-xs text-emerald-500 bg-emerald-950/40 px-2 py-1 rounded border border-emerald-900/50">
+                        <CheckCircle2 className="w-3 h-3" />
+                        Active
+                      </span>
+                    ) : (
+                      <span className="flex items-center gap-1 text-xs text-red-500 bg-red-950/40 px-2 py-1 rounded border border-red-900/50">
+                        <AlertCircle className="w-3 h-3" />
+                        Failed
+                      </span>
+                    )}
+
+                    <button 
+                      onClick={() => handleDelete(integration.id)}
+                      className="p-1.5 text-red-500 hover:bg-red-500/10 rounded-md transition-colors"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
               );
             }
@@ -308,6 +358,74 @@ export default function AlertsPage() {
           </div>
         </div>
       </div>
+
+      {/* MODAL */}
+      {isModalOpen && (
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
+          <div className="bg-zinc-950 border border-white/10 rounded-xl w-full max-w-md p-6">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-xl font-bold text-white">New Integration</h2>
+              <button onClick={() => setIsModalOpen(false)} className="text-white/50 hover:text-white">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <form onSubmit={handleCreate} className="space-y-4">
+              <div>
+                <label className="block text-sm text-zinc-400 mb-1">Name</label>
+                <input 
+                  type="text" 
+                  required
+                  value={newInt.name}
+                  onChange={(e) => setNewInt({...newInt, name: e.target.value})}
+                  className="w-full bg-black border border-white/10 rounded-md px-3 py-2 text-white focus:outline-none focus:border-amber-500" 
+                  placeholder="e.g. Security Slack Channel"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm text-zinc-400 mb-1">Type</label>
+                <select 
+                  value={newInt.type}
+                  onChange={(e) => setNewInt({...newInt, type: e.target.value})}
+                  className="w-full bg-black border border-white/10 rounded-md px-3 py-2 text-white focus:outline-none focus:border-amber-500"
+                >
+                  <option value="Webhook">Webhook (Slack/Teams/etc)</option>
+                  <option value="SMTP">Email (SMTP)</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm text-zinc-400 mb-1">Target URL / Email</label>
+                <input 
+                  type="text" 
+                  required
+                  value={newInt.target}
+                  onChange={(e) => setNewInt({...newInt, target: e.target.value})}
+                  className="w-full bg-black border border-white/10 rounded-md px-3 py-2 text-white focus:outline-none focus:border-amber-500" 
+                  placeholder={newInt.type === "SMTP" ? "security@company.com" : "https://hooks.slack.com/..."}
+                />
+              </div>
+
+              <div className="pt-4 flex justify-end gap-3">
+                <button 
+                  type="button" 
+                  onClick={() => setIsModalOpen(false)}
+                  className="px-4 py-2 text-sm text-white/70 hover:text-white"
+                >
+                  Cancel
+                </button>
+                <button 
+                  type="submit" 
+                  className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-md text-sm font-semibold transition-colors"
+                >
+                  Save Integration
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

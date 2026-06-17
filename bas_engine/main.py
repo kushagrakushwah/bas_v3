@@ -23,12 +23,15 @@ from bas_engine.api.routes import (
     ws,
     metrics,
     replay,
-    infrastructure
+    infrastructure,
+    integrations
 )
 from bas_engine.core.orchestrator import AttackOrchestrator
 from bas_engine.core.event_bus import EventBus
 from bas_engine.utils.logger import setup_logging
 from bas_engine.utils.elk_client import ELKClient
+from bas_engine.database.connection import engine, Base
+import bas_engine.database.models
 
 # Setup
 setup_logging()
@@ -56,6 +59,10 @@ async def startup():
     app.state.elk_client  = ELKClient()
     await app.state.elk_client.connect()
     
+    # Initialize Database Tables
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+    
     # --- THE MISSING WIRE ---
     # Listen to all internal events and forward them to Logstash
     async def forward_to_elk(event):
@@ -75,7 +82,7 @@ async def startup():
             # ALERT PIPELINE
             # -------------------------------------------
 
-            process_alert(event)
+            await process_alert(event)
             await ws.broadcast_event(event)
 
         except Exception as e:
@@ -105,6 +112,11 @@ app.include_router(
     infrastructure.router,
     prefix="/api/v1/infrastructure",
     tags=["Infrastructure"]
+)
+app.include_router(
+    integrations.router,
+    prefix="/api/v1/integrations",
+    tags=["Integrations"]
 )
 app.include_router(
     metrics.router,

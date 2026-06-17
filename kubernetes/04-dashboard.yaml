@@ -13,16 +13,14 @@ spec:
       labels:
         app: secureforge-dashboard
     spec:
-      hostNetwork: true
-      dnsPolicy: ClusterFirstWithHostNet
       containers:
       - name: dashboard
-        image: secureforge-dashboard:v3
+        image: secureforge-frontend:latest
         imagePullPolicy: IfNotPresent
         env:
-        - name: API_URL
+        - name: NEXT_PUBLIC_API_URL
           value: "http://bas-engine:8000/api/v1"
         - name: ELASTICSEARCH_URL
-          value: "https://192.168.10.62:9200"
+          value: "http://elasticsearch:9200"
         ports:
-        - containerPort: 8501
+        - containerPort: 3000

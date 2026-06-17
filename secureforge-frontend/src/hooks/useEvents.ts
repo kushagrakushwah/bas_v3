@@ -2,13 +2,9 @@
 
 import { useEffect, useState } from "react";
 
-const WS_URL =
-  (
-    process.env.NEXT_PUBLIC_API_URL ||
-    "http://localhost:8000"
-  )
-    .replace("http", "ws") +
-  "/ws/events";
+import { api } from "@/lib/api";
+
+const WS_URL = api.getWebSocketUrl();
 
 export function useEvents() {
 

@@ -23,7 +23,7 @@ export default function LaunchPage() {
   );
 
   const [parallel, setParallel] = useState(true);
-  const [liveMode, setLiveMode] = useState(false);
+  const [detailedEnumeration, setDetailedEnumeration] = useState(false);
 
   // ── Nmap options ────────────────────────────────────────────
   const [scanProfile, setScanProfile] = useState("standard");
@@ -38,6 +38,13 @@ export default function LaunchPage() {
   // ── SSH / Webmail brute force options ───────────────────────
   const [sshAuthType, setSshAuthType] = useState<"ssh" | "webmail">("ssh");
   const [webmailLoginUrl, setWebmailLoginUrl] = useState("");
+
+  // ── Custom HTTP options ──────────────────────────────────────
+  const [customMethod, setCustomMethod] = useState("GET");
+  const [customUrl, setCustomUrl] = useState("");
+  const [customHeaders, setCustomHeaders] = useState("{}");
+  const [customBody, setCustomBody] = useState("");
+  const [customTimeout, setCustomTimeout] = useState(10);
 
   // ── Module state ────────────────────────────────────────────
   const [modules, setModules] = useState<AttackModule[]>([]);
@@ -120,15 +127,29 @@ export default function LaunchPage() {
         };
       }
 
-      // live_mode goes inside metadata — not at the top level
+      // ── Custom HTTP options ──────────────────────────────
+      if (selectedModules.includes("custom_http")) {
+        try {
+          options.custom_http = {
+            method: customMethod,
+            url: customUrl || target, // fallback to simulation target
+            headers: JSON.parse(customHeaders),
+            body: customBody,
+            timeout: customTimeout,
+          };
+        } catch (e) {
+          setMessage("Invalid JSON in custom headers.");
+          setLaunching(false);
+          return;
+        }
+      }
+
       const payload: SimulationRequest = {
         name: jobLabel,
         target,
         modules: selectedModules,
         parallel,
-        metadata: {
-          live_mode: liveMode,
-        },
+        detailed_enumeration: detailedEnumeration,
         options,
       };
 
@@ -161,13 +182,6 @@ export default function LaunchPage() {
           value={selectedModules.length}
           icon={Rocket}
           color="purple"
-        />
-
-        <MetricCard
-          title="Mode"
-          value={liveMode ? "LIVE" : "SAFE"}
-          icon={liveMode ? AlertTriangle : CheckCircle2}
-          color={liveMode ? "red" : "green"}
         />
 
         <MetricCard
@@ -381,6 +395,66 @@ export default function LaunchPage() {
           </div>
         )}
 
+        {/* ── Custom HTTP options ───────────────────────────── */}
+        {selectedModules.includes("custom_http") && (
+          <div className="mt-8 rounded-2xl border border-white/10 bg-white/[0.03] p-6">
+            <h3 className="text-lg font-semibold mb-4">Custom HTTP Request</h3>
+            <div className="grid md:grid-cols-2 gap-6">
+              <div>
+                <label className="text-sm text-white/50">Method</label>
+                <select
+                  value={customMethod}
+                  onChange={(e) => setCustomMethod(e.target.value)}
+                  className="mt-2 w-full rounded-2xl border border-white/10 bg-black/30 p-4"
+                >
+                  <option value="GET">GET</option>
+                  <option value="POST">POST</option>
+                  <option value="PUT">PUT</option>
+                  <option value="DELETE">DELETE</option>
+                  <option value="PATCH">PATCH</option>
+                </select>
+              </div>
+              <div>
+                <label className="text-sm text-white/50">URL (override)</label>
+                <input
+                  value={customUrl}
+                  onChange={(e) => setCustomUrl(e.target.value)}
+                  placeholder="Leave empty to use simulation target"
+                  className="mt-2 w-full rounded-2xl border border-white/10 bg-black/30 p-4"
+                />
+              </div>
+              <div className="md:col-span-2">
+                <label className="text-sm text-white/50">Headers (JSON)</label>
+                <input
+                  value={customHeaders}
+                  onChange={(e) => setCustomHeaders(e.target.value)}
+                  placeholder='{"Content-Type": "application/json"}'
+                  className="mt-2 w-full rounded-2xl border border-white/10 bg-black/30 p-4"
+                />
+              </div>
+              <div className="md:col-span-2">
+                <label className="text-sm text-white/50">Body (string)</label>
+                <textarea
+                  value={customBody}
+                  onChange={(e) => setCustomBody(e.target.value)}
+                  placeholder='{"key": "value"} or plain text'
+                  rows={4}
+                  className="mt-2 w-full rounded-2xl border border-white/10 bg-black/30 p-4"
+                />
+              </div>
+              <div>
+                <label className="text-sm text-white/50">Timeout (sec)</label>
+                <input
+                  type="number"
+                  value={customTimeout}
+                  onChange={(e) => setCustomTimeout(Number(e.target.value))}
+                  className="mt-2 w-full rounded-2xl border border-white/10 bg-black/30 p-4"
+                />
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* ── Module grid ──────────────────────────────────── */}
         <div className="mt-8">
           <h3 className="text-lg font-semibold mb-4">Attack Modules</h3>
@@ -450,13 +524,13 @@ export default function LaunchPage() {
             Parallel
           </label>
 
-          <label className="flex items-center gap-2 text-red-400">
+          <label className="flex items-center gap-2 text-red-500 font-semibold">
             <input
               type="checkbox"
-              checked={liveMode}
-              onChange={() => setLiveMode(!liveMode)}
+              checked={detailedEnumeration}
+              onChange={() => setDetailedEnumeration(!detailedEnumeration)}
             />
-            Live Mode
+            Danger
           </label>
         </div>
 

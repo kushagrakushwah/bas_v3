@@ -11,3 +11,5 @@ python-nmap
 sqlalchemy
 asyncpg
 kubernetes
+cryptography
+aiosmtplib

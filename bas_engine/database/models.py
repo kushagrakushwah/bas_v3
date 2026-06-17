@@ -158,3 +158,29 @@ class EventDB(Base):
     payload = Column(JSON)
 
     timestamp = Column(DateTime)
+
+class IntegrationDB(Base):
+
+    __tablename__ = "integrations"
+
+    id = Column(
+        String,
+        primary_key=True,
+        default=lambda: str(uuid.uuid4())
+    )
+
+    name = Column(String)
+
+    type = Column(String)
+
+    target = Column(String)
+
+    status = Column(
+        String,
+        default="Active"
+    )
+
+    created_at = Column(
+        DateTime,
+        default=datetime.utcnow
+    )

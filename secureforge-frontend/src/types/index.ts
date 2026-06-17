@@ -58,10 +58,8 @@ export interface SimulationRequest {
   target: string;
   modules: string[];
   parallel: boolean;
-  metadata: {
-    live_mode: boolean;
-    [key: string]: unknown;
-  };
+  detailed_enumeration?: boolean;
+  metadata?: Record<string, unknown>;
   options?: SimulationOptions;
 }
 

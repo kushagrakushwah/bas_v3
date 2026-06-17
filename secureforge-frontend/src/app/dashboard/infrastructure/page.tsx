@@ -138,7 +138,7 @@ export default function InfrastructurePage() {
               : metrics.node_count
           }
           icon={Box}
-          color="blue"
+          color="purple"
         />
       </div>
 

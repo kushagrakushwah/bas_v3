@@ -1,6 +1,7 @@
 import asyncio
 import uuid
 import logging
+import importlib
 from datetime import datetime
 from typing import Dict, Optional, List
 from enum import Enum
@@ -29,6 +30,24 @@ class SimulationState(str, Enum):
     COMPLETED = "completed"
     FAILED    = "failed"
     CANCELLED = "cancelled"
+
+
+# ─── Module variant mapping ────────────────────────────────────────────────
+# Maps module_name -> (safe_module_path, safe_class_name, red_module_path, red_class_name)
+# or a dict with boolean keys.
+# This tells the orchestrator which file/class to load for safe vs. aggressive mode.
+MODULE_VARIANT_MAP = {
+    "privilege_escalation": {
+        False: ("bas_engine.attack_modules.privilege_escalation_safe", "PrivEscModule"),
+        True:  ("bas_engine.attack_modules.privilege_escalation_red", "PrivEscModule"),
+    },
+    "impact_sim": {
+        False: ("bas_engine.attack_modules.impact_sim_safe", "ImpactSimModule"),
+        True:  ("bas_engine.attack_modules.impact_sim_red", "ImpactSimModule"),
+    },
+    # Add other modules here if they have _safe/_red variants.
+    # If a module is not listed, we will fall back to the original registry.
+}
 
 
 class AttackOrchestrator:
@@ -111,12 +130,14 @@ class AttackOrchestrator:
             )
 
             try:
+                # Pass the detailed_enumeration flag to each module runner
                 module_tasks = [
                     self._run_module(
                         sim_id,
                         request.target,
                         m,
-                        request.options
+                        request.options,
+                        request.detailed_enumeration  # <-- NEW
                     )
                     for m in request.modules
                 ]
@@ -232,29 +253,59 @@ class AttackOrchestrator:
         sim_id: str,
         target: str,
         module_name: str,
-        options: dict
+        options: dict,
+        detailed_enumeration: bool  # <-- NEW parameter
     ) -> AttackModuleResult:
-        from bas_engine.attack_modules.registry import MODULE_REGISTRY
-
-        module_cls = MODULE_REGISTRY.get(module_name)
+        """
+        Runs a single attack module.
+        - If the module has a _safe / _red variant defined in MODULE_VARIANT_MAP,
+          it imports the appropriate one based on detailed_enumeration.
+        - Otherwise, it falls back to the original MODULE_REGISTRY.
+        """
+        # 1. Try to load a variant from the map
+        variant_entry = MODULE_VARIANT_MAP.get(module_name)
+        if variant_entry:
+            module_path, class_name = variant_entry[detailed_enumeration]
+            try:
+                mod = importlib.import_module(module_path)
+                module_cls = getattr(mod, class_name)
+                logger.info(
+                    f"Loading module {module_name} variant: "
+                    f"{module_path}.{class_name} "
+                    f"(detailed_enumeration={detailed_enumeration})"
+                )
+            except (ImportError, AttributeError) as e:
+                logger.error(
+                    f"Failed to import variant for {module_name}: {e}. "
+                    "Falling back to registry."
+                )
+                module_cls = None
+        else:
+            # Fallback to the original registry (for modules without variants)
+            from bas_engine.attack_modules.registry import MODULE_REGISTRY
+            module_cls = MODULE_REGISTRY.get(module_name)
 
         if not module_cls:
             return AttackModuleResult(
                 module=module_name,
                 status="error",
-                error="Not found"
+                error=f"Module {module_name} not found"
             )
 
-        # IMPORTANT:
-        # Pass only the per-module option block, not the full options dict.
+        # 2. Extract per-module options
         module_options = {}
         if isinstance(options, dict):
             module_options = options.get(module_name, {}) or {}
 
+        # (Optional) still inject the flag in case the module wants it anyway
+        module_options["detailed_enumeration"] = detailed_enumeration
+
+        # 3. Instantiate and run
         module_instance = module_cls(
             target=target,
             options=module_options,
-            sim_id=sim_id
+            sim_id=sim_id,
+            event_bus=self.event_bus
         )
 
         await self.event_bus.publish(
@@ -276,8 +327,7 @@ class AttackOrchestrator:
             }
         )
 
-        # --- THE SECOND MISSING WIRE ---
-        # Broadcast the actual findings so they appear in Kibana!
+        # Broadcast individual findings
         for finding in mod_result.findings:
             finding_data = (
                 finding.model_dump()

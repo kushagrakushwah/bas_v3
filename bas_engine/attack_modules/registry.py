@@ -1,13 +1,13 @@
 
 from .ssh_bruteforce import SSHBruteForceModule
 from .owasp_web import OWASPWebModule
-from .privilege_escalation import PrivEscModule
+from .privilege_escalation_safe import PrivEscModule
 from .waf_detection import WAFEvasionModule
 from .nmap_scan import NmapScanModule
 from .apt_killchain import APTKillChainModule
 from .recon_exposure import ReconExposureModule
-from .impact_sim import ImpactSimModule
-
+from .impact_sim_safe import ImpactSimModule
+from .custom_http import CustomHTTPModule
 
 
 MODULE_REGISTRY = {
@@ -19,5 +19,6 @@ MODULE_REGISTRY = {
     ImpactSimModule.MODULE_NAME:          ImpactSimModule,
     NmapScanModule.MODULE_NAME:           NmapScanModule,
     APTKillChainModule.MODULE_NAME:       APTKillChainModule,
+    CustomHTTPModule.MODULE_NAME: CustomHTTPModule,
 }
 

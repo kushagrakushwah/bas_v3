@@ -22,8 +22,7 @@ type EventItem = {
   source?: string;
 };
 
-const API_BASE =
-  process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+import { api, API_BASE } from "@/lib/api";
 
 function normalizeEvent(event: any): EventItem {
   if (!event) return {};
@@ -77,6 +76,111 @@ function dedupeEvents(events: EventItem[]) {
   return result;
 }
 
+function EventPayloadRenderer({ event }: { event: EventItem }) {
+  const payload = (event.payload || event) as any;
+  
+  if (event.type === "raw_event") {
+    const rawType = payload.event_type || "INFO";
+    const msg = payload.message || "";
+    const meta = payload.metadata || {};
+    
+    return (
+      <div className="mt-4 space-y-3">
+        <div className="bg-black/40 rounded-xl p-4 border border-white/5 font-mono text-sm">
+          <div className="flex items-center gap-2 mb-2 text-purple-400">
+            <span className="font-bold">[{rawType}]</span>
+          </div>
+          <p className="text-white/90 whitespace-pre-wrap leading-relaxed">{msg}</p>
+        </div>
+        
+        {Object.keys(meta).length > 0 && (
+          <div className="flex flex-wrap gap-2 mt-3">
+            {Object.entries(meta).map(([k, v]) => (
+              <div key={k} className="bg-white/[0.05] border border-white/10 rounded-md px-3 py-1.5 text-xs flex gap-2 items-center">
+                <span className="text-white/40 uppercase tracking-wider">{k}:</span>
+                <span className="text-white/80 font-mono">{String(v)}</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  }
+  
+  if (event.type === "module.completed" || event.type === "module.started") {
+    return (
+      <div className="mt-4 flex flex-wrap gap-3">
+        <div className="bg-white/[0.03] border border-white/10 rounded-lg p-3 min-w-[140px]">
+          <div className="text-[10px] uppercase tracking-widest text-white/40 mb-1">Module</div>
+          <div className="font-mono text-sm text-purple-300">{payload.module || "Unknown"}</div>
+        </div>
+        {payload.findings_count !== undefined && (
+          <div className="bg-white/[0.03] border border-white/10 rounded-lg p-3 min-w-[140px]">
+            <div className="text-[10px] uppercase tracking-widest text-white/40 mb-1">Findings</div>
+            <div className="font-mono text-sm text-amber-300">{payload.findings_count}</div>
+          </div>
+        )}
+      </div>
+    );
+  }
+  
+  if (event.type === "vulnerability.found") {
+    const details = payload.finding_details || {};
+    return (
+      <div className="mt-4 bg-red-500/5 border border-red-500/20 rounded-xl p-4 space-y-3">
+        <div className="flex items-start justify-between">
+          <div>
+            <h4 className="text-red-400 font-bold text-sm">{details.title || "Unknown Vulnerability"}</h4>
+            <p className="text-white/70 text-xs mt-1">{details.description}</p>
+          </div>
+          <span className="bg-red-500/20 text-red-300 text-[10px] px-2 py-1 rounded uppercase tracking-wider font-bold">
+            {details.severity || "Critical"}
+          </span>
+        </div>
+        
+        <div className="grid grid-cols-2 gap-3 mt-3">
+          <div className="bg-black/30 rounded p-2 text-xs">
+            <span className="text-white/40 block mb-1">MITRE ID</span>
+            <span className="font-mono text-white/80">{details.mitre_id || "N/A"}</span>
+          </div>
+          <div className="bg-black/30 rounded p-2 text-xs">
+            <span className="text-white/40 block mb-1">Target</span>
+            <span className="font-mono text-white/80">{payload.target || "N/A"}</span>
+          </div>
+        </div>
+        
+        {details.remediation && (
+          <div className="mt-3 bg-green-500/10 border border-green-500/20 rounded p-3 text-xs">
+            <span className="text-green-400 font-bold block mb-1">Remediation</span>
+            <span className="text-white/80">{details.remediation}</span>
+          </div>
+        )}
+      </div>
+    );
+  }
+  
+  if (event.type === "simulation.completed" || event.type === "simulation.started" || event.type === "simulation.queued") {
+    return (
+      <div className="mt-4 bg-white/[0.03] border border-white/10 rounded-xl p-4 flex gap-4 items-center">
+        <div className="w-10 h-10 rounded-full bg-purple-500/20 flex items-center justify-center">
+          <Activity className="w-5 h-5 text-purple-400" />
+        </div>
+        <div>
+          <h4 className="text-white font-medium text-sm">Simulation {event.type.split('.')[1]}</h4>
+          <p className="text-white/50 text-xs font-mono mt-1">ID: {payload.id || payload.sim_id || "Unknown"}</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Fallback for unknown events
+  return (
+    <pre className="mt-4 overflow-x-auto rounded-xl border border-white/10 bg-black/40 p-4 text-[11px] text-white/60 font-mono leading-relaxed whitespace-pre-wrap">
+      {JSON.stringify(payload, null, 2)}
+    </pre>
+  );
+}
+
 export default function RealtimeOperations() {
   const terminalRef = useRef<HTMLDivElement | null>(null);
 
@@ -85,7 +189,7 @@ export default function RealtimeOperations() {
 
   // This hook can return { connected, messages } in the current version.
   // Using "any" here keeps the page resilient if the hook shape changes slightly.
-  const socketState = useWebSocket("ws://127.0.0.1:8000/ws/events") as any;
+  const socketState = useWebSocket(api.getWebSocketUrl()) as any;
 
   const connected = Boolean(socketState?.connected);
   const liveMessages: EventItem[] = Array.isArray(socketState?.messages)
@@ -336,9 +440,7 @@ export default function RealtimeOperations() {
                     </span>
                   </div>
 
-                  <pre className="mt-4 overflow-x-auto rounded-xl border border-white/10 bg-white/[0.03] p-4 text-xs text-white/80 leading-6 whitespace-pre-wrap">
-{JSON.stringify(event.payload ?? event, null, 2)}
-                  </pre>
+                  <EventPayloadRenderer event={event} />
                 </div>
               );
             })

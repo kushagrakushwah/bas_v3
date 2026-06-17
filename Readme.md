@@ -203,88 +203,60 @@ secureforge/
 
 ## Prerequisites
 
-- Python 3.11+
-- Node.js 18+ and npm
-- Docker + Docker Compose (for containerized runs)
-- `kubectl` configured against a local or remote cluster (for Kubernetes deployment)
-- Kubernetes cluster with `metrics-server` installed (for CPU/memory data)
-- Nmap installed on the host or container running the backend (for scan modules)
-- A running ELK stack (local or remote) if you want telemetry forwarding
+Before you begin, ensure your machine has the following installed:
+1. **Git**: To clone the repository.
+   - Download: [git-scm.com](https://git-scm.com/downloads)
+2. **Docker Desktop**: This includes the Docker Engine and Docker Compose.
+   - Download: [docker.com/products/docker-desktop](https://www.docker.com/products/docker-desktop)
+   - Ensure Docker Desktop is running before proceeding.
 
-For local Kubernetes, [minikube](https://minikube.sigs.k8s.io/) or [kind](https://kind.sigs.k8s.io/) both work fine.
+> **Note**: Because SecureForge uses a modern, containerized architecture, you do not need to install Python, Node.js, or complex databases directly on your host machine. Docker will handle everything automatically.
 
 ---
 
-## Local Setup
+## 🚀 Quick Start (Local Setup)
 
-### Clone the repository
+Because the entire infrastructure (Frontend Dashboard, Python BAS Engine, PostgreSQL Database, and Elasticsearch) is containerized, you can launch the entire stack with a single command.
+
+### 1. Clone the Repository
+Open your terminal and clone the repository to your local machine:
 
 ```bash
-git clone https://github.com/your-org/secureforge.git
+git clone https://github.com/your-username/secureforge.git
 cd secureforge
 ```
 
----
-
-## Running the Backend
-
-The backend is a FastAPI app located in `bas_engine/`. It runs via `uvicorn`.
+### 2. Launch the Platform
+Make sure you are in the root `secureforge` directory (where the `docker-compose.yml` file is located) and run:
 
 ```bash
-cd bas_engine
-python -m venv venv
-
-# Windows
-venv\Scripts\activate
-
-# macOS / Linux
-source venv/bin/activate
-
-pip install -r requirements.txt
-
-uvicorn bas_engine.main:app --host localhost --port 8000
+docker-compose up -d --build
 ```
 
-The API will be available at `http://localhost:8000`. Swagger docs are at `http://localhost:8000/docs`.
+### 3. Access the Platform
+Once the terminal returns to the prompt and the containers have started, your platform is live!
 
-The WebSocket endpoint for real-time events is at `ws://localhost:8000/ws`.
+- **SecureForge Dashboard (UI)**: [http://localhost:3001](http://localhost:3001)
+- **Backend API Docs (Swagger UI)**: [http://localhost:8000/docs](http://localhost:8000/docs)
 
-**Environment variables** — create a `.env` file in `bas_engine/` or export before running:
-
-```env
-ELK_HOST=http://localhost:9200
-LOGSTASH_HOST=localhost
-LOGSTASH_PORT=5044
-KUBECONFIG=/path/to/.kube/config   # omit if running in-cluster
-```
-
----
-
-## Running the Next.js Frontend
-
-The primary UI is in `secureforge-frontend/`. It requires the backend to be running.
+### 4. View Live Logs (Optional)
+To view the raw Python engine output or debug modules, you can stream the backend logs:
 
 ```bash
-cd secureforge-frontend
-npm install
-npm run dev
+docker logs -f secureforge-bas-engine-1
 ```
+*(Press `Ctrl+C` to exit the log stream without killing the server).*
 
-The dashboard will be available at `http://localhost:3000`.
-
-**Environment** — create a `.env.local` file in `secureforge-frontend/`:
-
-```env
-NEXT_PUBLIC_API_URL=http://localhost:8000
-NEXT_PUBLIC_WS_URL=ws://localhost:8000/ws
-```
-
-For production builds:
+### 5. Shutting Down
+When you are done testing and want to shut off the platform to free up RAM/CPU:
 
 ```bash
-npm run build
-npm start
+docker-compose down
 ```
+
+> **Complete Wipe**: If you want to completely wipe all data (delete databases, simulation history, and logs) to start from a clean slate next time, run: `docker-compose down -v --rmi all`
+
+
 
 ---
 
