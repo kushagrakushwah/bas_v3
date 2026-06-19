@@ -15,6 +15,72 @@ import PageHeader from "@/components/ui/PageHeader";
 import { api } from "@/lib/api";
 import type { AttackModule, Simulation, SimulationRequest } from "@/types/index";
 
+// ── Default templates for the 8 vuln_scanner tabs ──────────────
+const DEFAULT_TEMPLATES = {
+  xss: {
+    description: "Test for reflected script injection",
+    method: "GET",
+    payload: "<script>alert(1)</script>",
+    param: "q",
+    headers: "{}",
+  },
+  sqli: {
+    description: "Test for SQL injection with delay",
+    method: "GET",
+    payload: "' OR SLEEP(5) --",
+    param: "id",
+    headers: "{}",
+  },
+  cmd_injection: {
+    description: "Test for OS command injection",
+    method: "GET",
+    payload: "; ping 127.0.0.1 -c 1",
+    param: "file",
+    headers: "{}",
+  },
+  path_traversal: {
+    description: "Test for path traversal (read /etc/passwd)",
+    method: "GET",
+    payload: "../../../etc/passwd",
+    param: "file",
+    headers: "{}",
+  },
+  xxe: {
+    description: "Test for XML external entity injection",
+    method: "POST",
+    payload:
+      '<?xml version="1.0"?><!DOCTYPE root [<!ENTITY test SYSTEM "file:///etc/passwd">]><root>&test;</root>',
+    param: "",
+    headers: '{"Content-Type": "application/xml"}',
+  },
+  ssrf: {
+    description: "Test for server-side request forgery (AWS metadata)",
+    method: "GET",
+    payload: "http://169.254.169.254/latest/meta-data/",
+    param: "url",
+    headers: "{}",
+  },
+  bruteforce: {
+    description: "Try common username/password combinations",
+    method: "POST",
+    payload: "",
+    param: "",
+    headers: '{"Content-Type": "application/x-www-form-urlencoded"}',
+    wordlist: "admin:admin,admin:password,user:password,root:root,admin:123456",
+    loginUrl: "",
+    usernameParam: "username",
+    passwordParam: "password",
+  },
+  portscan: {
+    description: "Check if a specific port is open",
+    method: "TCP",
+    payload: "",
+    param: "",
+    headers: "{}",
+    port: 80,
+  },
+};
+
 export default function LaunchPage() {
   const [target, setTarget] = useState("");
 
@@ -23,6 +89,7 @@ export default function LaunchPage() {
   );
 
   const [parallel, setParallel] = useState(true);
+  const [autonomous, setAutonomous] = useState(false);
   const [detailedEnumeration, setDetailedEnumeration] = useState(false);
 
   // ── Nmap options ────────────────────────────────────────────
@@ -39,12 +106,24 @@ export default function LaunchPage() {
   const [sshAuthType, setSshAuthType] = useState<"ssh" | "webmail">("ssh");
   const [webmailLoginUrl, setWebmailLoginUrl] = useState("");
 
-  // ── Custom HTTP options ──────────────────────────────────────
-  const [customMethod, setCustomMethod] = useState("GET");
-  const [customUrl, setCustomUrl] = useState("");
-  const [customHeaders, setCustomHeaders] = useState("{}");
-  const [customBody, setCustomBody] = useState("");
-  const [customTimeout, setCustomTimeout] = useState(10);
+  // ── Vuln Scanner options ─────────────────────────────────────
+  const [vulnTestType, setVulnTestType] = useState("xss");
+  const [vulnMethod, setVulnMethod] = useState("GET");
+  const [vulnUrl, setVulnUrl] = useState("");
+  const [vulnHeaders, setVulnHeaders] = useState("{}");
+  const [vulnBody, setVulnBody] = useState("");
+  const [vulnTimeout, setVulnTimeout] = useState(10);
+  const [vulnInjectParam, setVulnInjectParam] = useState("");
+  const [vulnPayload, setVulnPayload] = useState("<script>alert(1)</script>");
+  // Brute‑force specific
+  const [vulnLoginUrl, setVulnLoginUrl] = useState("");
+  const [vulnUsernameParam, setVulnUsernameParam] = useState("username");
+  const [vulnPasswordParam, setVulnPasswordParam] = useState("password");
+  const [vulnWordlist, setVulnWordlist] = useState(
+    "admin:admin,admin:password,user:password,root:root,admin:123456"
+  );
+  // Port‑scan specific
+  const [vulnPort, setVulnPort] = useState(80);
 
   // ── Module state ────────────────────────────────────────────
   const [modules, setModules] = useState<AttackModule[]>([]);
@@ -127,20 +206,37 @@ export default function LaunchPage() {
         };
       }
 
-      // ── Custom HTTP options ──────────────────────────────
-      if (selectedModules.includes("custom_http")) {
-        try {
-          options.custom_http = {
-            method: customMethod,
-            url: customUrl || target, // fallback to simulation target
-            headers: JSON.parse(customHeaders),
-            body: customBody,
-            timeout: customTimeout,
+      // ── Vuln Scanner options ──────────────────────────────
+      if (selectedModules.includes("vuln_scanner")) {
+        const common = {
+          test_type: vulnTestType,
+          url: vulnUrl || target,
+          method: vulnMethod,
+          headers: JSON.parse(vulnHeaders),
+          body: vulnBody,
+          timeout: vulnTimeout,
+          inject_param: vulnInjectParam,
+          payload: vulnBody, // use vulnBody here since textarea only updates vulnBody
+        };
+
+        if (vulnTestType === "bruteforce") {
+          options.vuln_scanner = {
+            ...common,
+            login_url: vulnLoginUrl || target,
+            username_param: vulnUsernameParam,
+            password_param: vulnPasswordParam,
+            wordlist: vulnWordlist.split(",").map((pair) => {
+              const [u, p] = pair.split(":");
+              return [u.trim(), p.trim()];
+            }),
           };
-        } catch (e) {
-          setMessage("Invalid JSON in custom headers.");
-          setLaunching(false);
-          return;
+        } else if (vulnTestType === "portscan") {
+          options.vuln_scanner = {
+            ...common,
+            port: vulnPort,
+          };
+        } else {
+          options.vuln_scanner = common;
         }
       }
 
@@ -149,6 +245,7 @@ export default function LaunchPage() {
         target,
         modules: selectedModules,
         parallel,
+        autonomous,
         detailed_enumeration: detailedEnumeration,
         options,
       };
@@ -163,6 +260,28 @@ export default function LaunchPage() {
       setMessage("Failed to launch simulation.");
     } finally {
       setLaunching(false);
+    }
+  }
+
+  // ── Helper: reset vuln_scanner fields when tab changes ──────
+  function switchVulnTab(type: string) {
+    setVulnTestType(type);
+    const template = DEFAULT_TEMPLATES[type as keyof typeof DEFAULT_TEMPLATES] as any;
+    if (template) {
+      setVulnMethod(template.method || "GET");
+      setVulnHeaders(template.headers || "{}");
+      setVulnBody(template.payload || "");
+      setVulnInjectParam(template.param || "");
+      setVulnPayload(template.payload || "");
+      if (type === "bruteforce") {
+        setVulnWordlist(template.wordlist || "");
+        setVulnLoginUrl(template.loginUrl || "");
+        setVulnUsernameParam(template.usernameParam || "username");
+        setVulnPasswordParam(template.passwordParam || "password");
+      }
+      if (type === "portscan") {
+        setVulnPort(template.port || 80);
+      }
     }
   }
 
@@ -395,62 +514,159 @@ export default function LaunchPage() {
           </div>
         )}
 
-        {/* ── Custom HTTP options ───────────────────────────── */}
-        {selectedModules.includes("custom_http") && (
+        {/* ── Vuln Scanner options ───────────────────────────── */}
+        {selectedModules.includes("vuln_scanner") && (
           <div className="mt-8 rounded-2xl border border-white/10 bg-white/[0.03] p-6">
-            <h3 className="text-lg font-semibold mb-4">Custom HTTP Request</h3>
-            <div className="grid md:grid-cols-2 gap-6">
-              <div>
-                <label className="text-sm text-white/50">Method</label>
-                <select
-                  value={customMethod}
-                  onChange={(e) => setCustomMethod(e.target.value)}
-                  className="mt-2 w-full rounded-2xl border border-white/10 bg-black/30 p-4"
+            <h3 className="text-lg font-semibold mb-4">Vulnerability Test Scanner</h3>
+
+            {/* Tab buttons */}
+            <div className="flex flex-wrap gap-2 mb-6">
+              {[
+                "xss",
+                "sqli",
+                "cmd_injection",
+                "path_traversal",
+                "xxe",
+                "ssrf",
+                "bruteforce",
+                "portscan",
+              ].map((type) => (
+                <button
+                  key={type}
+                  onClick={() => switchVulnTab(type)}
+                  className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${
+                    vulnTestType === type
+                      ? "bg-purple-600 text-white"
+                      : "bg-white/5 text-white/60 hover:bg-white/10"
+                  }`}
                 >
-                  <option value="GET">GET</option>
-                  <option value="POST">POST</option>
-                  <option value="PUT">PUT</option>
-                  <option value="DELETE">DELETE</option>
-                  <option value="PATCH">PATCH</option>
-                </select>
-              </div>
-              <div>
-                <label className="text-sm text-white/50">URL (override)</label>
-                <input
-                  value={customUrl}
-                  onChange={(e) => setCustomUrl(e.target.value)}
-                  placeholder="Leave empty to use simulation target"
-                  className="mt-2 w-full rounded-2xl border border-white/10 bg-black/30 p-4"
-                />
-              </div>
-              <div className="md:col-span-2">
-                <label className="text-sm text-white/50">Headers (JSON)</label>
-                <input
-                  value={customHeaders}
-                  onChange={(e) => setCustomHeaders(e.target.value)}
-                  placeholder='{"Content-Type": "application/json"}'
-                  className="mt-2 w-full rounded-2xl border border-white/10 bg-black/30 p-4"
-                />
-              </div>
-              <div className="md:col-span-2">
-                <label className="text-sm text-white/50">Body (string)</label>
-                <textarea
-                  value={customBody}
-                  onChange={(e) => setCustomBody(e.target.value)}
-                  placeholder='{"key": "value"} or plain text'
-                  rows={4}
-                  className="mt-2 w-full rounded-2xl border border-white/10 bg-black/30 p-4"
-                />
-              </div>
+                  {type.toUpperCase()}
+                </button>
+              ))}
+            </div>
+
+            {/* Conditional fields based on test type */}
+            <div className="grid md:grid-cols-2 gap-6">
+              {vulnTestType !== "bruteforce" && (
+                <div>
+                  <label className="text-sm text-white/50">URL (override)</label>
+                  <input
+                    value={vulnUrl}
+                    onChange={(e) => setVulnUrl(e.target.value)}
+                    placeholder="Leave empty to use simulation target"
+                    className="mt-2 w-full rounded-2xl border border-white/10 bg-black/30 p-4"
+                  />
+                </div>
+              )}
+
+              {!["bruteforce", "portscan"].includes(vulnTestType) && (
+                <>
+                  <div>
+                    <label className="text-sm text-white/50">Method</label>
+                    <select
+                      value={vulnMethod}
+                      onChange={(e) => setVulnMethod(e.target.value)}
+                      className="mt-2 w-full rounded-2xl border border-white/10 bg-black/30 p-4"
+                    >
+                      <option value="GET">GET</option>
+                      <option value="POST">POST</option>
+                      <option value="PUT">PUT</option>
+                      <option value="DELETE">DELETE</option>
+                      <option value="PATCH">PATCH</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-sm text-white/50">Headers (JSON)</label>
+                    <input
+                      value={vulnHeaders}
+                      onChange={(e) => setVulnHeaders(e.target.value)}
+                      placeholder='{"Content-Type": "application/json"}'
+                      className="mt-2 w-full rounded-2xl border border-white/10 bg-black/30 p-4"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm text-white/50">Parameter Name (to inject)</label>
+                    <input
+                      value={vulnInjectParam}
+                      onChange={(e) => setVulnInjectParam(e.target.value)}
+                      placeholder="e.g., q, id, file"
+                      className="mt-2 w-full rounded-2xl border border-white/10 bg-black/30 p-4"
+                    />
+                  </div>
+                  <div className="md:col-span-2">
+                    <label className="text-sm text-white/50">Payload / Body</label>
+                    <textarea
+                      value={vulnBody}
+                      onChange={(e) => setVulnBody(e.target.value)}
+                      placeholder="Enter your test string"
+                      rows={3}
+                      className="mt-2 w-full rounded-2xl border border-white/10 bg-black/30 p-4"
+                    />
+                  </div>
+                </>
+              )}
               <div>
                 <label className="text-sm text-white/50">Timeout (sec)</label>
                 <input
                   type="number"
-                  value={customTimeout}
-                  onChange={(e) => setCustomTimeout(Number(e.target.value))}
+                  value={vulnTimeout}
+                  onChange={(e) => setVulnTimeout(Number(e.target.value))}
                   className="mt-2 w-full rounded-2xl border border-white/10 bg-black/30 p-4"
                 />
               </div>
+
+              {/* Brute Force specific fields */}
+              {vulnTestType === "bruteforce" && (
+                <>
+                  <div>
+                    <label className="text-sm text-white/50">Login URL</label>
+                    <input
+                      value={vulnLoginUrl}
+                      onChange={(e) => setVulnLoginUrl(e.target.value)}
+                      placeholder="https://example.com/login"
+                      className="mt-2 w-full rounded-2xl border border-white/10 bg-black/30 p-4"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm text-white/50">Username Parameter</label>
+                    <input
+                      value={vulnUsernameParam}
+                      onChange={(e) => setVulnUsernameParam(e.target.value)}
+                      className="mt-2 w-full rounded-2xl border border-white/10 bg-black/30 p-4"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm text-white/50">Password Parameter</label>
+                    <input
+                      value={vulnPasswordParam}
+                      onChange={(e) => setVulnPasswordParam(e.target.value)}
+                      className="mt-2 w-full rounded-2xl border border-white/10 bg-black/30 p-4"
+                    />
+                  </div>
+                  <div className="md:col-span-2">
+                    <label className="text-sm text-white/50">Wordlist (comma‑separated user:pass)</label>
+                    <input
+                      value={vulnWordlist}
+                      onChange={(e) => setVulnWordlist(e.target.value)}
+                      placeholder="admin:admin,admin:password,user:password"
+                      className="mt-2 w-full rounded-2xl border border-white/10 bg-black/30 p-4"
+                    />
+                  </div>
+                </>
+              )}
+
+              {/* Port Scan specific fields */}
+              {vulnTestType === "portscan" && (
+                <div>
+                  <label className="text-sm text-white/50">Port Number</label>
+                  <input
+                    type="number"
+                    value={vulnPort}
+                    onChange={(e) => setVulnPort(Number(e.target.value))}
+                    className="mt-2 w-full rounded-2xl border border-white/10 bg-black/30 p-4"
+                  />
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -514,19 +730,31 @@ export default function LaunchPage() {
         </div>
 
         {/* ── Flags row ────────────────────────────────────── */}
-        <div className="mt-8 flex gap-6">
-          <label className="flex items-center gap-2">
+        <div className="mt-8 flex flex-wrap gap-4">
+          <label className="flex items-center gap-2 text-purple-400 font-semibold border border-purple-500/30 bg-purple-500/10 px-3 py-1 rounded-full cursor-pointer hover:bg-purple-500/20 transition-colors">
             <input
               type="checkbox"
+              className="accent-purple-500"
               checked={parallel}
               onChange={() => setParallel(!parallel)}
             />
             Parallel
           </label>
 
-          <label className="flex items-center gap-2 text-red-500 font-semibold">
+          <label className="flex items-center gap-2 text-cyan-400 font-bold border border-cyan-500/30 bg-cyan-500/10 px-3 py-1 rounded-full cursor-pointer hover:bg-cyan-500/20 transition-colors">
             <input
               type="checkbox"
+              className="accent-cyan-500"
+              checked={autonomous}
+              onChange={() => setAutonomous(!autonomous)}
+            />
+            Autonomous Mode
+          </label>
+
+          <label className="flex items-center gap-2 text-red-500 font-semibold border border-red-500/30 bg-red-500/10 px-3 py-1 rounded-full cursor-pointer hover:bg-red-500/20 transition-colors">
+            <input
+              type="checkbox"
+              className="accent-red-500"
               checked={detailedEnumeration}
               onChange={() => setDetailedEnumeration(!detailedEnumeration)}
             />

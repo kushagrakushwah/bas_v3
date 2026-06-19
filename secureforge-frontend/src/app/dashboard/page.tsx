@@ -309,7 +309,7 @@ export default function DashboardHomePage() {
             {timeline.map((event, index) => (
               <div key={index} className="border-l border-purple-500 pl-4">
                 <div className="text-xs text-white/40">
-                  {new Date(event.time).toLocaleString()}
+                  {new Date(event.time.endsWith('Z') ? event.time : event.time + 'Z').toLocaleString('en-US', { timeZone: 'Asia/Kolkata' })}
                 </div>
 
                 <div className="mt-1">{event.text}</div>

@@ -20,6 +20,9 @@ from bas_engine.models.simulation import (
 from bas_engine.detection.validation_engine import (
     DetectionValidationEngine
 )
+from bas_engine.core.recon.attack_recommender import (
+    AttackRecommender
+)
 
 logger = logging.getLogger("secureforge.orchestrator")
 
@@ -81,7 +84,13 @@ class AttackOrchestrator:
 
         task = asyncio.create_task(self._run_simulation(sim_id, request))
         self._tasks[sim_id] = task
-        task.add_done_callback(lambda t: self._tasks.pop(sim_id, None))
+
+        def _handle_task_result(t):
+            self._tasks.pop(sim_id, None)
+            if not t.cancelled() and t.exception():
+                logger.error(f"Simulation {sim_id} crashed with unhandled exception: {t.exception()}")
+
+        task.add_done_callback(_handle_task_result)
 
         await self.event_bus.publish(
             "simulation.queued",
@@ -130,70 +139,97 @@ class AttackOrchestrator:
             )
 
             try:
-                # Pass the detailed_enumeration flag to each module runner
-                module_tasks = [
-                    self._run_module(
-                        sim_id,
-                        request.target,
-                        m,
-                        request.options,
-                        request.detailed_enumeration  # <-- NEW
-                    )
-                    for m in request.modules
-                ]
-
                 # ----------------------------------------
-                # PARALLEL / SEQUENTIAL EXECUTION
+                # AUTONOMOUS EXECUTION LOOP
                 # ----------------------------------------
-                if request.parallel:
-                    module_results = await asyncio.gather(
-                        *module_tasks,
-                        return_exceptions=True
-                    )
-                else:
-                    module_results = []
-                    for t in module_tasks:
-                        module_results.append(await t)
-
-                # ----------------------------------------
-                # STORE MODULE RESULTS
-                # ----------------------------------------
+                modules_to_run = list(request.modules)
+                executed_modules = set()
+                recommender = AttackRecommender()
                 result.module_results = []
-
-                for r in module_results:
-                    if isinstance(r, Exception):
-                        logger.error(f"Module execution error: {r}")
-                        continue
-
-                    result.module_results.append(r)
-                    print("\n=== MODULE RESULT ===")
-                    print(r)
-                    print("Findings:", len(r.findings))
-
-                # ----------------------------------------
-                # COLLECT FINDINGS
-                # ----------------------------------------
                 all_findings = []
 
-                for mod in result.module_results:
-                    print(f"\n=== MODULE {mod.module} ===")
-                    print(f"Findings count: {len(mod.findings)}")
+                while modules_to_run:
+                    logger.info(f"Orchestrator loop starting batch: {modules_to_run}")
 
-                    for finding in mod.findings:
-                        print("Finding:", finding)
+                    module_tasks = [
+                        self._run_module(
+                            sim_id,
+                            request.target,
+                            m,
+                            request.options,
+                            request.detailed_enumeration
+                        )
+                        for m in modules_to_run
+                    ]
 
-                        if hasattr(finding, "model_dump"):
-                            f = finding.model_dump()
-                        else:
-                            f = finding.dict()
+                    # ----------------------------------------
+                    # PARALLEL / SEQUENTIAL EXECUTION
+                    # ----------------------------------------
+                    if request.parallel:
+                        module_results = await asyncio.gather(
+                            *module_tasks,
+                            return_exceptions=True
+                        )
+                    else:
+                        module_results = []
+                        for t in module_tasks:
+                            module_results.append(await t)
 
-                        print("Serialized:", f)
+                    # ----------------------------------------
+                    # STORE MODULE RESULTS
+                    # ----------------------------------------
+                    for r in module_results:
+                        if isinstance(r, Exception):
+                            logger.error(f"Module execution error: {r}")
+                            continue
 
-                        all_findings.append({
-                            "mitre_id": f.get("mitre_id"),
-                            "severity": str(f.get("severity")),
-                            "title": f.get("title")
-                        })
+                        result.module_results.append(r)
+                        print(f"\n=== MODULE RESULT: {r.module} ===")
+                        print(f"Findings: {len(r.findings)}")
+
+                        for finding in r.findings:
+                            if hasattr(finding, "model_dump"):
+                                f = finding.model_dump()
+                            else:
+                                f = finding.dict()
+
+                            all_findings.append({
+                                "mitre_id": f.get("mitre_id"),
+                                "severity": str(f.get("severity")),
+                                "title": f.get("title")
+                            })
+
+                    # Mark current batch as executed
+                    executed_modules.update(modules_to_run)
+                    modules_to_run = []
+
+                    # If autonomous mode is on, check for new recommended modules
+                    if getattr(request, 'autonomous', False):
+                        new_recommendations = set()
+                        from bas_engine.attack_modules.registry import MODULE_REGISTRY
+
+                        # Look at findings from the *current batch* only
+                        for r in module_results:
+                            if isinstance(r, Exception): continue
+                            for finding in r.findings:
+                                if finding.raw_data and "open_ports" in finding.raw_data:
+                                    for port in finding.raw_data["open_ports"]:
+                                        recs = recommender.recommend_by_port(port)
+                                        for rec in recs:
+                                            # Only add if it's a real module and we haven't run it yet
+                                            if rec in MODULE_REGISTRY and rec not in executed_modules:
+                                                new_recommendations.add(rec)
+                                elif finding.raw_data and "port" in finding.raw_data:
+                                    # Single port finding format
+                                    port = finding.raw_data["port"]
+                                    recs = recommender.recommend_by_port(port)
+                                    for rec in recs:
+                                        if rec in MODULE_REGISTRY and rec not in executed_modules:
+                                            new_recommendations.add(rec)
+
+                        if new_recommendations:
+                            modules_to_run = list(new_recommendations)
+                            logger.info(f"Autonomous Mode triggered new modules: {modules_to_run}")
 
                 # ----------------------------------------
                 # RUN DETECTION VALIDATION

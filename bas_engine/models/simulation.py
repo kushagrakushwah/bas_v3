@@ -66,6 +66,7 @@ class SimulationRequest(BaseModel):
     target:   str                    = Field(..., description="Target host/IP/URL")
     modules:  List[str]              = Field(..., description="List of attack module names")
     parallel: bool                   = Field(False, description="Run modules in parallel")
+    autonomous: bool                 = Field(False, description="Enable AI-driven autonomous module chaining")
     detailed_enumeration: bool       = Field(False, description="Flag to enable deeper read-only enumeration")
     options:  Dict[str, Any]         = Field(default_factory=dict, description="Per-module options")
     metadata: Optional[Dict[str, Any]] = None

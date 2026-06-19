@@ -183,7 +183,7 @@ class NmapScanModule(BaseAttackModule):
                 await writer.drain()
             try:
                 data = await asyncio.wait_for(reader.read(256), timeout=timeout)
-                banner = data.decode("utf-8", errors="replace").strip()[:120]
+                banner = data.decode("utf-8", errors="replace").replace("\x00", "").strip()[:120]
             except Exception:
                 banner = ""
             writer.close()

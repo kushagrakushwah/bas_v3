@@ -403,7 +403,7 @@ export default function RealtimeOperations() {
           ) : (
             allEvents.map((event: EventItem, index: number) => {
               const timestamp = event.timestamp
-                ? new Date(event.timestamp).toLocaleString()
+                ? new Date(event.timestamp.endsWith('Z') ? event.timestamp : event.timestamp + 'Z').toLocaleString('en-US', { timeZone: 'Asia/Kolkata' })
                 : "No timestamp";
 
               const badgeColor =
@@ -456,7 +456,7 @@ export default function RealtimeOperations() {
           <div className="text-sm text-white/60">
             {latestEvent.type || "event"} at{" "}
             {latestEvent.timestamp
-              ? new Date(latestEvent.timestamp).toLocaleString()
+              ? new Date(latestEvent.timestamp.endsWith('Z') ? latestEvent.timestamp : latestEvent.timestamp + 'Z').toLocaleString('en-US', { timeZone: 'Asia/Kolkata' })
               : "No timestamp"}
           </div>
         </div>

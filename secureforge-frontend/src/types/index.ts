@@ -58,6 +58,7 @@ export interface SimulationRequest {
   target: string;
   modules: string[];
   parallel: boolean;
+  autonomous?: boolean;
   detailed_enumeration?: boolean;
   metadata?: Record<string, unknown>;
   options?: SimulationOptions;

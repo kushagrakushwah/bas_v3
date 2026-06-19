@@ -7,8 +7,7 @@ from .nmap_scan import NmapScanModule
 from .apt_killchain import APTKillChainModule
 from .recon_exposure import ReconExposureModule
 from .impact_sim_safe import ImpactSimModule
-from .custom_http import CustomHTTPModule
-
+from .vuln_scanner import VulnScannerModule
 
 MODULE_REGISTRY = {
     SSHBruteForceModule.MODULE_NAME:      SSHBruteForceModule,
@@ -19,6 +18,5 @@ MODULE_REGISTRY = {
     ImpactSimModule.MODULE_NAME:          ImpactSimModule,
     NmapScanModule.MODULE_NAME:           NmapScanModule,
     APTKillChainModule.MODULE_NAME:       APTKillChainModule,
-    CustomHTTPModule.MODULE_NAME: CustomHTTPModule,
+    VulnScannerModule.MODULE_NAME: VulnScannerModule,
 }
-

