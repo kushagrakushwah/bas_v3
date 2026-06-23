@@ -218,6 +218,7 @@ class NmapScanModule(BaseAttackModule):
                 service, severity, _ = PORT_DB.get(port, (f"unknown-{port}", Severity.LOW, ""))
                 results.append((port, service, severity, banner))
                 self.logger.info(f"[nmap_scan] {host}:{port} OPEN ({service})")
+                await self.emit_event("INFO", f"[OPEN] {host}:{port} ({service})")
             except (asyncio.TimeoutError, ConnectionRefusedError, OSError):
                 pass
             except Exception as e:
@@ -267,8 +268,9 @@ class NmapScanModule(BaseAttackModule):
                         except Exception:
                             pass
                         live.append(ip)
-                        self.logger.info(f"[nmap_scan] Live host: {ip}")
-                        return
+                        self.logger.info(f"[nmap_scan] Host UP: {ip}")
+                        await self.emit_event("INFO", f"[HOST UP] {ip}")
+                        break
                     except Exception:
                         pass
 

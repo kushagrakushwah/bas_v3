@@ -382,6 +382,7 @@ class ReconExposureModule(BaseAttackModule):
             try:
                 async with session.get(url, allow_redirects=True) as resp:
                     if resp.status == 200:
+                        await self.emit_event("INFO", f"[LOGIN EXPOSURE] Found login endpoint: {login_path}")
                         findings.append(self.finding(
                             title       = f"Login Endpoint Found: {login_path}",
                             description = (
@@ -461,6 +462,7 @@ class ReconExposureModule(BaseAttackModule):
                         body_size = len(body)
 
                         if "Index of /" in body:
+                            await self.emit_event("INFO", f"[DATA EXFIL] Directory listing exposed at {path}")
                             findings.append(self.finding(
                                 title       = f"Directory Listing Exposed: {path}",
                                 description = (
@@ -578,6 +580,7 @@ class ReconExposureModule(BaseAttackModule):
             try:
                 async with session.get(url, allow_redirects=False) as resp:
                     if resp.status in (200, 301, 302, 403):
+                        await self.emit_event("INFO", f"[LATERAL MOVEMENT] Found potential vector: {path} (HTTP {resp.status})")
                         method = random.choice(self.LATERAL_METHODS)
                         sev    = Severity.CRITICAL if resp.status in (200, 302) else Severity.HIGH
 
@@ -660,6 +663,7 @@ class ReconExposureModule(BaseAttackModule):
                     if resp.status == 200:
                         body = await resp.text(errors="replace")
 
+                        await self.emit_event("INFO", f"[SUPPLY CHAIN] Dependency manifest exposed: {path}")
                         findings.append(self.finding(
                             title       = f"Dependency Manifest Exposed: {path}",
                             description = (

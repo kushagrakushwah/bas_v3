@@ -193,6 +193,10 @@ class KillChainState:
 
         print(f"    {detail}")
 
+        # The module isn't strictly passing `self` into the state object,
+        # so we'll just queue an async emit on the orchestrator if possible,
+        # or we'll inject it into the main execute loop later.
+
 
 # =========================================================
 # MODULE
@@ -1135,6 +1139,7 @@ class APTKillChainModule(BaseAttackModule):
 
         ) as session:
 
+            await self.emit_event("INFO", "[APT] Stage 1: Reconnaissance")
             await self.stage_recon(
                 session,
                 state
@@ -1142,21 +1147,25 @@ class APTKillChainModule(BaseAttackModule):
                 target
             )
 
+            await self.emit_event("INFO", "[APT] Stage 2: Login Attack")
             await self.stage_login_attack(
                 session,
                 state
             )
 
+            await self.emit_event("INFO", "[APT] Stage 3: Session Validation")
             await self.stage_session_validation(
                 session,
                 state
             )
 
+            await self.emit_event("INFO", "[APT] Stage 4: OWASP Web Scanning")
             await self.stage_owasp(
                 session,
                 state
             )
 
+            await self.emit_event("INFO", "[APT] Stage 5: Privilege Escalation Vectors")
             await self.stage_priv_esc(
                 session,
                 state
@@ -1164,6 +1173,7 @@ class APTKillChainModule(BaseAttackModule):
                 target
             )
 
+            await self.emit_event("INFO", "[APT] Stage 6: Persistence Probes")
             await self.stage_persistence(
                 session,
                 state

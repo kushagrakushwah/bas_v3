@@ -544,14 +544,18 @@ class WAFEvasionModule(BaseAttackModule):
                             ] += 1
 
                         print(
-
-                            f"[{result['outcome']}] "
+                            f"[+] Probe: "
 
                             f"{category} "
 
                             f"{result['status']} "
 
                             f"{base_url}"
+                        )
+
+                        await self.emit_event(
+                            "INFO",
+                            f"[WAF TEST] {category}: HTTP {result['status']} (Blocked: {result.get('blocked', False)})"
                         )
 
                         # -------------------------------------

@@ -13,6 +13,7 @@ import SimulationStatusBadge from "@/components/SimulationStatusBadge";
 import MetricCard from "@/components/MetricCard";
 import PageHeader from "@/components/ui/PageHeader";
 import { api } from "@/lib/api";
+import { useEvents } from "@/hooks/useEvents";
 import type { AttackModule, Simulation, SimulationRequest } from "@/types/index";
 
 // ── Default templates for the 8 vuln_scanner tabs ──────────────
@@ -61,15 +62,15 @@ const DEFAULT_TEMPLATES = {
     headers: "{}",
   },
   bruteforce: {
-    description: "Try common username/password combinations",
+    description: "Test a single username/password pair",
     method: "POST",
     payload: "",
     param: "",
     headers: '{"Content-Type": "application/x-www-form-urlencoded"}',
-    wordlist: "admin:admin,admin:password,user:password,root:root,admin:123456",
+    authType: "auto",
     loginUrl: "",
-    usernameParam: "username",
-    passwordParam: "password",
+    username: "admin",
+    password: "admin",
   },
   portscan: {
     description: "Check if a specific port is open",
@@ -116,12 +117,10 @@ export default function LaunchPage() {
   const [vulnInjectParam, setVulnInjectParam] = useState("");
   const [vulnPayload, setVulnPayload] = useState("<script>alert(1)</script>");
   // Brute‑force specific
+  const [vulnAuthType, setVulnAuthType] = useState<"auto" | "ssh" | "webmail">("auto");
   const [vulnLoginUrl, setVulnLoginUrl] = useState("");
-  const [vulnUsernameParam, setVulnUsernameParam] = useState("username");
-  const [vulnPasswordParam, setVulnPasswordParam] = useState("password");
-  const [vulnWordlist, setVulnWordlist] = useState(
-    "admin:admin,admin:password,user:password,root:root,admin:123456"
-  );
+  const [vulnUsername, setVulnUsername] = useState("admin");
+  const [vulnPassword, setVulnPassword] = useState("admin");
   // Port‑scan specific
   const [vulnPort, setVulnPort] = useState(80);
 
@@ -137,6 +136,14 @@ export default function LaunchPage() {
     loadModules();
     loadSimulations();
   }, []);
+
+  const events = useEvents();
+
+  useEffect(() => {
+    if (events.length > 0) {
+      loadSimulations();
+    }
+  }, [events]);
 
   async function loadModules() {
     try {
@@ -208,11 +215,19 @@ export default function LaunchPage() {
 
       // ── Vuln Scanner options ──────────────────────────────
       if (selectedModules.includes("vuln_scanner")) {
+        let parsedHeaders = {};
+        try {
+          if (vulnHeaders) parsedHeaders = JSON.parse(vulnHeaders);
+        } catch (e) {
+          alert("Invalid JSON format in Vulnerability Scanner headers.");
+          return;
+        }
+
         const common = {
           test_type: vulnTestType,
           url: vulnUrl || target,
           method: vulnMethod,
-          headers: JSON.parse(vulnHeaders),
+          headers: parsedHeaders,
           body: vulnBody,
           timeout: vulnTimeout,
           inject_param: vulnInjectParam,
@@ -222,13 +237,10 @@ export default function LaunchPage() {
         if (vulnTestType === "bruteforce") {
           options.vuln_scanner = {
             ...common,
-            login_url: vulnLoginUrl || target,
-            username_param: vulnUsernameParam,
-            password_param: vulnPasswordParam,
-            wordlist: vulnWordlist.split(",").map((pair) => {
-              const [u, p] = pair.split(":");
-              return [u.trim(), p.trim()];
-            }),
+            auth_type: vulnAuthType,
+            login_url: vulnLoginUrl.trim() || "",
+            username: vulnUsername.trim(),
+            password: vulnPassword.trim(),
           };
         } else if (vulnTestType === "portscan") {
           options.vuln_scanner = {
@@ -274,10 +286,10 @@ export default function LaunchPage() {
       setVulnInjectParam(template.param || "");
       setVulnPayload(template.payload || "");
       if (type === "bruteforce") {
-        setVulnWordlist(template.wordlist || "");
+        setVulnAuthType(template.authType || "auto");
+        setVulnUsername(template.username || "admin");
+        setVulnPassword(template.password || "admin");
         setVulnLoginUrl(template.loginUrl || "");
-        setVulnUsernameParam(template.usernameParam || "username");
-        setVulnPasswordParam(template.passwordParam || "password");
       }
       if (type === "portscan") {
         setVulnPort(template.port || 80);
@@ -615,42 +627,69 @@ export default function LaunchPage() {
                 />
               </div>
 
-              {/* Brute Force specific fields */}
+              {/* Brute Force — single credential check */}
               {vulnTestType === "bruteforce" && (
                 <>
-                  <div>
-                    <label className="text-sm text-white/50">Login URL</label>
+                  <div className="md:col-span-2">
+                    <label className="text-sm text-white/50">Auth type</label>
+                    <div className="mt-2 flex flex-wrap gap-4">
+                      {(["auto", "ssh", "webmail"] as const).map((type) => (
+                        <label
+                          key={type}
+                          className="flex items-center gap-2 cursor-pointer"
+                          onClick={() => setVulnAuthType(type)}
+                        >
+                          <div
+                            className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
+                              vulnAuthType === type
+                                ? "border-purple-500 bg-purple-500"
+                                : "border-white/30"
+                            }`}
+                          >
+                            {vulnAuthType === type && (
+                              <div className="w-1.5 h-1.5 rounded-full bg-white" />
+                            )}
+                          </div>
+                          <span className="text-sm text-white/70 capitalize">{type}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="md:col-span-2">
+                    <label className="text-sm text-white/50">Login URL
+                      <span className="ml-2 text-white/30 text-xs">
+                        (leave empty to use Target above)
+                      </span>
+                    </label>
                     <input
                       value={vulnLoginUrl}
                       onChange={(e) => setVulnLoginUrl(e.target.value)}
-                      placeholder="https://example.com/login"
+                      placeholder="e.g. https://tlsoc.nile.iitb.ac.in/mail/"
                       className="mt-2 w-full rounded-2xl border border-white/10 bg-black/30 p-4"
                     />
                   </div>
                   <div>
-                    <label className="text-sm text-white/50">Username Parameter</label>
+                    <label className="text-sm text-white/50">Username</label>
                     <input
-                      value={vulnUsernameParam}
-                      onChange={(e) => setVulnUsernameParam(e.target.value)}
+                      value={vulnUsername}
+                      onChange={(e) => setVulnUsername(e.target.value)}
+                      placeholder="e.g. admin"
                       className="mt-2 w-full rounded-2xl border border-white/10 bg-black/30 p-4"
                     />
                   </div>
                   <div>
-                    <label className="text-sm text-white/50">Password Parameter</label>
+                    <label className="text-sm text-white/50">Password</label>
                     <input
-                      value={vulnPasswordParam}
-                      onChange={(e) => setVulnPasswordParam(e.target.value)}
+                      type="password"
+                      value={vulnPassword}
+                      onChange={(e) => setVulnPassword(e.target.value)}
+                      placeholder="e.g. secret123"
                       className="mt-2 w-full rounded-2xl border border-white/10 bg-black/30 p-4"
                     />
                   </div>
-                  <div className="md:col-span-2">
-                    <label className="text-sm text-white/50">Wordlist (comma‑separated user:pass)</label>
-                    <input
-                      value={vulnWordlist}
-                      onChange={(e) => setVulnWordlist(e.target.value)}
-                      placeholder="admin:admin,admin:password,user:password"
-                      className="mt-2 w-full rounded-2xl border border-white/10 bg-black/30 p-4"
-                    />
+                  <div className="md:col-span-2 rounded-xl bg-purple-500/10 border border-purple-500/20 px-4 py-3 text-xs text-purple-300">
+                    Checks exactly one username/password pair. Auto mode probes port 22 first:
+                    SSH open → SSH auth test, otherwise → webmail/HTTP login check.
                   </div>
                 </>
               )}
@@ -804,7 +843,10 @@ export default function LaunchPage() {
             </thead>
 
             <tbody>
-              {simulations.map((simulation) => (
+              {[...simulations]
+                .sort((a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime())
+                .slice(0, 10)
+                .map((simulation) => (
                 <tr
                   key={simulation.id ?? simulation.simulation_id}
                   className="border-b border-white/5 hover:bg-white/[0.03]"

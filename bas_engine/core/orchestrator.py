@@ -105,11 +105,11 @@ class AttackOrchestrator:
     def get(self, sim_id: str) -> Optional[SimulationResult]:
         return self._store.get(sim_id)
 
-    def list_all(self) -> List[SimulationResult]:
-        return list(self._store.values())
+    async def list_all(self) -> List[SimulationResult]:
+        return await self.repo.list_simulations()
 
-    def summary(self) -> SimulationSummary:
-        results = list(self._store.values())
+    async def summary(self) -> SimulationSummary:
+        results = await self.repo.list_simulations()
         return SimulationSummary(
             total=len(results),
             queued=sum(1 for r in results if r.status == SimulationState.QUEUED),
@@ -128,6 +128,7 @@ class AttackOrchestrator:
 
             result.status = SimulationState.RUNNING
             result.started_at = datetime.utcnow()
+            result.updated_at = datetime.utcnow()
             await self.repo.update_simulation(result)
 
             await self.event_bus.publish(
@@ -252,6 +253,7 @@ class AttackOrchestrator:
                 # ----------------------------------------
                 result.status = SimulationState.COMPLETED
                 result.finished_at = datetime.utcnow()
+                result.updated_at = datetime.utcnow()
 
                 # ----------------------------------------
                 # SAVE TO DATABASE
@@ -273,6 +275,7 @@ class AttackOrchestrator:
                 result.status = SimulationState.FAILED
                 result.error = str(exc)
                 result.finished_at = datetime.utcnow()
+                result.updated_at = datetime.utcnow()
 
                 await self.repo.update_simulation(result)
 

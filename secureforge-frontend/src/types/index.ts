@@ -73,6 +73,7 @@ export interface Simulation {
   modules?: string[];
   status: string;
   risk_score?: number;
+  created_at?: string;
 }
 
 // ── Event stream item ─────────────────────────────────────────

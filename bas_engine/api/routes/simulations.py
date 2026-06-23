@@ -13,9 +13,9 @@ async def launch_simulation(request: Request, sim_req: SimulationRequest):
 @router.get("/", response_model=List[SimulationResult])
 async def list_simulations(request: Request):
     """List all historical and running simulations."""
-    return request.app.state.orchestrator.list_all()
+    return await request.app.state.orchestrator.list_all()
 
 @router.get("/summary", response_model=SimulationSummary)
 async def get_summary(request: Request):
     """Get high-level statistics for the dashboard."""
-    return request.app.state.orchestrator.summary()
+    return await request.app.state.orchestrator.summary()

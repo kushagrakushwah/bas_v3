@@ -50,11 +50,17 @@ class PrivEscModule(BaseAttackModule):
 
     async def _linux_checks(self) -> List[Finding]:
         findings = []
+        await self.emit_event("INFO", "[ENUMERATION] Checking SUID binaries...")
         findings.extend(await self._check_suid_binaries())
+        await self.emit_event("INFO", "[ENUMERATION] Checking sudo rules...")
         findings.extend(await self._check_sudo_rules())
+        await self.emit_event("INFO", "[ENUMERATION] Checking writable paths...")
         findings.extend(await self._check_writable_paths())
+        await self.emit_event("INFO", "[ENUMERATION] Checking cron jobs...")
         findings.extend(await self._check_cron_jobs())
+        await self.emit_event("INFO", "[ENUMERATION] Checking Docker group...")
         findings.extend(await self._check_docker_group())
+        await self.emit_event("INFO", "[ENUMERATION] Checking kernel version...")
         findings.extend(await self._check_kernel_version())
         return findings
 

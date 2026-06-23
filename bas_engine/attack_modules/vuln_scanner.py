@@ -62,18 +62,15 @@ DEFAULT_TEMPLATES = {
         "headers": "{}"
     },
     "bruteforce": {
-        "description": "Try common username/password combinations",
+        "description": "Check one username/password pair against SSH or webmail",
         "method": "POST",
-        "payload": "",  # not used; we'll use a wordlist
+        "payload": "",
         "param": "",
         "headers": '{"Content-Type": "application/x-www-form-urlencoded"}',
-        "wordlist": [
-            ("admin", "admin"),
-            ("admin", "password"),
-            ("user", "password"),
-            ("root", "root"),
-            ("admin", "123456")
-        ]
+        "auth_type": "auto",
+        "username": "admin",
+        "password": "admin",
+        "login_url": "",
     },
     "portscan": {
         "description": "Check if a specific port is open",
@@ -104,7 +101,7 @@ class VulnScannerModule(BaseAttackModule):
         timeout_sec = options.get("timeout", 10)
         inject_param = options.get("inject_param", template.get("param", ""))
 
-        # For brute force, we need a list of credentials
+        # Brute force mode intentionally checks exactly one credential pair.
         if test_type == "bruteforce":
             findings.extend(await self._run_bruteforce(target, options, timeout_sec))
         elif test_type == "portscan":
@@ -212,8 +209,11 @@ class VulnScannerModule(BaseAttackModule):
 
                         severity = Severity.CRITICAL if is_vulnerable else Severity.INFO
 
+                        if is_vulnerable:
+                            await self.emit_event("INFO", f"[VULNERABILITY] {test_type.upper()} indicator found at {target}")
+
                         findings.append(self.finding(
-                            title=f"{test_type.upper()} Test – {'Potential' if is_vulnerable else 'No'} Indicator",
+                            title=f"{test_type.upper()} Test â€“ {'Potential' if is_vulnerable else 'No'} Indicator",
                             description=f"Sent {test_type} probe to {target}. Status: {resp.status}",
                             severity=severity,
                             mitre_id="T1190",
@@ -249,141 +249,379 @@ class VulnScannerModule(BaseAttackModule):
 
         return findings
 
-    # ─── Brute Force ──────────────────────────────────────────────────────────
+    # â”€â”€â”€ Brute Force â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+
 
     async def _run_bruteforce(self, target: str, options: dict, timeout: int) -> List[Finding]:
-        findings = []
-        login_url = options.get("login_url", target)
+        """
+        Check one username/password pair against SSH or webmail.
+
+        This intentionally does not call SSHBruteForceModule and does not load
+        username/password wordlists. The vuln scanner tab is a one-shot
+        credential verifier, independent from the full attack module.
+        """
+        import asyncssh
+        import re
+        import ssl
+
+        username = str(options.get("username", "")).strip()
+        password = str(options.get("password", "")).strip()
+        auth_type = str(options.get("auth_type", "auto")).strip().lower()
+
+        if not username or not password:
+            return [
+                self.finding(
+                    title="Credential Check Missing Input",
+                    description="A username and password are required for the vuln_scanner brute force check.",
+                    severity=Severity.MEDIUM,
+                    mitre_id="T1110",
+                    evidence="Missing username or password.",
+                    remediation="Provide exactly one username and one password.",
+                    mode="safe",
+                    evidence_type="bruteforce",
+                )
+            ]
+
+        if auth_type not in ("auto", "ssh", "webmail"):
+            auth_type = "auto"
+
+        parsed = urlparse(target if "://" in target else f"ssh://{target}")
+        host = parsed.hostname or target.split(":")[0]
+        ssh_port = int(options.get("ssh_port") or parsed.port or 22)
+
+        if auth_type == "auto":
+            is_web = parsed.scheme in ("http", "https") or bool(parsed.path and parsed.path.strip("/"))
+            if is_web:
+                auth_type = "webmail"
+                await self.emit_event(
+                    "INFO",
+                    f"[AUTO-DETECT] target looks like a web URL, checking webmail",
+                )
+            else:
+                ssh_open = await self._vuln_single_is_port_open(host, ssh_port, timeout)
+                auth_type = "ssh" if ssh_open else "webmail"
+                await self.emit_event(
+                    "INFO",
+                    f"[AUTO-DETECT] host={host} | SSH port {ssh_port}: "
+                    f"{'open, checking SSH' if ssh_open else 'closed, checking webmail'}",
+                )
+
+        if auth_type == "ssh":
+            return await self._vuln_single_ssh_check(
+                host=host,
+                port=ssh_port,
+                username=username,
+                password=password,
+                timeout=timeout,
+            )
+
+        login_url = str(options.get("login_url", "")).strip() or target
+        if not login_url.startswith(("http://", "https://")):
+            login_url = f"https://{login_url.strip('/')}"
+
+        user_field = options.get("webmail_user_field", "_user")
+        pass_field = options.get("webmail_pass_field", "_pass")
+        action_field = options.get("webmail_action_field", "_action")
+        action_value = options.get("webmail_action_value", "login")
+        token_field_def = options.get("webmail_token_field", "request_token")
         username_param = options.get("username_param", "username")
         password_param = options.get("password_param", "password")
-        wordlist = options.get("wordlist", DEFAULT_TEMPLATES["bruteforce"]["wordlist"])
-        
-        # Parse string wordlist from UI input into list of tuples
-        if isinstance(wordlist, str):
-            parsed_wordlist = []
-            for pair in wordlist.split(','):
-                parts = pair.strip().split(':', 1)
-                if len(parts) == 2:
-                    parsed_wordlist.append((parts[0], parts[1]))
-            wordlist = parsed_wordlist
+        timeout_s = float(options.get("timeout", timeout or 10))
 
-        last_error = None
-        attempt_count = 0
+        ssl_ctx = ssl.create_default_context()
+        ssl_ctx.check_hostname = False
+        ssl_ctx.verify_mode = ssl.CERT_NONE
 
-        async with aiohttp.ClientSession(connector=aiohttp.TCPConnector(ssl=False)) as session:
-            for username, password in wordlist:
-                attempt_count += 1
+        token_pattern = r'(?:request_token|_token|token|_csrf)'
 
-                # Step 1: Hit login page to get session cookie and CSRF token *for this attempt*
-                # Roundcube invalidates tokens on failed logins, so we MUST fetch a fresh one each time.
-                default_token = None
-                default_token_name = "_token"
-                canonical_url = login_url
-                try:
-                    async with session.get(login_url, timeout=aiohttp.ClientTimeout(total=timeout), ssl=False, allow_redirects=True) as get_resp:
-                        body_get = await get_resp.text()
-                        canonical_url = str(get_resp.url)
-                        import re
-                        token_names_pattern = r'(?:request_token|_token|token|_csrf)'
-                        m = re.search(r'name=["\'](' + token_names_pattern + r')["\'][^>]*value=["\']([^"\']{8,})["\']', body_get)
-                        if m:
-                            default_token_name, default_token = m.group(1), m.group(2)
-                        else:
-                            m = re.search(r'value=["\']([^"\']{8,})["\'][^>]*name=["\'](' + token_names_pattern + r')["\']', body_get)
-                            if m:
-                                default_token = m.group(1)
-                                default_token_name = m.group(2)
-                except Exception as e:
-                    logger.warning(f"Error fetching token: {e}")
-                    pass
-                
-                # Prepare POST data
-                data = {
-                    username_param: username, 
-                    password_param: password,
-                    "_user": username,  # Fallback for Roundcube webmail
-                    "_pass": password,  # Fallback for Roundcube webmail
-                    "_action": "login"  # Fallback for Roundcube webmail
-                }
-                
-                # Insert token if found
-                if default_token:
-                    data[default_token_name] = default_token
+        def extract_token(body: str):
+            match = re.search(
+                r'name=["\'](' + token_pattern + r')["\'][^>]*value=["\']([^"\']{8,})["\']',
+                body,
+            )
+            if match:
+                return match.group(1), match.group(2)
 
-                logger.info(f"BRUTEFORCE ATTEMPT {attempt_count}: user={username}, token={default_token}")
+            match = re.search(
+                r'value=["\']([^"\']{8,})["\'][^>]*name=["\'](' + token_pattern + r')["\']',
+                body,
+            )
+            if match:
+                return match.group(2), match.group(1)
 
-                try:
-                    # Give it plenty of time; successful webmail logins can take longer to redirect
-                    async with session.post(canonical_url, data=data, timeout=aiohttp.ClientTimeout(total=timeout + 15), ssl=False, allow_redirects=True) as resp:
-                        body = await resp.text()
-                        
-                        success = False
-                        location = str(resp.url)
-                        logger.info(f"BRUTEFORCE RESPONSE: status={resp.status}, location={location}")
-                        
-                        if "_task=mail" in location:
-                            success = True
-                        elif resp.status == 200:
-                            body_lower = body.lower()
-                            pass_markers = ["logout", "dashboard", "_task=mail", "rcmbody"]
-                            fail_markers = ["invalid_login", "login failed", "incorrect password", "login-form", "rcmloginuser"]
-                            has_pass = any(m in body_lower for m in pass_markers)
-                            has_fail = any(m in body_lower for m in fail_markers)
-                            success = has_pass and not has_fail
-                            
-                        # If Basic auth is challenged, the post logic needs to handle that. Assuming Form auth here.
+            return token_field_def, None
 
-                        if success:
-                            logger.info(f"BRUTEFORCE SUCCESS: {username}:{password}")
-                            evidence = {
-                                "username": username,
-                                "password": password,
-                                "status": resp.status,
-                                "body_preview": body[:500]
-                            }
-                            findings.append(self.finding(
-                                title="Potential Credential Found",
-                                description=f"Login successful with {username}:{password}",
-                                severity=Severity.CRITICAL,
-                                mitre_id="T1110",
-                                evidence=json.dumps(evidence, indent=2),
-                                remediation="Enforce strong password policy and account lockout.",
-                                mode="safe",
-                                evidence_type="bruteforce"
-                            ))
-                            break  # stop after first success
-                except Exception as e:
-                    logger.error(f"BRUTEFORCE ERROR during post: {repr(e)}")
-                    last_error = str(e)
-                    continue
+        fail_markers = [
+            "invalid_login",
+            "login failed",
+            "incorrect password",
+            "authentication failed",
+            "login_failed",
+            "unauthorized",
+        ]
+        pass_markers = [
+            "_task=mail",
+            "_task=contacts",
+            "rcmbody",
+            'id="rcmbody"',
+            "composebody",
+            "mailboxlist",
+            "logout",
+            "dashboard",
+            "welcome",
+        ]
 
-            if not findings:
-                if last_error and attempt_count == len(wordlist):
-                    findings.append(self.finding(
-                        title="Brute Force Failed (Network Error)",
-                        description=f"All requests failed. Last error: {last_error}",
-                        severity=Severity.MEDIUM,
-                        mitre_id="T1110",
-                        evidence=f"Error: {last_error}",
-                        remediation="Check target URL, network connectivity, and SSL configuration.",
-                        mode="safe",
-                        evidence_type="bruteforce"
-                    ))
+        await self.emit_event(
+            "INFO",
+            f"[WEBMAIL SINGLE CHECK] {login_url} | username={username}",
+        )
+
+        try:
+            async with aiohttp.ClientSession(
+                connector=aiohttp.TCPConnector(ssl=ssl_ctx),
+            ) as session:
+                async with session.get(
+                    login_url,
+                    timeout=aiohttp.ClientTimeout(total=timeout_s, connect=5),
+                    ssl=ssl_ctx,
+                    allow_redirects=True,
+                ) as get_resp:
+                    body_get = await get_resp.text(errors="replace")
+                    canonical_url = str(get_resp.url)
+                    is_basic_auth = get_resp.status == 401
+
+                if is_basic_auth:
+                    auth = aiohttp.BasicAuth(username, password)
+                    async with session.get(
+                        canonical_url,
+                        timeout=aiohttp.ClientTimeout(total=timeout_s, connect=5),
+                        ssl=ssl_ctx,
+                        allow_redirects=False,
+                        auth=auth,
+                    ) as auth_resp:
+                        status = auth_resp.status
+                        final_url = auth_resp.headers.get("Location", "")
+                        body_post = await auth_resp.text(errors="replace")
                 else:
-                    findings.append(self.finding(
-                        title="Brute Force Completed",
-                        description="No valid credentials found in the provided wordlist.",
-                        severity=Severity.INFO,
-                        mitre_id="T1110",
-                        evidence="All attempts failed or timed out.",
-                        remediation="Ensure login endpoint is correct.",
-                        mode="safe",
-                        evidence_type="bruteforce"
-                    ))
+                    token_field, token_value = extract_token(body_get)
+                    post_data = {
+                        user_field: username,
+                        pass_field: password,
+                        action_field: action_value,
+                        username_param: username,
+                        password_param: password,
+                    }
+                    if token_value:
+                        post_data[token_field] = token_value
 
-        return findings
+                    async with session.post(
+                        canonical_url,
+                        data=post_data,
+                        timeout=aiohttp.ClientTimeout(total=timeout_s, connect=5),
+                        ssl=ssl_ctx,
+                        allow_redirects=True,
+                    ) as post_resp:
+                        status = post_resp.status
+                        final_url = str(post_resp.url)
+                        body_post = await post_resp.text(errors="replace")
 
-    # ─── Port Scan ────────────────────────────────────────────────────────────
+        except asyncio.TimeoutError:
+            return [
+                self.finding(
+                    title="Webmail Credential Check Timed Out",
+                    description=f"Timed out checking one credential pair against {login_url}.",
+                    severity=Severity.MEDIUM,
+                    mitre_id="T1110",
+                    evidence=f"Timeout: {timeout_s}s",
+                    remediation="Increase timeout or verify the login URL.",
+                    mode="safe",
+                    evidence_type="bruteforce",
+                )
+            ]
+        except Exception as exc:
+            return [
+                self.finding(
+                    title="Webmail Credential Check Error",
+                    description=f"Could not check webmail credentials: {exc}",
+                    severity=Severity.MEDIUM,
+                    mitre_id="T1110",
+                    evidence=str(exc),
+                    remediation="Verify the login URL and form field names.",
+                    mode="safe",
+                    evidence_type="bruteforce",
+                )
+            ]
+
+        body_lower = body_post.lower()
+        has_fail = any(marker in body_lower for marker in fail_markers)
+        has_pass = any(marker in body_lower for marker in pass_markers)
+        success = (
+            (status in (301, 302, 303, 307, 308) and "_task=mail" in final_url)
+            or ("_task=mail" in final_url)
+            or (has_pass and not has_fail)
+            or (is_basic_auth and status == 200 and not has_fail)
+        )
+
+        return [
+            self.finding(
+                title="Webmail Credential Valid" if success else "Webmail Credential Invalid",
+                description=f"Checked one webmail credential pair for {username} against {login_url}.",
+                severity=Severity.CRITICAL if success else Severity.INFO,
+                mitre_id="T1110.001",
+                evidence=json.dumps(
+                    {
+                        "auth_type": "webmail",
+                        "login_url": login_url,
+                        "username": username,
+                        "http_status": status,
+                        "final_url": final_url,
+                        "success": success,
+                        "body_preview": body_post[:500],
+                    },
+                    indent=2,
+                ),
+                remediation=(
+                    "Reset the account password and enforce MFA."
+                    if success
+                    else "No valid credential indicator was observed for this single pair."
+                ),
+                raw_data={
+                    "auth_type": "webmail",
+                    "login_url": login_url,
+                    "username": username,
+                    "attempts": 1,
+                    "successes": 1 if success else 0,
+                    "http_status": status,
+                },
+                mode="safe",
+                evidence_type="bruteforce",
+            )
+        ]
+
+    async def _vuln_single_is_port_open(self, host: str, port: int, timeout: int) -> bool:
+        try:
+            _, writer = await asyncio.wait_for(
+                asyncio.open_connection(host, port),
+                timeout=timeout,
+            )
+            writer.close()
+            try:
+                await writer.wait_closed()
+            except Exception:
+                pass
+            return True
+        except Exception:
+            return False
+
+    async def _vuln_single_ssh_check(
+        self,
+        host: str,
+        port: int,
+        username: str,
+        password: str,
+        timeout: int,
+    ) -> List[Finding]:
+        import asyncssh
+
+        try:
+            conn = await asyncio.wait_for(
+                asyncssh.connect(
+                    host,
+                    port=port,
+                    username=username,
+                    password=password,
+                    known_hosts=None,
+                    connect_timeout=min(timeout, 5),
+                    login_timeout=max(timeout, 10),
+                    preferred_auth=["password", "keyboard-interactive"],
+                    kex_algs=[
+                        "curve25519-sha256",
+                        "curve25519-sha256@libssh.org",
+                        "ecdh-sha2-nistp256",
+                        "diffie-hellman-group14-sha256",
+                        "diffie-hellman-group14-sha1",
+                    ],
+                    encryption_algs=[
+                        "aes128-ctr",
+                        "aes192-ctr",
+                        "aes256-ctr",
+                        "aes128-cbc",
+                        "aes256-cbc",
+                    ],
+                    server_host_key_algs=[
+                        "ssh-ed25519",
+                        "ecdsa-sha2-nistp256",
+                        "rsa-sha2-256",
+                        "rsa-sha2-512",
+                        "ssh-rsa",
+                    ],
+                ),
+                timeout=max(timeout, 15),
+            )
+            conn.close()
+            result = "success"
+        except asyncssh.PermissionDenied:
+            result = "auth_failed"
+        except ConnectionResetError:
+            result = "reset"
+        except asyncssh.ConnectionLost:
+            result = "reset"
+        except asyncio.TimeoutError:
+            result = "timeout"
+        except ConnectionRefusedError:
+            result = "refused"
+        except asyncssh.KeyExchangeFailed:
+            result = "kex_failed"
+        except asyncssh.HostKeyNotVerifiable:
+            result = "hostkey_failed"
+        except asyncssh.DisconnectError:
+            result = "disconnect"
+        except Exception as exc:
+            err = str(exc).lower()
+            if "reset by peer" in err or "connection lost" in err:
+                result = "reset"
+            elif "too many connections" in err:
+                result = "rate_limited"
+            else:
+                result = f"other: {exc}"
+
+        success = result == "success"
+        return [
+            self.finding(
+                title="SSH Credential Valid" if success else "SSH Credential Invalid",
+                description=f"Checked one SSH credential pair for {username} against {host}:{port}.",
+                severity=Severity.CRITICAL if success else Severity.INFO,
+                mitre_id="T1110.001",
+                evidence=json.dumps(
+                    {
+                        "auth_type": "ssh",
+                        "host": host,
+                        "port": port,
+                        "username": username,
+                        "result": result,
+                        "success": success,
+                    },
+                    indent=2,
+                ),
+                remediation=(
+                    "Reset the account password, disable SSH password auth, and enforce MFA."
+                    if success
+                    else "No valid SSH credential indicator was observed for this single pair."
+                ),
+                raw_data={
+                    "auth_type": "ssh",
+                    "host": host,
+                    "port": port,
+                    "username": username,
+                    "attempts": 1,
+                    "successes": 1 if success else 0,
+                    "result": result,
+                },
+                mode="safe",
+                evidence_type="bruteforce",
+            )
+        ]
 
     async def _run_portscan(self, target: str, options: dict, timeout: int) -> List[Finding]:
         findings = []
@@ -413,7 +651,7 @@ class VulnScannerModule(BaseAttackModule):
             severity = Severity.MEDIUM
 
         findings.append(self.finding(
-            title=f"Port {port} – {'Open' if open_status else 'Closed'}",
+            title=f"Port {port} â€“ {'Open' if open_status else 'Closed'}",
             description=message,
             severity=severity,
             mitre_id="T1046",

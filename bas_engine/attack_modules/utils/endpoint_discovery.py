@@ -1,15 +1,23 @@
-"""
-Shared endpoint discovery helpers for web attack modules.
+﻿"""
+Shared endpoint discovery helpers for web attack modules â€” FIXED EDITION.
 
-The helper collects candidate routes from the target root, follows same-domain
-links and forms, and falls back to a small set of common routes when discovery
-is sparse. It deliberately avoids treating identical fallback HTML as proof of
-a real endpoint.
+Same public interface as the original (`EndpointDiscoveryEngine(session, target,
+seeds=, max_endpoints=, max_depth=, timeout=)` / `await engine.discover()`),
+but:
+  - Fetches within each depth round concurrently, bounded by a semaphore.
+  - Caps how many candidates are considered per round (not just total endpoints).
+  - Enforces a wall-clock deadline across the whole discover() call so a chatty
+    or slow target can never make discovery run unbounded.
+
+The false-positive prevention (baseline signature / SPA-shell detection) from
+the original is preserved unchanged.
 """
 
 from __future__ import annotations
 
+import asyncio
 import re
+import time
 from dataclasses import dataclass
 from typing import List, Optional, Sequence
 from urllib.parse import urldefrag, urljoin, urlparse
@@ -55,6 +63,9 @@ class EndpointDiscoveryEngine:
         max_endpoints: int = 50,
         max_depth: int = 1,
         timeout: float = 6.0,
+        max_concurrency: int = 10,
+        max_candidates_per_round: int = 60,
+        time_budget_s: float = 45.0,
     ):
         self.session = session
         self.target = target.rstrip("/")
@@ -62,7 +73,11 @@ class EndpointDiscoveryEngine:
         self.max_endpoints = max_endpoints
         self.max_depth = max_depth
         self.timeout = timeout
+        self.max_concurrency = max_concurrency
+        self.max_candidates_per_round = max_candidates_per_round
+        self.time_budget_s = time_budget_s
         self._baseline_signature: Optional[str] = None
+        self._sem = asyncio.Semaphore(max_concurrency)
 
     @property
     def base_url(self) -> str:
@@ -74,33 +89,64 @@ class EndpointDiscoveryEngine:
         return f"https://{self.target.lstrip('/')}".rstrip("/")
 
     async def discover(self) -> List[str]:
+        deadline = time.monotonic() + self.time_budget_s
+
+        def time_left() -> bool:
+            return time.monotonic() < deadline
+
         endpoints: List[DiscoveredEndpoint] = []
         seen = set()
 
-        baseline = await self._fetch(self.base_url)
+        try:
+            baseline = await asyncio.wait_for(self._fetch(self.base_url), timeout=self.timeout)
+        except asyncio.TimeoutError:
+            baseline = None
         if baseline is not None:
             self._baseline_signature = self._signature(baseline[2])
 
         candidates = []
         if baseline is not None:
             candidates.extend(self._extract_candidates(self.base_url, baseline[2]))
-
         candidates.extend(urljoin(self.base_url + "/", seed.lstrip("/")) for seed in self.seeds)
 
         depth = 0
         while candidates and len(endpoints) < self.max_endpoints and depth <= self.max_depth:
-            next_candidates = []
-            for candidate in candidates:
-                if len(endpoints) >= self.max_endpoints:
-                    break
+            if not time_left():
+                break
 
+            # Dedup + cap how many candidates we even attempt this round.
+            round_candidates = []
+            for candidate in candidates:
                 normalized = self._normalize_url(candidate)
                 if not normalized or normalized in seen:
                     continue
                 seen.add(normalized)
+                round_candidates.append(normalized)
+                if len(round_candidates) >= self.max_candidates_per_round:
+                    break
 
-                response = await self._fetch(normalized)
-                if response is None:
+            if not round_candidates:
+                break
+
+            # Fetch this round concurrently, bounded by the semaphore.
+            remaining_budget = max(1.0, deadline - time.monotonic())
+            try:
+                responses = await asyncio.wait_for(
+                    asyncio.gather(
+                        *[self._fetch(url) for url in round_candidates],
+                        return_exceptions=True,
+                    ),
+                    timeout=remaining_budget,
+                )
+            except asyncio.TimeoutError:
+                # Whatever completed, completed; treat round as exhausted and stop.
+                break
+
+            next_candidates = []
+            for normalized, response in zip(round_candidates, responses):
+                if len(endpoints) >= self.max_endpoints:
+                    break
+                if response is None or isinstance(response, Exception):
                     continue
 
                 status, final_url, body = response
@@ -127,12 +173,17 @@ class EndpointDiscoveryEngine:
         return deduped
 
     async def _fetch(self, url: str):
-        try:
-            async with self.session.get(url, allow_redirects=True, ssl=False, timeout=self.timeout) as resp:
-                body = await resp.text(errors="replace")
-                return resp.status, str(resp.url), body
-        except Exception:
-            return None
+        import aiohttp as _aiohttp
+        _ct = _aiohttp.ClientTimeout(total=self.timeout, connect=5, sock_connect=5, sock_read=self.timeout)
+        async with self._sem:
+            try:
+                async with self.session.get(
+                    url, allow_redirects=True, ssl=False, timeout=_ct
+                ) as resp:
+                    body = await resp.text(errors="replace")
+                    return resp.status, str(resp.url), body
+            except Exception:
+                return None
 
     def _extract_candidates(self, base_url: str, body: str) -> List[str]:
         soup = BeautifulSoup(body or "", "html.parser")
@@ -150,7 +201,11 @@ class EndpointDiscoveryEngine:
                 if self._is_same_domain(full):
                     candidates.append(full)
 
-        for match in re.findall(r"/(?:api|rest|graphql|admin|login|dashboard|upload|uploads|files|download|downloads|reports|data)[A-Za-z0-9_./?-]*", body or "", re.IGNORECASE):
+        for match in re.findall(
+            r"/(?:api|rest|graphql|admin|login|dashboard|upload|uploads|files|download|downloads|reports|data)[A-Za-z0-9_./?-]*",
+            body or "",
+            re.IGNORECASE,
+        ):
             full = urljoin(base_url, match)
             full, _ = urldefrag(full)
             if self._is_same_domain(full):
@@ -199,3 +254,4 @@ class EndpointDiscoveryEngine:
             return True
         text = (body or "").strip()
         return bool(text) and len(text) > 20
+

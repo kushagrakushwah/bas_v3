@@ -54,6 +54,7 @@ class ImpactSimModule(BaseAttackModule):
                             real = await is_real_endpoint(session, target, path)
                             if real:
                                 discovered.append(path)
+                                await self.emit_event("INFO", f"[DISCOVERED] Storage path reachable: {path}")
                 except Exception:
                     pass
                 await asyncio.sleep(0.2)
@@ -77,6 +78,7 @@ class ImpactSimModule(BaseAttackModule):
                     async with session.get(url, allow_redirects=False) as resp:
                         real = await is_real_endpoint(session, target, path)
                         if real:
+                            await self.emit_event("INFO", f"[DISCOVERED] Potential C2 beacon endpoint: {path}")
                             findings.append(self.finding(
                                 title=f"Potential C2 Endpoint Reachable: {path}",
                                 description=f"Path '{path}' returned HTTP {resp.status}.",
