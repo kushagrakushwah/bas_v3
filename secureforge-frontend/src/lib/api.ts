@@ -81,7 +81,7 @@ export const api = {
   },
 
   getRecentReplayEvents() {
-    return request<any[]>(
+    return request<any>(
       "/api/v1/replay/recent/events"
     );
   },
