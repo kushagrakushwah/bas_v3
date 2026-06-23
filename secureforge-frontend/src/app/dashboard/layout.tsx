@@ -49,11 +49,7 @@ const navigation = [
     href: "/dashboard/infrastructure",
     icon: HardDrive,
   },
-  {
-    name: "Reports",
-    href: "/dashboard/reports",
-    icon: FileText,
-  },
+
   {
     name: "Alerts",
     href: "/dashboard/alerts",

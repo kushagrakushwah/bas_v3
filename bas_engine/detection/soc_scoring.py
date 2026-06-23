@@ -1,7 +1,7 @@
 from bas_engine.detection.coverage_engine import (
     CoverageEngine
 )
-
+from bas_engine.detection.constants import MITRE_ATTACK_TACTICS
 
 class SOCScoringEngine:
 
@@ -15,8 +15,11 @@ class SOCScoringEngine:
 
     def calculate_score(
         self,
-        findings: list
+        findings: list,
+        executed_modules: list = None
     ):
+        if executed_modules is None:
+            executed_modules = []
 
         coverage_data = (
             self.coverage_engine
@@ -34,6 +37,19 @@ class SOCScoringEngine:
         tactics_detected = coverage_data[
             "tactics_detected"
         ]
+
+        if len(executed_modules) == 0:
+            return {
+                "soc_score": 0,
+                "rating": "Not Tested",
+                "coverage_strength": f"{tactics_detected} tactics",
+                "critical_findings": 0,
+                "high_findings": 0,
+                "medium_findings": 0,
+                "low_findings": 0,
+                "blind_spots": len(MITRE_ATTACK_TACTICS),
+                "coverage": coverage
+            }
 
         # --------------------------------------------
         # SEVERITY ANALYSIS
@@ -117,7 +133,7 @@ class SOCScoringEngine:
         # --------------------------------------------
 
         blind_spots = max(
-            12 - tactics_detected,
+            len(MITRE_ATTACK_TACTICS) - tactics_detected,
             0
         )
 

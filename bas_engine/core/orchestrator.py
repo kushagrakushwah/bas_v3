@@ -238,7 +238,7 @@ class AttackOrchestrator:
                 print("\n=== FINDINGS SENT TO VALIDATION ===")
                 print(all_findings)
 
-                validation = self.validation_engine.validate(all_findings)
+                validation = self.validation_engine.validate(all_findings, list(executed_modules))
 
                 print("\n=== VALIDATION RESULT ===")
                 print(validation)

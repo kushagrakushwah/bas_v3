@@ -41,7 +41,8 @@ class DetectionValidationEngine:
 
     def validate(
         self,
-        findings: list
+        findings: list,
+        executed_modules: list = None
     ):
 
         coverage = (
@@ -51,7 +52,7 @@ class DetectionValidationEngine:
 
         soc_score = (
             self.soc_engine
-            .calculate_score(findings)
+            .calculate_score(findings, executed_modules)
         )
 
         blindspots = (

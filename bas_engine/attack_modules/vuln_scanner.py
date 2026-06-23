@@ -125,7 +125,7 @@ class VulnScannerModule(BaseAttackModule):
                     body_json[inject_param] = payload
                     body = json.dumps(body_json)
                     headers["Content-Type"] = "application/json"
-                except:
+                except Exception as e:
                     # If not JSON, treat as form data
                     body = f"{inject_param}={payload}"
                     if "Content-Type" not in headers:
@@ -172,13 +172,13 @@ class VulnScannerModule(BaseAttackModule):
                             # Check if payload is reflected without encoding
                             is_vulnerable = payload in response_body
                         elif test_type == "sqli":
-                            # Check for common SQL errors or time delay
+                            # Check for common SQL errors or significant time delay (proxy for baseline + 4.0)
                             sql_errors = ["syntax error", "mysql_fetch", "sqlite3", "ora-", "postgresql"]
-                            is_vulnerable = any(err in body_lower for err in sql_errors) or elapsed >= 4.0
+                            is_vulnerable = any(err in body_lower for err in sql_errors) or elapsed >= 4.5
                         elif test_type == "cmd_injection":
                             # Command output or delay
-                            cmd_markers = ["uid=", "root:x", "ttl=", "ms"] # e.g. ping or id output
-                            is_vulnerable = any(m in body_lower for m in cmd_markers) or elapsed >= 2.0
+                            cmd_markers = ["uid=", "root:x", "ttl="] # e.g. ping or id output
+                            is_vulnerable = any(m in body_lower for m in cmd_markers) or elapsed >= 2.5
                         elif test_type == "path_traversal" or test_type == "xxe":
                             # Reading /etc/passwd
                             is_vulnerable = "root:x:0:0" in response_body

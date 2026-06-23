@@ -15,7 +15,7 @@ async def get_metrics():
 
         output = subprocess.check_output(
             [
-                "kubectl",
+                "/usr/local/bin/kubectl",
                 "top",
                 "nodes",
                 "--no-headers",

@@ -1,28 +1,9 @@
 from bas_engine.detection.coverage_engine import (
     CoverageEngine
 )
-
+from bas_engine.detection.constants import MITRE_ATTACK_TACTICS
 
 class BlindSpotAnalyzer:
-
-    # ------------------------------------------------
-    # FULL MITRE TACTIC SET
-    # ------------------------------------------------
-
-    ALL_TACTICS = [
-
-        "Initial Access",
-        "Execution",
-        "Persistence",
-        "Privilege Escalation",
-        "Defense Evasion",
-        "Credential Access",
-        "Discovery",
-        "Lateral Movement",
-        "Collection",
-        "Exfiltration",
-        "Impact"
-    ]
 
     def __init__(self):
 
@@ -52,7 +33,7 @@ class BlindSpotAnalyzer:
 
         blind_spots = []
 
-        for tactic in self.ALL_TACTICS:
+        for tactic in MITRE_ATTACK_TACTICS:
 
             if tactic not in detected:
 
@@ -86,7 +67,7 @@ class BlindSpotAnalyzer:
 
             (
                 len(detected)
-                / len(self.ALL_TACTICS)
+                / len(MITRE_ATTACK_TACTICS)
             ) * 100,
 
             2

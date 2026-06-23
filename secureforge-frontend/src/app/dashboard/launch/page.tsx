@@ -485,7 +485,7 @@ export default function LaunchPage() {
                       sshAuthType === type ? "text-white" : "text-white/50"
                     }`}
                   >
-                    {type === "ssh" ? "SSH" : "Webmail / Roundcube"}
+                    {type === "ssh" ? "SSH" : "Webmail"}
                   </span>
                 </label>
               ))}
@@ -504,9 +504,8 @@ export default function LaunchPage() {
             {sshAuthType === "webmail" && (
               <div className="space-y-4">
                 <div className="rounded-xl border border-amber-500/20 bg-amber-500/10 px-4 py-3 text-sm text-amber-300">
-                  Performs HTTP POST brute force against a Roundcube / webmail
-                  login page. Leave the URL blank to auto-derive from Target +{" "}
-                  <code className="font-mono">/roundcube/</code>.
+                  Performs HTTP POST brute force against a webmail
+                  login portal. Usually configured for mail login endpoints.
                 </div>
 
                 <div>
@@ -517,7 +516,7 @@ export default function LaunchPage() {
                   <input
                     value={webmailLoginUrl}
                     onChange={(e) => setWebmailLoginUrl(e.target.value)}
-                    placeholder="https://mail.example.com/roundcube/"
+                    placeholder="https://mail.example.com/login/"
                     className="mt-2 w-full rounded-2xl border border-white/10 bg-black/30 p-4 text-sm"
                   />
                 </div>
@@ -664,7 +663,7 @@ export default function LaunchPage() {
                     <input
                       value={vulnLoginUrl}
                       onChange={(e) => setVulnLoginUrl(e.target.value)}
-                      placeholder="e.g. https://tlsoc.nile.iitb.ac.in/mail/"
+                      placeholder="e.g. https://mail.example.com/login/"
                       className="mt-2 w-full rounded-2xl border border-white/10 bg-black/30 p-4"
                     />
                   </div>

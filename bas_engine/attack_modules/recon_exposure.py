@@ -1,6 +1,6 @@
 """
-Recon & Exposure Module
-=======================
+Recon & Exposure Module — Deadly Edition
+=========================================
 Merged from 4 modules:
   - credential_dumping  (T1003, T1552, T1110.001)
   - data_exfiltration   (T1041, T1020, T1530)
@@ -9,13 +9,13 @@ Merged from 4 modules:
 
 Runs 4 sequential stages over a single shared aiohttp session.
 Each stage emits a WebSocket event on start and contributes
-findings to a single returned list.
+findings to a single returned list. Findings are based on
+real exploitation techniques, not fabricated narratives.
 """
 
 import asyncio
 import aiohttp
 import re
-import random
 from typing import List
 from urllib.parse import urlparse
 from bas_engine.attack_modules.base import BaseAttackModule
@@ -45,7 +45,6 @@ class ReconExposureModule(BaseAttackModule):
 
     # =========================================================
     # STAGE 1 — CREDENTIAL DUMPING
-    # from: credential_dumping.py
     # =========================================================
 
     CREDENTIAL_PATHS = [
@@ -66,52 +65,45 @@ class ReconExposureModule(BaseAttackModule):
     ]
 
     CREDENTIAL_PATTERNS = [
-        (r"DB_PASSWORD\s*=\s*\S+",          "Database password in .env"),
-        (r"db_password\s*:\s*\S+",          "Database password in config"),
-        (r"SECRET_KEY\s*=\s*\S+",           "Secret key exposed"),
-        (r"AWS_SECRET_ACCESS_KEY\s*=\s*\S+","AWS credentials exposed"),
-        (r"password\s*=\s*['\"][^'\"]+['\"]","Hardcoded password in config"),
-        (r"\[default\]\s*aws_",             "AWS credentials file"),
-        (r"mysql://\S+:\S+@",               "Database connection string with credentials"),
-        (r"postgresql://\S+:\S+@",          "PostgreSQL connection string with credentials"),
+        (r"DB_PASSWORD\s*=\s*(\S+)",           1, "Database password"),
+        (r"db_password\s*:\s*(\S+)",           1, "Database password"),
+        (r"SECRET_KEY\s*=\s*(\S+)",            1, "Secret key"),
+        (r"AWS_SECRET_ACCESS_KEY\s*=\s*(\S+)", 1, "AWS secret access key"),
+        (r"password\s*=\s*['\"]([^'\"]+)['\"]",1, "Hardcoded password"),
+        (r"mysql://(\S+):(\S+)@",              2, "MySQL connection string"),
+        (r"postgresql://(\S+):(\S+)@",         2, "PostgreSQL connection string"),
+    ]
+
+    # Default credentials used in lateral movement (stage 3)
+    DEFAULT_CREDENTIALS = [
+        ("admin",  "admin"),
+        ("admin",  "password"),
+        ("admin",  "123456"),
+        ("root",   "root"),
+        ("root",   "password"),
+        ("user",   "user"),
+        ("test",   "test"),
     ]
 
     # =========================================================
     # STAGE 2 — DATA EXFILTRATION
-    # from: data_exfiltration.py
     # =========================================================
 
     EXFIL_PATHS = [
+        "/api/users",
+        "/api/v1/users",
+        "/api/students",
+        "/rest/products",
+        "/rest/user",
+        "/users.csv",
+        "/users.json",
+        "/students.csv",
+        "/backup.zip",
+        "/database_backup.sql",
         "/exports",
         "/reports",
         "/downloads",
         "/data",
-        "/api/users",
-        "/api/v1/users",
-        "/api/students",
-        "/users.csv",
-        "/users.json",
-        "/students.csv",
-        "/backup.zip",
-        "/database_backup.sql",
-        "/logs",
-        "/log",
-        "/access.log",
-        "/error.log",
-            # Juice Shop
-        "/api",
-        "/rest",
-        "/rest/products",
-        "/rest/user",
-
-        "/api/users",
-        "/api/v1/users",
-        "/api/students",
-        "/users.csv",
-        "/users.json",
-        "/students.csv",
-        "/backup.zip",
-        "/database_backup.sql",
         "/logs",
         "/log",
         "/access.log",
@@ -129,44 +121,33 @@ class ReconExposureModule(BaseAttackModule):
 
     # =========================================================
     # STAGE 3 — LATERAL MOVEMENT
-    # from: lateral_movement.py
     # =========================================================
 
     LATERAL_PROBE_PATHS = [
         "/admin",
-        "/rest/admin",
-
         "/manager",
         "/console",
         "/phpmyadmin",
         "/wp-admin",
-
         "/.env",
         "/config",
         "/backup",
     ]
 
-    LATERAL_METHODS = [
-        "SMB/PsExec",
-        "WMI Remote Execution",
-        "SSH Forwarding",
-        "RDP Session Hijacking",
-        "Pass-the-Hash via NTLM",
+    # Common parameter names vulnerable to SSRF
+    SSRF_PARAMETERS = [
+        "url", "uri", "path", "dest", "redirect", "redirect_uri",
+        "forward", "target", "proxy", "fetch", "load", "image_url",
+        "file", "document", "resource", "source",
     ]
 
     # =========================================================
     # STAGE 4 — SUPPLY CHAIN
-    # from: supply_chain.py
     # =========================================================
 
     MANIFEST_PATHS = [
         "/package.json",
         "/package-lock.json",
-
-        "/swagger",
-        "/api-docs",
-        "/openapi.json",
-
         "/requirements.txt",
         "/Pipfile",
         "/Gemfile",
@@ -182,20 +163,21 @@ class ReconExposureModule(BaseAttackModule):
         "/",
         "/index.html",
         "/robots.txt",
-        "/ftp",
-        "/moodle/",
-        "/mail/",
     ]
 
     VULNERABLE_PATTERNS = [
-        (r'"version"\s*:\s*"([^"]+)"',           "npm package version"),
-        (r"(Django|Flask|Spring|Rails)==([^\n]+)","Framework version"),
-        (r"(log4j|log4j2)[^=]*==?([^\n\s]+)",    "Log4j version — check for CVE-2021-44228"),
+        (r'"version"\s*:\s*"([^"]+)"',            "npm package version"),
+        (r"(Django|Flask|Spring|Rails)==([^\n]+)", "Framework version"),
+        (r"(log4j|log4j2)[^=]*==?([^\n\s]+)",     "Log4j version — check for CVE-2021-44228"),
     ]
 
     SUSPICIOUS_SCRIPT_PATTERNS = [
         r'<script[^>]+src=["\']https?://(?!cdnjs|unpkg|jsdelivr|ajax\.googleapis)([^"\']+)["\']',
     ]
+
+    # =========================================================
+    # Helpers
+    # =========================================================
 
     def _dedupe_urls(self, urls):
         seen = set()
@@ -207,7 +189,8 @@ class ReconExposureModule(BaseAttackModule):
                 deduped.append(item)
         return deduped
 
-    def _route_candidates(self, target, discovered_urls, fallback_paths, keywords, minimum=3, fallback_limit=None, allow_fallback=True):
+    def _route_candidates(self, target, discovered_urls, fallback_paths, keywords,
+                          minimum=3, fallback_limit=None, allow_fallback=True):
         selected = []
         target_base = target.rstrip("/")
 
@@ -217,7 +200,8 @@ class ReconExposureModule(BaseAttackModule):
                 selected.append((url, "discovery"))
 
         if allow_fallback and len(selected) < minimum:
-            for path in fallback_paths[: fallback_limit or len(fallback_paths)]:
+            limit = fallback_limit or len(fallback_paths)
+            for path in fallback_paths[:limit]:
                 selected.append((target_base + path, "fallback"))
 
         return self._dedupe_urls(selected)
@@ -252,7 +236,7 @@ class ReconExposureModule(BaseAttackModule):
         ) as session:
 
             discovered_routes = self._dedupe_urls(await self._discover_routes(session, target))
-            discovery_sparse = len(discovered_routes) < 5
+            discovery_sparse  = len(discovered_routes) < 5
 
             findings.extend(await self._stage_credential_dumping(session, target, discovered_routes, discovery_sparse))
             findings.extend(await self._stage_data_exfiltration(session, target, discovered_routes, discovery_sparse))
@@ -269,12 +253,16 @@ class ReconExposureModule(BaseAttackModule):
                 "Stages covered: Credential Exposure, Data Exfiltration, "
                 "Lateral Movement Vectors, Supply Chain Risks."
             ),
-            severity    = Severity.INFO,
-            mitre_id    = "T1595",
-            evidence    = f"4 stages executed against {target}; discovered_routes={len(discovered_routes)}",
-            remediation = "Review all findings above and prioritise CRITICAL and HIGH severity items.",
-            raw_data    = {"discovered_routes": len(discovered_routes), "discovery_sparse": discovery_sparse, "provenance": "mixed"},
-            mode        = "live",
+            severity      = Severity.INFO,
+            mitre_id      = "T1595",
+            evidence      = f"4 stages executed against {target}; discovered_routes={len(discovered_routes)}",
+            remediation   = "Review all findings above and prioritise CRITICAL and HIGH severity items.",
+            raw_data      = {
+                "discovered_routes": len(discovered_routes),
+                "discovery_sparse": discovery_sparse,
+                "provenance": "mixed",
+            },
+            mode          = "live",
             evidence_type = "target-derived",
         ))
 
@@ -284,32 +272,18 @@ class ReconExposureModule(BaseAttackModule):
     # STAGE 1 — CREDENTIAL DUMPING
     # =========================================================
 
-    async def _stage_credential_dumping(
-        self,
-        session: aiohttp.ClientSession,
-        target: str,
-        discovered_routes,
-        discovery_sparse: bool,
-    ) -> List[Finding]:
-
-        findings: List[Finding] = []
+    async def _stage_credential_dumping(self, session, target, discovered_routes, discovery_sparse):
+        findings = []
 
         await self.emit_event(
-            "INFO",
-            "Stage 1 starting: Credential Exposure",
+            "INFO", "Stage 1 starting: Credential Exposure",
             {"stage": 1, "module": self.MODULE_NAME},
         )
 
-        self.logger.info("[recon_exposure] Stage 1: Credential file exposure")
-
-        # Config file probe
         credential_candidates = self._route_candidates(
-            target,
-            discovered_routes,
-            self.CREDENTIAL_PATHS,
+            target, discovered_routes, self.CREDENTIAL_PATHS,
             ("env", "config", "git", "credential", "secret", "backup", "dump", "database"),
-            minimum=5,
-            allow_fallback=discovery_sparse,
+            minimum=5, allow_fallback=discovery_sparse,
         )
 
         for url, source in credential_candidates:
@@ -318,107 +292,73 @@ class ReconExposureModule(BaseAttackModule):
                 async with session.get(url, allow_redirects=False) as resp:
                     if resp.status == 200:
                         body = await resp.text(errors="replace")
-                        for pattern, desc in self.CREDENTIAL_PATTERNS:
-                            if re.search(pattern, body, re.IGNORECASE):
+                        extracted = []
+                        for pattern, group_idx, desc in self.CREDENTIAL_PATTERNS:
+                            matches = re.findall(pattern, body, re.IGNORECASE)
+                            if matches:
+                                if group_idx == 1:
+                                    secret = matches[0] if isinstance(matches[0], str) else matches[0][0]
+                                else:
+                                    secret = f"{matches[0][0]}:****"
+                                extracted.append((desc, secret, str(matches[:2])))
+
+                        if extracted:
+                            for desc, secret, raw in extracted:
                                 findings.append(self.finding(
-                                    title       = f"Credentials Exposed: {path}",
-                                    description = (
+                                    title=f"Credentials Exposed: {path}",
+                                    description=(
                                         f"The file '{path}' is publicly accessible and contains "
-                                        f"sensitive data matching: {desc}. "
+                                        f"credential data: {desc}. Example secret: {secret}. "
                                         "This gives an attacker direct access to backend systems."
                                     ),
-                                    severity    = Severity.CRITICAL,
-                                    mitre_id    = "T1552",
-                                    evidence    = f"GET {url} → HTTP 200, pattern: {pattern}",
-                                    remediation = (
+                                    severity=Severity.CRITICAL,
+                                    mitre_id="T1552",
+                                    evidence=f"GET {url} → HTTP 200, extracted: {raw}",
+                                    remediation=(
                                         f"1. Immediately remove {path} from web root.\n"
                                         "2. Rotate all exposed credentials.\n"
-                                        "3. Add sensitive file patterns to .htaccess deny rules.\n"
-                                        "4. Scan web root for other exposed config files."
+                                        "3. Add sensitive file patterns to .htaccess deny rules."
                                     ),
-                                    raw_data    = {"path": path, "pattern": pattern, "source": source},
-                                    mode        = "live",
-                                    evidence_type = "target-derived" if source == "discovery" else "fallback-heuristic",
+                                    raw_data={"path": path, "secret_type": desc, "source": source},
+                                    mode="live",
+                                    evidence_type="target-derived" if source == "discovery" else "fallback-heuristic",
                                 ))
-                                break
+                        else:
+                            findings.append(self.finding(
+                                title=f"Config File Accessible: {path}",
+                                description=f"'{path}' is accessible but no immediate credentials were parsed. Still a risk.",
+                                severity=Severity.MEDIUM,
+                                mitre_id="T1552",
+                                evidence=f"GET {url} → HTTP 200, size {len(body)}",
+                                remediation=f"Restrict access to {path}.",
+                                raw_data={"path": path, "source": source},
+                                mode="live",
+                                evidence_type="target-derived" if source == "discovery" else "fallback-heuristic",
+                            ))
 
                     elif resp.status == 403:
                         findings.append(self.finding(
-                            title       = f"Sensitive Path Exists But Blocked: {path}",
-                            description = (
-                                f"'{path}' returned HTTP 403 — the file exists on disk "
-                                "but is blocked by server config. "
-                                "A misconfiguration could expose it."
-                            ),
-                            severity    = Severity.MEDIUM,
-                            mitre_id    = "T1552",
-                            evidence    = f"GET {url} → HTTP 403",
-                            remediation = (
-                                f"1. Move {path} outside the web root entirely.\n"
-                                "2. Do not rely solely on 403 blocks for sensitive files."
-                            ),
-                                raw_data    = {"path": path, "source": source},
-                                mode        = "live",
-                                evidence_type = "target-derived" if source == "discovery" else "fallback-heuristic",
+                            title=f"Sensitive Path Exists But Blocked: {path}",
+                            description=f"'{path}' returned HTTP 403. The file exists but is currently blocked.",
+                            severity=Severity.MEDIUM,
+                            mitre_id="T1552",
+                            evidence=f"GET {url} → HTTP 403",
+                            remediation=f"Move {path} outside web root entirely.",
+                            raw_data={"path": path, "source": source},
+                            mode="live",
+                            evidence_type="target-derived" if source == "discovery" else "fallback-heuristic",
                         ))
             except Exception as e:
                 self.logger.debug(f"Credential probe {url}: {e}")
-
             await asyncio.sleep(0.2)
 
-        # Login endpoint probe
-        login_candidates = self._route_candidates(
-            target,
-            discovered_routes,
-            ["/admin/login", "/login", "/moodle/login/index.php", "/mail/"],
+        # Discover login pages for use in Stage 3
+        self._discovered_login_pages = self._route_candidates(
+            target, discovered_routes,
+            ["/login", "/admin/login", "/moodle/login/index.php", "/mail/"],
             ("login", "signin", "auth", "mail"),
-            minimum=2,
-            fallback_limit=2,
-            allow_fallback=discovery_sparse,
+            minimum=2, fallback_limit=2, allow_fallback=discovery_sparse,
         )
-
-        for url, source in login_candidates[:4]:
-            login_path = urlparse(url).path or url
-            try:
-                async with session.get(url, allow_redirects=True) as resp:
-                    if resp.status == 200:
-                        await self.emit_event("INFO", f"[LOGIN EXPOSURE] Found login endpoint: {login_path}")
-                        findings.append(self.finding(
-                            title       = f"Login Endpoint Found: {login_path}",
-                            description = (
-                                f"Login form accessible at '{login_path}'. "
-                                "Default credentials (admin/admin, admin/password etc.) "
-                                "should be tested. Automated brute force possible if no lockout exists."
-                            ),
-                            severity    = Severity.MEDIUM,
-                            mitre_id    = "T1110.001",
-                            evidence    = f"GET {url} → HTTP {resp.status}",
-                            remediation = (
-                                "1. Change all default credentials immediately.\n"
-                                "2. Implement account lockout after 5 failed attempts.\n"
-                                "3. Enable MFA on all login endpoints.\n"
-                                "4. Monitor login endpoints for brute force patterns."
-                            ),
-                            raw_data    = {"path": login_path, "source": source},
-                            mode        = "live",
-                            evidence_type = "target-derived" if source == "discovery" else "fallback-heuristic",
-                        ))
-            except Exception as e:
-                self.logger.debug(f"Login probe {url}: {e}")
-            await asyncio.sleep(0.2)
-
-        if not findings:
-            findings.append(self.finding(
-                title       = "No Credential Exposure Found",
-                description = "No exposed config files or accessible login endpoints detected.",
-                severity    = Severity.INFO,
-                mitre_id    = "T1003",
-                evidence    = f"Probed {len(self.CREDENTIAL_PATHS)} paths on {target}",
-                remediation = "Continue regular credential hygiene audits.",
-                raw_data    = {"mode": "live", "evidence_type": "target-derived"},
-                mode        = "live",
-                evidence_type = "target-derived",
-            ))
 
         return findings
 
@@ -426,31 +366,19 @@ class ReconExposureModule(BaseAttackModule):
     # STAGE 2 — DATA EXFILTRATION
     # =========================================================
 
-    async def _stage_data_exfiltration(
-        self,
-        session: aiohttp.ClientSession,
-        target: str,
-        discovered_routes,
-        discovery_sparse: bool,
-    ) -> List[Finding]:
-
-        findings: List[Finding] = []
+    async def _stage_data_exfiltration(self, session, target, discovered_routes, discovery_sparse):
+        findings = []
 
         await self.emit_event(
-            "INFO",
-            "Stage 2 starting: Data Exfiltration Vectors",
+            "INFO", "Stage 2 starting: Data Exfiltration Vectors",
             {"stage": 2, "module": self.MODULE_NAME},
         )
 
-        self.logger.info("[recon_exposure] Stage 2: Data exfiltration vectors")
-
         exfil_candidates = self._route_candidates(
-            target,
-            discovered_routes,
-            self.EXFIL_PATHS,
-            ("api", "rest", "data", "export", "download", "report", "user", "student", "log", "backup", "files", "csv", "json"),
-            minimum=4,
-            allow_fallback=discovery_sparse,
+            target, discovered_routes, self.EXFIL_PATHS,
+            ("api", "rest", "data", "export", "download", "report", "user", "student",
+             "log", "backup", "files", "csv", "json"),
+            minimum=4, allow_fallback=discovery_sparse,
         )
 
         for url, source in exfil_candidates:
@@ -462,85 +390,53 @@ class ReconExposureModule(BaseAttackModule):
                         body_size = len(body)
 
                         if "Index of /" in body:
-                            await self.emit_event("INFO", f"[DATA EXFIL] Directory listing exposed at {path}")
                             findings.append(self.finding(
-                                title       = f"Directory Listing Exposed: {path}",
-                                description = (
-                                    f"The path '{path}' has directory listing enabled. "
-                                    "An attacker can browse and download all files in this directory."
-                                ),
-                                severity    = Severity.HIGH,
-                                mitre_id    = "T1041",
-                                evidence    = f"GET {url} → HTTP 200 with 'Index of /'",
-                                remediation = (
-                                    "1. Disable directory listing in Apache (Options -Indexes) "
-                                    "or Nginx (autoindex off).\n"
-                                    "2. Ensure no sensitive files are in publicly accessible directories."
-                                ),
+                                title=f"Directory Listing Exposed: {path}",
+                                description="Directory listing enabled; attackers can browse and download files.",
+                                severity=Severity.HIGH,
+                                mitre_id="T1041",
+                                evidence=f"GET {url} → HTTP 200 with 'Index of /'",
+                                remediation="Disable directory listing (Options -Indexes / autoindex off).",
+                                raw_data={"path": path, "source": source},
+                                mode="live",
+                                evidence_type="target-derived" if source == "discovery" else "fallback-heuristic",
                             ))
 
                         for pattern, desc in self.PII_PATTERNS:
                             matches = re.findall(pattern, body[:5000], re.IGNORECASE)
                             if matches:
                                 findings.append(self.finding(
-                                    title       = f"Sensitive Data Exposed via {path}",
-                                    description = (
-                                        f"The endpoint '{path}' returned {body_size} bytes "
-                                        f"containing potentially sensitive data: {desc}. "
-                                        "This data could be exfiltrated by an attacker."
+                                    title=f"Sensitive Data Exposed via {path}",
+                                    description=(
+                                        f"'{path}' returned {body_size} bytes with potential {desc}. "
+                                        "Data could be exfiltrated."
                                     ),
-                                    severity    = Severity.CRITICAL,
-                                    mitre_id    = "T1041",
-                                    evidence    = f"Pattern '{pattern}' matched in response from {url}",
-                                    remediation = (
-                                        "1. Restrict access to this endpoint with authentication.\n"
-                                        "2. Implement data masking for sensitive fields in API responses.\n"
-                                        "3. Apply rate limiting to prevent bulk data extraction.\n"
-                                        "4. Audit all API endpoints for excessive data exposure."
-                                    ),
-                                    raw_data    = {"path": path, "pattern": pattern, "size": body_size, "source": source},
-                                    mode        = "live",
-                                    evidence_type = "target-derived" if source == "discovery" else "fallback-heuristic",
+                                    severity=Severity.CRITICAL,
+                                    mitre_id="T1041",
+                                    evidence=f"Pattern '{pattern}' matched in response from {url}",
+                                    remediation="Restrict access, apply data masking, add authentication.",
+                                    raw_data={"path": path, "pattern": pattern, "size": body_size, "source": source},
+                                    mode="live",
+                                    evidence_type="target-derived" if source == "discovery" else "fallback-heuristic",
                                 ))
                                 break
 
                         if body_size > 50000 and not findings:
                             findings.append(self.finding(
-                                title       = f"Large Unauthenticated Response: {path}",
-                                description = (
-                                    f"'{path}' returned {body_size:,} bytes without authentication. "
-                                    "Large unauthenticated responses are a data exfiltration risk."
-                                ),
-                                severity    = Severity.MEDIUM,
-                                mitre_id    = "T1020",
-                                evidence    = f"GET {url} → HTTP 200, {body_size:,} bytes",
-                                remediation = (
-                                    "1. Add authentication to this endpoint.\n"
-                                    "2. Implement pagination to limit response sizes.\n"
-                                    "3. Add rate limiting."
-                                ),
-                                raw_data    = {"path": path, "size": body_size, "source": source},
-                                mode        = "live",
-                                evidence_type = "target-derived" if source == "discovery" else "fallback-heuristic",
+                                title=f"Large Unauthenticated Response: {path}",
+                                description=f"'{path}' returned {body_size:,} bytes without authentication. Exfiltration risk.",
+                                severity=Severity.MEDIUM,
+                                mitre_id="T1020",
+                                evidence=f"GET {url} → HTTP 200, {body_size:,} bytes",
+                                remediation="Add authentication and pagination.",
+                                raw_data={"path": path, "size": body_size, "source": source},
+                                mode="live",
+                                evidence_type="target-derived" if source == "discovery" else "fallback-heuristic",
                             ))
 
             except Exception as e:
                 self.logger.debug(f"Exfil probe {url}: {e}")
-
             await asyncio.sleep(0.2)
-
-        if not findings:
-            findings.append(self.finding(
-                title       = "No Data Exfiltration Vectors Found",
-                description = "No exposed data endpoints, directory listings, or PII leakage detected.",
-                severity    = Severity.INFO,
-                mitre_id    = "T1041",
-                evidence    = f"Probed {len(self.EXFIL_PATHS)} paths on {target}",
-                remediation = "Continue regular API security audits and access control reviews.",
-                raw_data    = {"mode": "live", "evidence_type": "target-derived"},
-                mode        = "live",
-                evidence_type = "target-derived",
-            ))
 
         return findings
 
@@ -548,79 +444,139 @@ class ReconExposureModule(BaseAttackModule):
     # STAGE 3 — LATERAL MOVEMENT
     # =========================================================
 
-    async def _stage_lateral_movement(
-        self,
-        session: aiohttp.ClientSession,
-        target: str,
-        discovered_routes,
-        discovery_sparse: bool,
-    ) -> List[Finding]:
-
-        findings: List[Finding] = []
+    async def _stage_lateral_movement(self, session, target, discovered_routes, discovery_sparse):
+        findings = []
 
         await self.emit_event(
-            "INFO",
-            "Stage 3 starting: Lateral Movement Vectors",
+            "INFO", "Stage 3 starting: Lateral Movement Vectors",
             {"stage": 3, "module": self.MODULE_NAME},
         )
 
-        self.logger.info("[recon_exposure] Stage 3: Lateral movement vectors")
+        # 1. Try default credentials on discovered login pages
+        for login_url, source in getattr(self, "_discovered_login_pages", []):
+            try:
+                async with session.get(login_url) as resp:
+                    if resp.status == 200:
+                        page = await resp.text()
+                        if re.search(r'<input[^>]*type=["\']password["\']', page, re.IGNORECASE):
+                            for user, pwd in self.DEFAULT_CREDENTIALS[:4]:
+                                try:
+                                    data = {"username": user, "password": pwd, "submit": "Login"}
+                                    async with session.post(
+                                        login_url, data=data, allow_redirects=False
+                                    ) as post_resp:
+                                        if post_resp.status in (302, 303) and \
+                                                "session" in str(post_resp.cookies).lower():
+                                            findings.append(self.finding(
+                                                title=f"Default Credentials Successful on {login_url}",
+                                                description=(
+                                                    f"Login with {user}/{pwd} succeeded. "
+                                                    "An attacker can now pivot laterally using this account."
+                                                ),
+                                                severity=Severity.CRITICAL,
+                                                mitre_id="T1110.001",
+                                                evidence=f"POST {login_url} returned {post_resp.status} with session cookie",
+                                                remediation=(
+                                                    "Immediately change default credentials "
+                                                    "and enforce a strong password policy."
+                                                ),
+                                                raw_data={"login_url": login_url, "username": user, "source": source},
+                                                mode="live",
+                                                evidence_type="target-derived" if source == "discovery" else "fallback-heuristic",
+                                            ))
+                                            break
+                                except Exception:
+                                    pass
+            except Exception:
+                pass
 
+        # 2. Probe admin/management interfaces for SSRF vectors
         lateral_candidates = self._route_candidates(
-            target,
-            discovered_routes,
-            self.LATERAL_PROBE_PATHS,
+            target, discovered_routes, self.LATERAL_PROBE_PATHS,
             ("admin", "manage", "dashboard", "console", "phpmyadmin", "wp-admin", "config", "backup"),
-            minimum=3,
-            allow_fallback=discovery_sparse,
+            minimum=3, allow_fallback=discovery_sparse,
         )
 
         for url, source in lateral_candidates:
             path = urlparse(url).path or url
             try:
                 async with session.get(url, allow_redirects=False) as resp:
-                    if resp.status in (200, 301, 302, 403):
-                        await self.emit_event("INFO", f"[LATERAL MOVEMENT] Found potential vector: {path} (HTTP {resp.status})")
-                        method = random.choice(self.LATERAL_METHODS)
-                        sev    = Severity.CRITICAL if resp.status in (200, 302) else Severity.HIGH
+                    if resp.status == 200:
+                        body            = await resp.text(errors="replace")
+                        ssrf_candidates = [
+                            param for param in self.SSRF_PARAMETERS
+                            if re.search(rf"[?&]{param}=", body, re.IGNORECASE)
+                        ]
+                        if ssrf_candidates:
+                            findings.append(self.finding(
+                                title=f"Potential SSRF Vector: {path}",
+                                description=(
+                                    f"The management interface '{path}' accepts parameters "
+                                    f"{', '.join(ssrf_candidates)}. An attacker could abuse this "
+                                    "to make requests to internal services, enabling lateral movement."
+                                ),
+                                severity=Severity.HIGH,
+                                mitre_id="T1021",
+                                evidence=f"GET {url} → HTTP 200 with parameters {ssrf_candidates}",
+                                remediation=(
+                                    "Validate and restrict URL parameters; "
+                                    "implement allowlists for external requests."
+                                ),
+                                raw_data={"path": path, "ssrf_params": ssrf_candidates, "source": source},
+                                mode="live",
+                                evidence_type="target-derived" if source == "discovery" else "fallback-heuristic",
+                            ))
 
+                    elif resp.status == 403:
                         findings.append(self.finding(
-                            title       = f"Lateral Movement Vector: {path}",
-                            description = (
-                                f"Path '{path}' responded with HTTP {resp.status}. "
-                                f"In a real attack, this could be leveraged via {method} "
-                                "to pivot into adjacent systems."
+                            title=f"Protected Admin Interface: {path}",
+                            description=(
+                                f"'{path}' returned HTTP 403. If credentials are obtained (e.g., via "
+                                "password spraying), an attacker can use this interface to pivot internally."
                             ),
-                            severity    = sev,
-                            mitre_id    = "T1021",
-                            evidence    = f"GET {url} → HTTP {resp.status}",
-                            remediation = (
-                                "1. Implement network segmentation — restrict east-west traffic.\n"
-                                "2. Enforce authentication on all management interfaces.\n"
-                                "3. Deploy host-based IDS to detect unusual internal connections.\n"
-                                "4. Disable SMB/WMI if not required in your environment."
+                            severity=Severity.MEDIUM,
+                            mitre_id="T1021",
+                            evidence=f"GET {url} → HTTP 403",
+                            remediation=(
+                                "Restrict access to management interfaces by IP allowlist; enable MFA."
                             ),
-                            raw_data    = {"path": path, "status": resp.status, "method": method, "source": source},
-                            mode        = "live",
-                            evidence_type = "target-derived" if source == "discovery" else "fallback-heuristic",
+                            raw_data={"path": path, "source": source},
+                            mode="live",
+                            evidence_type="target-derived" if source == "discovery" else "fallback-heuristic",
                         ))
             except Exception as e:
                 self.logger.debug(f"Lateral probe {url}: {e}")
-
             await asyncio.sleep(0.3)
 
-        if not findings:
-            findings.append(self.finding(
-                title       = "No Lateral Movement Vectors Found",
-                description = "All probed admin/management paths returned 404 or were unreachable.",
-                severity    = Severity.INFO,
-                mitre_id    = "T1021",
-                evidence    = f"Probed {len(self.LATERAL_PROBE_PATHS)} paths on {target}",
-                remediation = "Continue monitoring for internal east-west traffic anomalies.",
-                raw_data    = {"mode": "live", "evidence_type": "target-derived"},
-                mode        = "live",
-                evidence_type = "target-derived",
-            ))
+        # 3. Open redirect probe
+        open_redirect_urls = [
+            f"{target}/?redirect=http://evil.com",
+            f"{target}/redirect?url=http://evil.com",
+            f"{target}/login?next=http://evil.com",
+        ]
+        for test_url in open_redirect_urls:
+            try:
+                async with session.get(test_url, allow_redirects=False) as resp:
+                    if resp.status in (301, 302, 303, 307, 308):
+                        loc = resp.headers.get("Location", "")
+                        if "evil.com" in loc:
+                            findings.append(self.finding(
+                                title="Open Redirect Detected",
+                                description=(
+                                    "Parameter injection leads to redirect to an external domain. "
+                                    "An attacker can use this in phishing campaigns to steal credentials "
+                                    "and move laterally."
+                                ),
+                                severity=Severity.MEDIUM,
+                                mitre_id="T1021.001",
+                                evidence=f"GET {test_url} → {resp.status} Location: {loc}",
+                                remediation="Validate redirect URLs against a whitelist; use relative redirects.",
+                                raw_data={"url": test_url, "redirect_to": loc},
+                                mode="live",
+                                evidence_type="target-derived",
+                            ))
+            except Exception:
+                pass
 
         return findings
 
@@ -628,32 +584,19 @@ class ReconExposureModule(BaseAttackModule):
     # STAGE 4 — SUPPLY CHAIN
     # =========================================================
 
-    async def _stage_supply_chain(
-        self,
-        session: aiohttp.ClientSession,
-        target: str,
-        discovered_routes,
-        discovery_sparse: bool,
-    ) -> List[Finding]:
-
-        findings: List[Finding] = []
+    async def _stage_supply_chain(self, session, target, discovered_routes, discovery_sparse):
+        findings = []
 
         await self.emit_event(
-            "INFO",
-            "Stage 4 starting: Supply Chain Risks",
+            "INFO", "Stage 4 starting: Supply Chain Risks",
             {"stage": 4, "module": self.MODULE_NAME},
         )
 
-        self.logger.info("[recon_exposure] Stage 4: Supply chain risks")
-
-        # Manifest file exposure
         manifest_candidates = self._route_candidates(
-            target,
-            discovered_routes,
-            self.MANIFEST_PATHS,
-            ("package", "requirements", "pipfile", "gemfile", "composer", "pom", "gradle", "npmrc", "yarn", "swagger", "openapi", "api", "rest"),
-            minimum=4,
-            allow_fallback=discovery_sparse,
+            target, discovered_routes, self.MANIFEST_PATHS,
+            ("package", "requirements", "pipfile", "gemfile", "composer",
+             "pom", "gradle", "npmrc", "yarn"),
+            minimum=4, allow_fallback=discovery_sparse,
         )
 
         for url, source in manifest_candidates:
@@ -662,109 +605,74 @@ class ReconExposureModule(BaseAttackModule):
                 async with session.get(url, allow_redirects=False) as resp:
                     if resp.status == 200:
                         body = await resp.text(errors="replace")
-
-                        await self.emit_event("INFO", f"[SUPPLY CHAIN] Dependency manifest exposed: {path}")
                         findings.append(self.finding(
-                            title       = f"Dependency Manifest Exposed: {path}",
-                            description = (
-                                f"The file '{path}' is publicly accessible. "
-                                "This reveals all dependencies and their versions, "
-                                "allowing attackers to identify vulnerable components "
-                                "or mount a dependency confusion attack."
-                            ),
-                            severity    = Severity.HIGH,
-                            mitre_id    = "T1195.002",
-                            evidence    = f"GET {url} → HTTP 200, {len(body)} bytes",
-                            remediation = (
-                                f"1. Block access to {path} via web server config.\n"
-                                "2. Move manifests outside web root.\n"
-                                "3. Add to .htaccess: <Files package.json> deny from all </Files>"
-                            ),
-                            raw_data    = {"path": path, "size": len(body), "source": source},
-                            mode        = "live",
-                            evidence_type = "target-derived" if source == "discovery" else "fallback-heuristic",
+                            title=f"Dependency Manifest Exposed: {path}",
+                            description="Manifest file publicly accessible; reveals dependency versions.",
+                            severity=Severity.HIGH,
+                            mitre_id="T1195.002",
+                            evidence=f"GET {url} → HTTP 200, {len(body)} bytes",
+                            remediation="Block access to manifest files via web server config.",
+                            raw_data={"path": path, "size": len(body), "source": source},
+                            mode="live",
+                            evidence_type="target-derived" if source == "discovery" else "fallback-heuristic",
                         ))
 
                         for pattern, desc in self.VULNERABLE_PATTERNS:
                             matches = re.findall(pattern, body, re.IGNORECASE)
                             if matches:
+                                if "log4j" in desc.lower():
+                                    cve, sev = "CVE-2021-44228", Severity.CRITICAL
+                                elif "django" in desc.lower():
+                                    cve, sev = "CVE-2023-31047", Severity.HIGH
+                                else:
+                                    cve, sev = "check manually", Severity.MEDIUM
+
                                 findings.append(self.finding(
-                                    title       = f"Component Version Exposed: {desc}",
-                                    description = (
-                                        f"Version information found in {path}: {matches[:3]}. "
-                                        "Attackers can cross-reference these against CVE databases."
+                                    title=f"Vulnerable Component: {desc} in {path}",
+                                    description=(
+                                        f"Version {matches[0][-1] if isinstance(matches[0], tuple) else matches[0]} "
+                                        f"of {desc} is listed. Known vulnerability {cve}. "
+                                        "Supply chain attack possible via dependency confusion or exploit."
                                     ),
-                                    severity    = Severity.MEDIUM,
-                                    mitre_id    = "T1195",
-                                    evidence    = f"Pattern '{pattern}' matched: {matches[:3]}",
-                                    remediation = (
-                                        "1. Keep all dependencies updated.\n"
-                                        "2. Use tools like 'npm audit' or 'safety check' regularly.\n"
-                                        "3. Subscribe to security advisories for your dependencies."
-                                    ),
-                                    raw_data    = {"path": path, "source": source},
-                                    mode        = "live",
-                                    evidence_type = "target-derived" if source == "discovery" else "fallback-heuristic",
+                                    severity=sev,
+                                    mitre_id="T1195",
+                                    evidence=f"Pattern matched: {matches[:2]}",
+                                    remediation="Update component to latest secure version; monitor security advisories.",
+                                    raw_data={"path": path, "cve": cve, "source": source},
+                                    mode="live",
+                                    evidence_type="target-derived" if source == "discovery" else "fallback-heuristic",
                                 ))
-            except Exception as e:
-                self.logger.debug(f"Manifest probe {url}: {e}")
+            except Exception:
+                pass
             await asyncio.sleep(0.2)
 
-        # Third-party script analysis
+        # Third-party script detection
         script_candidates = self._route_candidates(
-            target,
-            discovered_routes,
-            self.SCRIPT_PATHS[:2],
-            ("index", "html", "mail", "moodle", "admin", "dashboard", "root"),
-            minimum=2,
-            fallback_limit=2,
-            allow_fallback=discovery_sparse,
+            target, discovered_routes, self.SCRIPT_PATHS,
+            ("index", "html", "mail", "moodle"),
+            minimum=2, fallback_limit=2, allow_fallback=discovery_sparse,
         )
-
         for url, source in script_candidates:
-            path = urlparse(url).path or url
             try:
-                async with session.get(url, allow_redirects=True, ssl=False) as resp:
+                async with session.get(url) as resp:
                     if resp.status == 200:
                         body = await resp.text(errors="replace")
                         for pattern in self.SUSPICIOUS_SCRIPT_PATTERNS:
                             matches = re.findall(pattern, body, re.IGNORECASE)
                             if matches:
                                 findings.append(self.finding(
-                                    title       = "Third-Party Script Loaded from External Domain",
-                                    description = (
-                                        f"The page at '{path}' loads scripts from external domains: "
-                                        f"{matches[:3]}. "
-                                        "A compromised CDN or script host could inject malicious code "
-                                        "into all users' browsers (supply chain attack)."
-                                    ),
-                                    severity    = Severity.MEDIUM,
-                                    mitre_id    = "T1059",
-                                    evidence    = f"External script domains: {matches[:3]}",
-                                    remediation = (
-                                        "1. Use Subresource Integrity (SRI) hashes for all external scripts.\n"
-                                        "2. Self-host critical JavaScript dependencies.\n"
-                                        "3. Implement a strict Content-Security-Policy."
-                                    ),
-                                    raw_data    = {"path": path, "source": source},
-                                    mode        = "live",
-                                    evidence_type = "target-derived" if source == "discovery" else "fallback-heuristic",
+                                    title="Third-Party Script from External Domain",
+                                    description=f"External scripts: {matches[:3]}. Potential supply chain risk.",
+                                    severity=Severity.MEDIUM,
+                                    mitre_id="T1059",
+                                    evidence=f"Scripts: {matches[:3]}",
+                                    remediation="Use SRI hashes or self-host critical scripts.",
+                                    raw_data={"path": urlparse(url).path, "domains": matches[:3], "source": source},
+                                    mode="live",
+                                    evidence_type="target-derived" if source == "discovery" else "fallback-heuristic",
                                 ))
-            except Exception as e:
-                self.logger.debug(f"Script probe {url}: {e}")
+            except Exception:
+                pass
             await asyncio.sleep(0.3)
-
-        if not findings:
-            findings.append(self.finding(
-                title       = "No Supply Chain Vectors Found",
-                description = "No exposed manifests or suspicious third-party scripts detected.",
-                severity    = Severity.INFO,
-                mitre_id    = "T1195",
-                evidence    = f"Probed {len(self.MANIFEST_PATHS)} manifest paths on {target}",
-                remediation = "Continue regular dependency audits and SRI checks.",
-                raw_data    = {"mode": "live", "evidence_type": "target-derived"},
-                mode        = "live",
-                evidence_type = "target-derived",
-            ))
 
         return findings

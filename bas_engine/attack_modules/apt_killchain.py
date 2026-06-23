@@ -186,12 +186,12 @@ class KillChainState:
 
         }.get(status, "?")
 
-        print(
+        logger.info(
             f"\n[{icon}] Stage "
             f"{stage_num}: {name}"
         )
 
-        print(f"    {detail}")
+        logger.info(f"    {detail}")
 
         # The module isn't strictly passing `self` into the state object,
         # so we'll just queue an async emit on the orchestrator if possible,
@@ -253,7 +253,8 @@ class APTKillChainModule(BaseAttackModule):
                 urlparse(target).netloc
             )
 
-        except:
+        except Exception as e:
+            logger.error(f"Error in phase 1: {e}")
             return False
 
 
@@ -418,7 +419,8 @@ class APTKillChainModule(BaseAttackModule):
                         "links"
                     ].append(full)
 
-        except:
+        except Exception as e:
+            logger.error(f"Error in phase 2: {e}")
             pass
 
 
@@ -436,7 +438,7 @@ class APTKillChainModule(BaseAttackModule):
         target,
     ):
 
-        print(
+        logger.info(
             "\n=== STAGE 1 — RECON ==="
         )
 
@@ -472,7 +474,7 @@ class APTKillChainModule(BaseAttackModule):
                         in resp.headers.items()
                     }
 
-                    print(
+                    logger.info(
                         f"[{status}] {url}"
                     )
 
@@ -593,7 +595,7 @@ class APTKillChainModule(BaseAttackModule):
 
             except Exception as e:
 
-                print(f"[E] {url} : {e}")
+                logger.info(f"[E] {url} : {e}")
 
             await asyncio.sleep(
                 DELAY_BETWEEN
@@ -630,7 +632,7 @@ class APTKillChainModule(BaseAttackModule):
         state,
     ):
 
-        print(
+        logger.info(
             "\n=== STAGE 2 — LOGIN ATTACK ==="
         )
 
@@ -684,7 +686,7 @@ class APTKillChainModule(BaseAttackModule):
 
                         status = resp.status
 
-                        print(
+                        logger.info(
                             f"[{status}] "
                             f"{username}:{password}"
                         )
@@ -729,7 +731,7 @@ class APTKillChainModule(BaseAttackModule):
 
                 except Exception as e:
 
-                    print(f"[E] {e}")
+                    logger.info(f"[E] {e}")
 
                 await asyncio.sleep(
                     DELAY_BETWEEN
@@ -760,7 +762,7 @@ class APTKillChainModule(BaseAttackModule):
         state,
     ):
 
-        print(
+        logger.info(
             "\n=== STAGE 3 — SESSION VALIDATION ==="
         )
 
@@ -804,7 +806,7 @@ class APTKillChainModule(BaseAttackModule):
         state,
     ):
 
-        print(
+        logger.info(
             "\n=== STAGE 4 — OWASP ATTACKS ==="
         )
 
@@ -887,7 +889,7 @@ class APTKillChainModule(BaseAttackModule):
 
                             outcome = "BYPASSED"
 
-                        print(
+                        logger.info(
                             f"[{outcome}] "
                             f"{label} "
                             f"{status}"
@@ -904,7 +906,7 @@ class APTKillChainModule(BaseAttackModule):
 
                 except Exception as e:
 
-                    print(f"[E] {e}")
+                    logger.info(f"[E] {e}")
 
                 await asyncio.sleep(
                     DELAY_BETWEEN
@@ -938,7 +940,7 @@ class APTKillChainModule(BaseAttackModule):
         target,
     ):
 
-        print(
+        logger.info(
             "\n=== STAGE 5 — PRIV ESC ==="
         )
 
@@ -964,7 +966,7 @@ class APTKillChainModule(BaseAttackModule):
 
                     status = resp.status
 
-                    print(
+                    logger.info(
                         f"[{status}] {url}"
                     )
 
@@ -979,7 +981,7 @@ class APTKillChainModule(BaseAttackModule):
 
             except Exception as e:
 
-                print(f"[E] {e}")
+                logger.info(f"[E] {e}")
 
             await asyncio.sleep(
                 DELAY_BETWEEN
@@ -1028,7 +1030,7 @@ class APTKillChainModule(BaseAttackModule):
         target,
     ):
 
-        print(
+        logger.info(
             "\n=== STAGE 6 — PERSISTENCE ==="
         )
 
@@ -1054,7 +1056,7 @@ class APTKillChainModule(BaseAttackModule):
 
                     status = resp.status
 
-                    print(
+                    logger.info(
                         f"[{status}] {url}"
                     )
 
@@ -1069,7 +1071,7 @@ class APTKillChainModule(BaseAttackModule):
 
             except Exception as e:
 
-                print(f"[E] {e}")
+                logger.info(f"[E] {e}")
 
             await asyncio.sleep(
                 DELAY_BETWEEN
@@ -1117,17 +1119,17 @@ class APTKillChainModule(BaseAttackModule):
 
         target = resolved.original
 
-        print("\n" + "=" * 60)
+        logger.info("\n" + "=" * 60)
 
-        print(
+        logger.info(
             "Adaptive APT Kill Chain v3"
         )
 
-        print(
+        logger.info(
             f"TARGET: {target}"
         )
 
-        print("=" * 60)
+        logger.info("=" * 60)
 
         connector = aiohttp.TCPConnector(
             ssl=False
@@ -1225,9 +1227,16 @@ class APTKillChainModule(BaseAttackModule):
         # WAF BYPASS FINDINGS
         # =================================================
 
+        seen_labels = set()
+
         for attack in state.attack_results:
 
             if attack["blocked"] is False:
+
+                label = attack.get("label", "Unknown")
+                if label in seen_labels:
+                    continue
+                seen_labels.add(label)
 
                 findings.append(
 

@@ -73,16 +73,25 @@ class SimulationRequest(BaseModel):
 
     @field_validator("modules")
     @classmethod
-    def modules_not_empty(cls, v):
+    def validate_modules(cls, v):
         if not v:
             raise ValueError("At least one attack module must be specified")
+        from bas_engine.attack_modules.registry import MODULE_REGISTRY
+        for m in v:
+            if m not in MODULE_REGISTRY:
+                raise ValueError(f"Invalid module: {m}")
         return v
 
     @field_validator("target")
     @classmethod
-    def target_not_empty(cls, v):
-        if not v.strip():
+    def validate_target(cls, v):
+        if not v or not v.strip():
             raise ValueError("Target cannot be empty")
+        v_stripped = v.strip().lower()
+        if "169.254.169.254" in v_stripped:
+            raise ValueError("Cloud metadata IPs are prohibited (SSRF protection).")
+        if "127." in v_stripped or "localhost" in v_stripped:
+            raise ValueError("Loopback targets are prohibited (SSRF protection).")
         return v.strip()
 
 

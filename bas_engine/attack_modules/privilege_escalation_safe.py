@@ -27,23 +27,41 @@ class PrivEscModule(BaseAttackModule):
 
     async def execute(self) -> List[Finding]:
         findings = []
-        system = platform.system()
+        
+        if not self.options.get("ssh_user"):
+            findings.append(self.finding(
+                title="Target Execution Blocked",
+                description="Target execution requires 'ssh_user' and password/key in options.",
+                severity=Severity.INFO,
+                mitre_id="N/A",
+                evidence="No SSH credentials provided.",
+                remediation="Configure the module with ssh_user and ssh_pass/ssh_key.",
+                mode="safe",
+                evidence_type="enumeration"
+            ))
+            return findings
+
+        try:
+            uname = await self._run_cmd("uname -a")
+            system = "Linux" if "Linux" in uname else "Windows"
+        except Exception as e:
+            logger.error(f"Failed to connect to target: {e}")
+            findings.append(self.finding(
+                title="SSH Connection Failed",
+                description=f"Could not connect to target: {str(e)}",
+                severity=Severity.INFO,
+                mitre_id="N/A",
+                evidence=str(e),
+                remediation="Verify target SSH port and credentials.",
+                mode="safe",
+                evidence_type="enumeration"
+            ))
+            return findings
 
         if system == "Linux":
             findings.extend(await self._linux_checks())
         elif system == "Windows":
             findings.extend(await self._windows_checks())
-        else:
-            findings.append(self.finding(
-                title="Unsupported OS",
-                description=f"Enumeration not implemented for {system}",
-                severity=Severity.INFO,
-                mitre_id="N/A",
-                evidence=f"OS: {system}",
-                remediation="Run on Linux or Windows.",
-                mode="safe",
-                evidence_type="enumeration"
-            ))
         return findings
 
     # ─── Linux Checks ─────────────────────────────────────────────
@@ -149,25 +167,16 @@ class PrivEscModule(BaseAttackModule):
     async def _check_cron_jobs(self) -> List[Finding]:
         findings = []
         try:
-            cron_dirs = [
-                "/etc/cron.d", "/etc/cron.daily", "/etc/cron.hourly",
-                "/etc/cron.weekly", "/var/spool/cron"
-            ]
-            world_writable = []
-            for d in cron_dirs:
-                if os.path.isdir(d):
-                    for f in os.listdir(d):
-                        fp = os.path.join(d, f)
-                        try:
-                            st = os.stat(fp)
-                            if st.st_mode & stat.S_IWOTH:
-                                world_writable.append(fp)
-                        except Exception:
-                            pass
+            # Find world-writable cron files remotely via SSH
+            result = await self._run_cmd(
+                "find /etc/cron.d /etc/cron.daily /etc/cron.hourly /etc/cron.weekly "
+                "/var/spool/cron -maxdepth 1 -type f -perm -o+w 2>/dev/null"
+            )
+            world_writable = [l.strip() for l in result.splitlines() if l.strip()]
             if world_writable:
                 findings.append(self.finding(
                     title="World‑Writable Cron Files",
-                    description=f"{len(world_writable)} cron files are world‑writable.",
+                    description=f"{len(world_writable)} cron files are world‑writable on the target.",
                     severity=Severity.CRITICAL,
                     mitre_id="T1053.003",
                     evidence=str(world_writable),
@@ -307,20 +316,31 @@ class PrivEscModule(BaseAttackModule):
     # ─── Helpers ──────────────────────────────────────────────────
 
     async def _run_cmd(self, cmd: str) -> str:
-        proc = await asyncio.create_subprocess_shell(
-            cmd,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE,
-        )
-        stdout, _ = await asyncio.wait_for(proc.communicate(), timeout=15)
-        return stdout.decode(errors="replace")
+        ssh_user = self.options.get("ssh_user")
+        ssh_pass = self.options.get("ssh_pass")
+        ssh_key = self.options.get("ssh_key")
+        ssh_port = int(self.options.get("ssh_port", 22))
+
+        if not ssh_user:
+            raise ValueError("Target execution requires 'ssh_user' in options.")
+
+        import asyncssh
+        from urllib.parse import urlparse
+        
+        parsed = urlparse(self.target)
+        host = parsed.hostname or parsed.path
+
+        async with asyncssh.connect(
+            host,
+            port=ssh_port,
+            username=ssh_user,
+            password=ssh_pass,
+            client_keys=[ssh_key] if ssh_key else None,
+            known_hosts=None
+        ) as conn:
+            result = await conn.run(cmd, check=False)
+            return result.stdout or ""
 
     async def _run_powershell(self, command: str) -> str:
-        cmd = ["powershell", "-NoProfile", "-Command", command]
-        proc = await asyncio.create_subprocess_exec(
-            *cmd,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE,
-        )
-        stdout, _ = await asyncio.wait_for(proc.communicate(), timeout=30)
-        return stdout.decode(errors="replace").strip()
+        cmd = f"powershell -NoProfile -Command \"{command}\""
+        return await self._run_cmd(cmd)
