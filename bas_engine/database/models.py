@@ -34,6 +34,8 @@ class SimulationDB(Base):
 
     metadata_json = Column(JSON)
     
+    modules = Column(JSON)
+    
     detection_summary = Column(JSON)
 
     soc_score = Column(Float)

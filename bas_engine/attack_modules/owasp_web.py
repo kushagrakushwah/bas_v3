@@ -42,6 +42,9 @@ SQLI_PAYLOADS = [
     "\" OR \"1\"=\"1",
     "1; DROP TABLE users--",
     "' UNION SELECT NULL--",
+    "SLEEP(5)",
+    "pg_sleep(5)",
+    "WAITFOR DELAY '0:0:5'",
 ]
 
 SQLI_ERROR_PATTERNS = [
@@ -279,14 +282,30 @@ class OWASPWebModule(BaseAttackModule):
         for test_name, payloads, check_func, severity in tests:
             # Fire all payloads for this test concurrently, take first hit
             urls = [base_url + '?' + urlencode({param: p}) for p in payloads]
+            
+            async def timed_get(u):
+                start = time.monotonic()
+                resp = await self._get(session, sem, u)
+                elapsed = time.monotonic() - start
+                if isinstance(resp, Exception) or resp is None:
+                    return resp
+                return resp + (elapsed,)
+
             responses = await asyncio.gather(
-                *[self._get(session, sem, u) for u in urls], return_exceptions=True
+                *[timed_get(u) for u in urls], return_exceptions=True
             )
             for payload, resp in zip(payloads, responses):
                 if isinstance(resp, Exception) or resp is None:
                     continue
-                status, _, body = resp
-                if await check_func(payload, body, status):
+                status, _, body, elapsed = resp
+                
+                # Check functions might need elapsed time
+                if test_name == "SQLi":
+                    is_vuln = await check_func(payload, body, status, elapsed)
+                else:
+                    is_vuln = await check_func(payload, body, status)
+                    
+                if is_vuln:
                     findings.append(self.finding(
                         title=f"{test_name} Vulnerability in {param}",
                         description=f"Parameter '{param}' is vulnerable to {test_name}.",
@@ -305,7 +324,9 @@ class OWASPWebModule(BaseAttackModule):
     async def _check_xss_response(self, payload, body, status):
         return payload in body
 
-    async def _check_sqli_response(self, payload, body, status):
+    async def _check_sqli_response(self, payload, body, status, elapsed=0.0):
+        if elapsed > 4.5:
+            return True
         return any(re.search(p, body, re.IGNORECASE) for p in SQLI_ERROR_PATTERNS)
 
     async def _check_cmd_response(self, payload, body, status):

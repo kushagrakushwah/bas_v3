@@ -556,6 +556,11 @@ class SSHBruteForceModule(BaseAttackModule):
             "rcmloginuser",
             "invalid_login",
             "Login failed",
+            "invalid credentials",
+            "bad credentials",
+            "wrong password",
+            "access denied",
+            "authentication error",
         ]
 
         PASS_MARKERS = [

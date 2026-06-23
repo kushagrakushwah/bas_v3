@@ -34,6 +34,7 @@ class SimulationRepository:
                 name=simulation.name,
                 target=simulation.target,
                 status=simulation.status,
+                modules=simulation.modules,
                 metadata_json=simulation.metadata,
                 created_at=simulation.created_at,
                 updated_at=simulation.updated_at,
@@ -277,10 +278,7 @@ class SimulationRepository:
             id=db_sim.id,
             name=db_sim.name,
             target=db_sim.target,
-            modules=[
-                m.module
-                for m in db_sim.module_results
-            ],
+            modules=db_sim.modules or [],
             status=db_sim.status,
             module_results=module_results,
             metadata=db_sim.metadata_json or {},

@@ -185,8 +185,8 @@ class AttackOrchestrator:
                             continue
 
                         result.module_results.append(r)
-                        print(f"\n=== MODULE RESULT: {r.module} ===")
-                        print(f"Findings: {len(r.findings)}")
+                        logger.debug(f"=== MODULE RESULT: {r.module} ===")
+                        logger.debug(f"Findings: {len(r.findings)}")
 
                         for finding in r.findings:
                             if hasattr(finding, "model_dump"):
@@ -235,13 +235,13 @@ class AttackOrchestrator:
                 # ----------------------------------------
                 # RUN DETECTION VALIDATION
                 # ----------------------------------------
-                print("\n=== FINDINGS SENT TO VALIDATION ===")
-                print(all_findings)
+                logger.debug("=== FINDINGS SENT TO VALIDATION ===")
+                logger.debug(all_findings)
 
                 validation = self.validation_engine.validate(all_findings, list(executed_modules))
 
-                print("\n=== VALIDATION RESULT ===")
-                print(validation)
+                logger.debug("=== VALIDATION RESULT ===")
+                logger.debug(validation)
 
                 # ----------------------------------------
                 # STORE VALIDATION

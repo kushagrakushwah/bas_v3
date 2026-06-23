@@ -8,5 +8,7 @@ async def get_result(request: Request, sim_id: str):
     """Fetch findings for a specific simulation run."""
     result = request.app.state.orchestrator.get(sim_id)
     if not result:
+        result = await request.app.state.orchestrator.repo.get_simulation(sim_id)
+    if not result:
         raise HTTPException(status_code=404, detail="Simulation not found")
     return result
