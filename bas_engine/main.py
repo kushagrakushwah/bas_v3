@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 import logging
@@ -33,6 +33,7 @@ from bas_engine.utils.logger import setup_logging
 from bas_engine.utils.elk_client import ELKClient
 from bas_engine.database.connection import engine, Base
 import bas_engine.database.models
+from bas_engine.api.middleware.api_key_auth import verify_api_key
 
 # Setup
 setup_logging()
@@ -101,8 +102,18 @@ async def shutdown():
 
 # Routers
 app.include_router(health.router, prefix="/api/v1", tags=["Health"])
-app.include_router(modules.router, prefix="/api/v1/modules", tags=["Attack Modules"])
-app.include_router(simulations.router, prefix="/api/v1/simulations", tags=["Simulations"])
+app.include_router(
+    modules.router,
+    prefix="/api/v1/modules",
+    tags=["Attack Modules"],
+    dependencies=[Depends(verify_api_key)]
+)
+app.include_router(
+    simulations.router,
+    prefix="/api/v1/simulations",
+    tags=["Simulations"],
+    dependencies=[Depends(verify_api_key)]
+)
 app.include_router(results.router, prefix="/api/v1/results", tags=["Results"])
 app.include_router(
     events.router,

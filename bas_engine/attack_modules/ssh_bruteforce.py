@@ -78,7 +78,7 @@ class SSHBruteForceModule(BaseAttackModule):
                     if limit and count >= limit:
                         break
         except Exception as e:
-            self.logger.error(f"Wordlist load failed ({path}): {e}")
+            self.logger.error(f"Wordlist load failed ({path}): {e!r}")
 
 
     def load_usernames(self):
@@ -128,7 +128,7 @@ class SSHBruteForceModule(BaseAttackModule):
                     if proxy and not proxy.startswith("#"):
                         proxies.append(proxy)
         except Exception as e:
-            self.logger.warning(f"Proxy file load failed ({proxy_file}): {e}")
+            self.logger.warning(f"Proxy file load failed ({proxy_file}): {e!r}")
         return proxies
 
 
@@ -147,6 +147,7 @@ class SSHBruteForceModule(BaseAttackModule):
         self.kex_failures     = 0
         self.hostkey_failures = 0
         self.rate_limit_hits  = 0
+        self.error_count      = 0  # network/exception failures (never evaluated)
 
 
     # =====================================================
@@ -188,20 +189,19 @@ class SSHBruteForceModule(BaseAttackModule):
         usernames = self.load_usernames()
         passwords = self.load_passwords()
 
-        await self.emit_event('INFO', 
+        max_usernames = int(self.options.get("max_usernames", 0))  # 0 = unlimited
+        max_passwords = int(self.options.get("max_passwords", 0))  # 0 = unlimited
+
+        if max_usernames > 0:
+            usernames = usernames[:max_usernames]
+        if max_passwords > 0:
+            passwords = passwords[:max_passwords]
+
+        await self.emit_event('INFO',
             f"\n[WORDLISTS] "
             f"{len(usernames)} usernames | "
             f"{len(passwords)} passwords"
         )
-
-        if len(usernames) > 1:
-            usernames = usernames[:1] + secrets.SystemRandom().sample(
-                usernames[1:], min(4, len(usernames) - 1)
-            )
-        if len(passwords) > 5:
-            passwords = passwords[:5] + secrets.SystemRandom().sample(
-                passwords[5:], len(passwords[5:])
-            )
 
         reachable = await self._probe_port(host, port, timeout)
 
@@ -472,7 +472,7 @@ class SSHBruteForceModule(BaseAttackModule):
                         f"(final: {probe_final})"
                     )
         except Exception as e:
-            await self.emit_event('INFO', f"[WARN] Login page probe failed: {e}")
+            await self.emit_event('INFO', f"[WARN] Login page probe failed: {e!r}")
 
         if not reachable:
             if probe_status == 404:
@@ -706,11 +706,13 @@ class SSHBruteForceModule(BaseAttackModule):
 
                     except aiohttp.ClientConnectionError as e:
                         self.refused_count += 1
-                        await self.emit_event('INFO', f"[CONN ERROR] {username}:{password} — {e}")
+                        self.error_count += 1
+                        await self.emit_event('INFO', f"[CONN ERROR] {username}:{password} — {e!r}")
                         return
 
                     except Exception as e:
-                        await self.emit_event('INFO', f"[ERROR] {username}:{password} — {e}")
+                        self.error_count += 1
+                        await self.emit_event('INFO', f"[ERROR] {username}:{password} — {e!r}")
                         return
 
                     # ---- Debug dump ----
@@ -731,10 +733,12 @@ class SSHBruteForceModule(BaseAttackModule):
                     )
 
                     has_fail = any(m in body_post for m in FAIL_MARKERS)
-                    has_pass = any(m in body_post for m in PASS_MARKERS)
+                    # PASS gate: body marker must be present AND response must be 200
+                    # (prevents a plain 200 on a non-auth page from being CRITICAL)
+                    has_pass = post_status == 200 and any(m in body_post for m in PASS_MARKERS)
                     success_via_body = has_pass and not has_fail
-                    
-                    # HTTP Basic Auth returns 200 OK without specific body markers if successful
+
+                    # HTTP Basic Auth: 200 OK without fail markers counts as success
                     success_via_basic_auth = post_status == 200 and not has_fail and auth is not None
 
                     if success_via_redirect or success_via_body or success_via_basic_auth:
@@ -798,13 +802,29 @@ class SSHBruteForceModule(BaseAttackModule):
                     ),
                 )
             )
+        elif self.error_count > 0 and self.auth_fail_count == 0:
+            # Every attempt hit a network/exception error — no auth was evaluated at all
+            findings.append(
+                self.finding(
+                    title="Webmail Brute Force: Network Errors Only",
+                    description=(
+                        f"All {self.total_attempts} POST attempts failed with network errors "
+                        f"({self.error_count} errors, {self.timeout_count} timeouts). "
+                        "No authentication was evaluated — target may be unreachable or blocking connections."
+                    ),
+                    severity=Severity.INFO,
+                    mitre_id="T1110.001",
+                    evidence=f"errors={self.error_count} timeouts={self.timeout_count} refused={self.refused_count}",
+                )
+            )
         else:
             findings.append(
                 self.finding(
                     title="Webmail Credential Attack Failed",
                     description=(
                         f"{self.total_attempts} attempts against {login_url} "
-                        f"— no valid creds found"
+                        f"(— {self.auth_fail_count} auth failures, {self.error_count} errors) "
+                        f"— no valid credentials found"
                     ),
                     severity=Severity.INFO,
                 )
@@ -929,5 +949,5 @@ class SSHBruteForceModule(BaseAttackModule):
             if "reset by peer"       in err: return "reset"
             if "connection lost"     in err: return "reset"
             if "too many connections" in err: return "rate_limited"
-            await self.emit_event('INFO', f"[ERROR] {e}")
+            await self.emit_event('INFO', f"[ERROR] {e!r}")
             return "other"

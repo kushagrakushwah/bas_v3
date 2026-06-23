@@ -347,6 +347,8 @@ kubectl apply -f kubernetes/
 
 ## Important Notes
 
+- **API Authentication**: The backend API is secured via an `X-API-Key` header. The key is read from the `API_KEY` environment variable and passed by the frontend via `NEXT_PUBLIC_API_KEY`.
+- **SSRF Protection**: Web attack modules use safe external canary URLs and block internal/loopback IPs (e.g., `127.0.0.1`, `10.x.x.x`) to prevent engine compromise during testing.
 - **Attack modules** are in `bas_engine/modules/`. Each module is a self-contained class that implements a standard interface. New modules can be added without modifying the core orchestrator.
 - **Parallel simulations** are supported. The engine tracks each run independently with its own event stream.
 - **Nmap scans** require Nmap to be installed on the machine running the backend (or inside the backend container). Scan options include custom subnet ranges, port lists, scan profiles (`SYN`, `TCP Connect`, `UDP`), timing profiles (`T1`–`T5`), and optional banner grabbing.

@@ -205,16 +205,7 @@ export default function RealtimeOperations() {
       try {
         setLoadingReplay(true);
 
-        const response = await fetch(`${API_BASE}/api/v1/replay/recent/events`, {
-          method: "GET",
-          cache: "no-store",
-        });
-
-        if (!response.ok) {
-          throw new Error(`Failed to load recent events: ${response.status}`);
-        }
-
-        const data = await response.json();
+        const data = await api.getRecentReplayEvents();
 
         const items: any[] = Array.isArray(data)
           ? data
@@ -341,15 +332,7 @@ export default function RealtimeOperations() {
               try {
                 setLoadingReplay(true);
 
-                const response = await fetch(
-                  `${API_BASE}/api/v1/replay/recent/events`,
-                  {
-                    method: "GET",
-                    cache: "no-store",
-                  }
-                );
-
-                const data = await response.json();
+                const data = await api.getRecentReplayEvents();
                 const items: any[] = Array.isArray(data)
                   ? data
                   : Array.isArray(data?.events)
