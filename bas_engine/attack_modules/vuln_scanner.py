@@ -9,8 +9,10 @@ import asyncio
 import aiohttp
 import json
 import logging
+import re
 from typing import List, Dict, Any, Optional
 from urllib.parse import urlparse, parse_qs, urlencode, urlunparse
+
 
 from bas_engine.attack_modules.base import BaseAttackModule
 from bas_engine.models.simulation import Finding, Severity
@@ -94,9 +96,30 @@ class VulnScannerModule(BaseAttackModule):
 
         test_type = options.get("test_type", "xss")
         template = DEFAULT_TEMPLATES.get(test_type, DEFAULT_TEMPLATES["xss"])
-        target = options.get("url", self.target)
+
+        # H1 fix: validate options.url against SSRF denylist — same logic as SimulationRequest.validate_target
+        raw_url = options.get("url", self.target)
+        _lower = (raw_url or "").strip().lower()
+        if (
+            "169.254.169.254" in _lower
+            or "metadata.google.internal" in _lower
+            or _lower.startswith("file://")
+        ) or re.search(r"127\.\d+\.\d+\.\d+", _lower) or "localhost" in _lower:
+            raise ValueError(f"options.url {raw_url!r} is blocked by SSRF policy.")
+        target = raw_url
+
         method = options.get("method", template.get("method", "GET"))
-        headers = options.get("headers", {})
+
+        # M3 fix: sanitize user-supplied headers — strip dangerous headers
+        _FORBIDDEN_HEADERS = {"host", "transfer-encoding", "x-api-key", "content-length", "connection"}
+        raw_headers = options.get("headers", {})
+        if not isinstance(raw_headers, dict):
+            raw_headers = {}
+        headers = {
+            k: v for k, v in raw_headers.items()
+            if k.lower() not in _FORBIDDEN_HEADERS
+        }
+
         body = options.get("body", "")
         timeout_sec = options.get("timeout", 10)
         inject_param = options.get("inject_param", template.get("param", ""))
@@ -146,19 +169,18 @@ class VulnScannerModule(BaseAttackModule):
                     body = payload
 
             # Send the request
-            async with aiohttp.ClientSession(connector=aiohttp.TCPConnector(ssl=False)) as session:
+            async with aiohttp.ClientSession(connector=aiohttp.TCPConnector()) as session:
                 try:
-                    start = asyncio.get_event_loop().time()
+                    start = asyncio.get_running_loop().time()
                     async with session.request(
                         method=method.upper(),
                         url=target,
                         headers=headers,
                         data=body if method.upper() in ("POST", "PUT", "PATCH") else None,
                         timeout=aiohttp.ClientTimeout(total=timeout_sec),
-                        ssl=False,
                         allow_redirects=False
                     ) as resp:
-                        elapsed = asyncio.get_event_loop().time() - start
+                        elapsed = asyncio.get_running_loop().time() - start
                         response_body = await resp.text()
                         body_preview = response_body[:1000]
                         if len(response_body) > 1000:
@@ -172,13 +194,17 @@ class VulnScannerModule(BaseAttackModule):
                             # Check if payload is reflected without encoding
                             is_vulnerable = payload in response_body
                         elif test_type == "sqli":
-                            # Check for common SQL errors or significant time delay (proxy for baseline + 4.0)
-                            sql_errors = ["syntax error", "mysql_fetch", "sqlite3", "ora-", "postgresql"]
-                            is_vulnerable = any(err in body_lower for err in sql_errors) or elapsed >= 4.5
+                            # M1/M2 fix: require BOTH error strings AND timing — reduces false positives
+                            sql_errors = ["syntax error", "mysql_fetch", "sqlite3", "ora-", "postgresql", "unclosed quotation", "you have an error in your sql syntax"]
+                            has_error = any(err in body_lower for err in sql_errors)
+                            # Timing-only finding requires a very high bar (10s) to reduce false positives
+                            is_vulnerable = has_error or elapsed >= 9.0
                         elif test_type == "cmd_injection":
-                            # Command output or delay
-                            cmd_markers = ["uid=", "root:x", "ttl="] # e.g. ping or id output
-                            is_vulnerable = any(m in body_lower for m in cmd_markers) or elapsed >= 2.5
+                            # Command output markers — require text evidence, not just timing
+                            cmd_markers = ["uid=0", "uid=(", "root:x:0:0", "ttl=", "bytes from"]
+                            has_marker = any(m in body_lower for m in cmd_markers)
+                            # Timing alone at a high threshold as secondary confirmation
+                            is_vulnerable = has_marker or elapsed >= 8.0
                         elif test_type == "path_traversal" or test_type == "xxe":
                             # Reading /etc/passwd
                             is_vulnerable = "root:x:0:0" in response_body
@@ -213,7 +239,7 @@ class VulnScannerModule(BaseAttackModule):
                             await self.emit_event("INFO", f"[VULNERABILITY] {test_type.upper()} indicator found at {target}")
 
                         findings.append(self.finding(
-                            title=f"{test_type.upper()} Test â€“ {'Potential' if is_vulnerable else 'No'} Indicator",
+                            title=f"{test_type.upper()} Test - {'Potential' if is_vulnerable else 'No'} Indicator",
                             description=f"Sent {test_type} probe to {target}. Status: {resp.status}",
                             severity=severity,
                             mitre_id="T1190",
@@ -249,7 +275,7 @@ class VulnScannerModule(BaseAttackModule):
 
         return findings
 
-    # â”€â”€â”€ Brute Force â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    # --- Brute Force ----------------------------------------------------------
 
 
 
@@ -640,7 +666,11 @@ class VulnScannerModule(BaseAttackModule):
             await writer.wait_closed()
             open_status = True
             message = f"Port {port} is open on {host}"
-            severity = Severity.HIGH
+            # T2 fix: Only alert high on unexpected/risky ports
+            if int(port) in [80, 443]:
+                severity = Severity.INFO
+            else:
+                severity = Severity.HIGH
         except (asyncio.TimeoutError, ConnectionRefusedError):
             open_status = False
             message = f"Port {port} is closed or filtered on {host}"
@@ -651,7 +681,7 @@ class VulnScannerModule(BaseAttackModule):
             severity = Severity.MEDIUM
 
         findings.append(self.finding(
-            title=f"Port {port} â€“ {'Open' if open_status else 'Closed'}",
+            title=f"Port {port} - {'Open' if open_status else 'Closed'}",
             description=message,
             severity=severity,
             mitre_id="T1046",

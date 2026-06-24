@@ -294,7 +294,7 @@ class SSHBruteForceModule(BaseAttackModule):
                     ),
                     severity=Severity.CRITICAL,
                     mitre_id="T1110.001",
-                    evidence=str(self.successes),
+                    evidence=str([("REDACTED", p) for u, p in self.successes]),
                     remediation=(
                         "Disable password auth, enable MFA, deploy fail2ban."
                     ),
@@ -363,15 +363,7 @@ class SSHBruteForceModule(BaseAttackModule):
         # -------------------------------------------------
         # OPTIONS
         # -------------------------------------------------
-        # Force live mode and proxies (temporary)
-        self.options["live_mode"] = True
-        self.options["use_proxies"] = False
-        self.options["proxy_file"] = "bas_engine/attack_modules/proxies/proxies.txt"
-        self.options["rotate_proxy_every"] = 3
-        self.options["attempt_delay"] = 1.0
-        self.options["jitter"] = 0.5
-        self.options["timeout"] = 20.0
-        self.options["max_retries"] = 0
+        # Note: options come from user configuration — do not override silently
         user_field   = self.options.get("webmail_user_field",   "_user")
         pass_field   = self.options.get("webmail_pass_field",   "_pass")
         action_field = self.options.get("webmail_action_field", "_action")
@@ -800,7 +792,7 @@ class SSHBruteForceModule(BaseAttackModule):
                     ),
                     severity=Severity.CRITICAL,
                     mitre_id="T1110.001",
-                    evidence=str(self.successes),
+                    evidence=str([("REDACTED", p) for u, p in self.successes]),
                     remediation=(
                         "Enable MFA on webmail, enforce account lockout, "
                         "rate-limit login endpoint, deploy WAF rules."

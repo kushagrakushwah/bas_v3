@@ -17,6 +17,7 @@ Features:
 
 import aiohttp
 import asyncio
+import logging
 import urllib.parse
 import re
 
@@ -30,6 +31,8 @@ from bas_engine.attack_modules.utils.endpoint_validator import (
 )
 from .base import BaseAttackModule
 from bas_engine.models.simulation import Severity
+
+logger = logging.getLogger("secureforge.apt_killchain")
 
 
 # =========================================================

@@ -96,8 +96,8 @@ class SOCScoringEngine:
         # Medium severity findings
         score -= medium * 3
 
-        # Unknown coverage penalty
-        if tactics_detected < 4:
+        # Unknown coverage penalty (only applies if attacks actually succeeded)
+        if tactics_detected < 4 and len(findings) > 0:
             score -= 10
 
         # Coverage reward

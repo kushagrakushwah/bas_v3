@@ -1,11 +1,14 @@
 import aiohttp
 import asyncio
+import logging
 import urllib.parse
 
 from urllib.parse import urlparse
 
 from .base import BaseAttackModule
 from bas_engine.models.simulation import Severity
+
+logger = logging.getLogger("secureforge.waf_detection")
 
 
 # =========================================================
@@ -194,21 +197,13 @@ class WAFEvasionModule(BaseAttackModule):
             ""
         ).lower()
 
-        if "nginx" in server:
-
-            result["proxy_detected"] = True
-
+        # Fix: nginx/apache are web servers, not WAF proxies — don't inflate WAF confidence
+        # Only flag actual reverse proxy/CDN headers, not server software
+        if "nginx" in server or "apache" in server:
+            # Record server type for informational purposes only
             if not result["type"]:
-
-                result["type"] = "Reverse Proxy"
-
-        if "apache" in server:
-
-            result["proxy_detected"] = True
-
-            if not result["type"]:
-
-                result["type"] = "Reverse Proxy"
+                result["type"] = "Web Server"
+            # Do NOT set proxy_detected=True for standard web servers
 
         return result
 
@@ -459,21 +454,16 @@ class WAFEvasionModule(BaseAttackModule):
                 if stop_scan:
                     break
 
-                path_block_counter[
-                    base_url
-                ] = 0
+                # Fix: initialise the counter BEFORE the inner loop,
+                # and only reset it when moving to a new base_url
+                if base_url not in path_block_counter:
+                    path_block_counter[base_url] = 0
 
-                # ---------------------------------------------
-                # SKIP HEAVILY PROTECTED PATHS
-                # ---------------------------------------------
+                # Skip heavily protected paths (counter now correctly accumulates)
+                if path_block_counter[base_url] >= 10:
 
-                if path_block_counter[
-                    base_url
-                ] >= 10:
-
-                    print(
-                        f"[!] Skipping protected path: "
-                        f"{base_url}"
+                    logger.debug(
+                        f"Skipping protected path: {base_url}"
                     )
 
                     continue
@@ -621,7 +611,9 @@ class WAFEvasionModule(BaseAttackModule):
                 ratio * 100
             )
 
-            if ratio > 0.35:
+            # Fix: raise WAF detection threshold to 50% to reduce false positives
+            # from application-level 403s that are not WAF blocks
+            if ratio > 0.50:
 
                 waf_detected = True
 

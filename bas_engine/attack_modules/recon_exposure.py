@@ -226,7 +226,7 @@ class ReconExposureModule(BaseAttackModule):
         resolved = await self.resolve_target()
         target = self.build_target_url(resolved, default_scheme="https")
 
-        connector = aiohttp.TCPConnector(ssl=False)
+        connector = aiohttp.TCPConnector()  # H5 fix: ssl verification enabled
         timeout   = aiohttp.ClientTimeout(total=10)
 
         async with aiohttp.ClientSession(
@@ -623,7 +623,9 @@ class ReconExposureModule(BaseAttackModule):
                                 if "log4j" in desc.lower():
                                     cve, sev = "CVE-2021-44228", Severity.CRITICAL
                                 elif "django" in desc.lower():
-                                    cve, sev = "CVE-2023-31047", Severity.HIGH
+                                    # Fix: do not hardcode a CVE for any Django version.
+                                    # Different versions have different CVEs; flag for manual review.
+                                    cve, sev = "version-dependent (check NVD)", Severity.MEDIUM
                                 else:
                                     cve, sev = "check manually", Severity.MEDIUM
 

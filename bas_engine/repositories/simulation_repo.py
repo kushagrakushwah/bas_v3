@@ -88,32 +88,19 @@ class SimulationRepository:
 
                 db_sim.detection_summary = validation
 
+                # M7 fix: use .get() with safe defaults to prevent KeyError crashes
+                soc_score_block = validation.get("soc_score", {})
                 db_sim.soc_score = (
-
-                    validation[
-                        "soc_score"
-                    ][
-                        "soc_score"
-                    ]
+                    soc_score_block.get("soc_score")
+                    if isinstance(soc_score_block, dict)
+                    else None
                 )
 
-                db_sim.coverage_data = (
-                    validation[
-                        "coverage"
-                    ]
-                )
+                db_sim.coverage_data = validation.get("coverage", {})
 
-                db_sim.blindspot_data = (
-                    validation[
-                        "blindspots"
-                    ]
-                )
+                db_sim.blindspot_data = validation.get("blindspots", [])
 
-                db_sim.sigma_rules = (
-                    validation[
-                        "sigma_rules"
-                    ]
-                )
+                db_sim.sigma_rules = validation.get("sigma_rules", [])
             await session.commit()
 
             return db_sim
@@ -205,7 +192,10 @@ class SimulationRepository:
     # LIST ALL
     # ------------------------------------------------
 
-    async def list_simulations(self):
+    async def list_simulations(self, limit: int = 100):
+
+        # M8 fix: clamp limit to prevent unbounded eager loads / OOM
+        limit = min(max(limit, 1), 200)
 
         async with AsyncSessionLocal() as session:
 
@@ -220,6 +210,10 @@ class SimulationRepository:
                         ModuleResultDB.findings
                     )
                 )
+
+                .order_by(SimulationDB.created_at.desc())
+
+                .limit(limit)
             )
 
             simulations = result.scalars().all()

@@ -18,5 +18,5 @@ def test_soc_scoring_with_critical():
     engine = SOCScoringEngine()
     findings = [{"severity": "critical"}, {"severity": "high"}]
     result = engine.calculate_score(findings=findings, executed_modules=["nmap_scan"])
-    # 100 - (1 * 15) - (1 * 8) - 10 (coverage penalty for < 4 tactics) = 67
-    assert result["soc_score"] == 67
+    # 100 - (1 * 15) - (1 * 8) - 10 (coverage penalty for < 4 tactics) + 2 (coverage reward for 1 tactic) = 69
+    assert result["soc_score"] == 69

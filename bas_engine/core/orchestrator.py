@@ -251,7 +251,17 @@ class AttackOrchestrator:
                 # ----------------------------------------
                 # COMPLETE
                 # ----------------------------------------
-                result.status = SimulationState.COMPLETED
+                has_errors = any(r.status == "error" for r in result.module_results)
+                is_unreachable = any(
+                    "unreachable" in f.title.lower() or "not reachable" in f.title.lower()
+                    for r in result.module_results
+                    for f in r.findings
+                )
+                
+                if has_errors or is_unreachable:
+                    result.status = SimulationState.FAILED
+                else:
+                    result.status = SimulationState.COMPLETED
                 result.finished_at = datetime.utcnow()
                 result.updated_at = datetime.utcnow()
 

@@ -1,5 +1,5 @@
 ﻿"""
-Shared endpoint discovery helpers for web attack modules â€” FIXED EDITION.
+Shared endpoint discovery helpers for web attack modules - FIXED EDITION.
 
 Same public interface as the original (`EndpointDiscoveryEngine(session, target,
 seeds=, max_endpoints=, max_depth=, timeout=)` / `await engine.discover()`),

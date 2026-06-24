@@ -1,5 +1,6 @@
-from fastapi import FastAPI, Depends
+from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 import uvicorn
 import logging
 import os
@@ -10,7 +11,7 @@ from bas_engine.alerts.alert_manager import (
 from bas_engine.api.routes.recon import (
     router as recon_router
 )
-from fastapi import WebSocket
+from fastapi import WebSocket, Depends
 
 from bas_engine.core.events.ws_manager import (
     manager
@@ -33,7 +34,7 @@ from bas_engine.utils.logger import setup_logging
 from bas_engine.utils.elk_client import ELKClient
 from bas_engine.database.connection import engine, Base
 import bas_engine.database.models
-from bas_engine.api.middleware.api_key_auth import verify_api_key
+from bas_engine.api.middleware.api_key_auth import verify_api_key, verify_api_key_value
 
 # Setup
 setup_logging()
@@ -52,6 +53,30 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Public paths that bypass API key auth
+PUBLIC_PATH_PREFIXES = (
+    "/api/v1/health",
+    "/ws/",
+    "/",
+)
+
+@app.middleware("http")
+async def global_api_key_middleware(request: Request, call_next):
+    """Enforce API key on all /api/v1/ routes except public paths."""
+    path = request.url.path
+    # Allow public paths and WebSocket upgrades
+    if path == "/" or path.startswith("/ws/") or path.startswith("/api/v1/health"):
+        return await call_next(request)
+    # Enforce key on all other API paths
+    if path.startswith("/api/v1/"):
+        key = request.headers.get("X-API-Key", "")
+        if not verify_api_key_value(key):
+            return JSONResponse(
+                status_code=403,
+                content={"detail": "Invalid or missing API key. Pass X-API-Key header."}
+            )
+    return await call_next(request)
 
 @app.on_event("startup")
 async def startup():
@@ -101,7 +126,7 @@ async def shutdown():
     await app.state.elk_client.close()
 
 # Routers
-app.include_router(health.router, prefix="/api/v1", tags=["Health"])
+app.include_router(health.router, prefix="/api/v1/health", tags=["Health"])
 app.include_router(
     modules.router,
     prefix="/api/v1/modules",
@@ -114,43 +139,51 @@ app.include_router(
     tags=["Simulations"],
     dependencies=[Depends(verify_api_key)]
 )
-app.include_router(results.router, prefix="/api/v1/results", tags=["Results"])
+app.include_router(
+    results.router, 
+    prefix="/api/v1/results", 
+    tags=["Results"],
+    dependencies=[Depends(verify_api_key)]
+)
 app.include_router(
     events.router,
     prefix="/api/v1/events",
-    tags=["Events"]
+    tags=["Events"],
+    dependencies=[Depends(verify_api_key)]
 )
 app.include_router(
     infrastructure.router,
     prefix="/api/v1/infrastructure",
-    tags=["Infrastructure"]
+    tags=["Infrastructure"],
+    dependencies=[Depends(verify_api_key)]
 )
 app.include_router(
     integrations.router,
     prefix="/api/v1/integrations",
-    tags=["Integrations"]
+    tags=["Integrations"],
+    dependencies=[Depends(verify_api_key)]
 )
 app.include_router(
     metrics.router,
     prefix="/api/v1/metrics",
     tags=["Metrics"],
+    dependencies=[Depends(verify_api_key)]
 )
 app.include_router(
     replay.router,
     prefix="/api/v1/replay",
-    tags=["Replay"]
+    tags=["Replay"],
+    dependencies=[Depends(verify_api_key)]
 )
 app.include_router(ws.router)
 @app.get("/")
 async def root():
     return {"status": "operational", "service": "SecureForge BAS Engine"}
 app.include_router(
-
     recon_router,
-
     prefix="/api/v1/recon",
-
-    tags=["Recon"]
+    tags=["Recon"],
+    dependencies=[Depends(verify_api_key)]
 )
 @app.websocket("/ws/global")
 async def global_websocket(

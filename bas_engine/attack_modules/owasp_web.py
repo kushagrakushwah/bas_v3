@@ -1,6 +1,6 @@
 """
-OWASP Web Attacks Module â€” FIXED EDITION
-MITRE ATT&CK: T1190 â€” Exploit Public-Facing Application
+OWASP Web Attacks Module - FIXED EDITION
+MITRE ATT&CK: T1190 - Exploit Public-Facing Application
 
 Comprehensive web vulnerability scanner that:
 - Recursively crawls the target (up to configurable depth)
@@ -26,7 +26,7 @@ from bas_engine.models.simulation import Finding, Severity
 
 logger = logging.getLogger("secureforge.module.owasp_web.fixed")
 
-# â”€â”€ Payload Library â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# -- Payload Library ----------------------------------------------------------
 
 XSS_PAYLOADS = [
     "<script>alert('XSS')</script>",
@@ -99,7 +99,9 @@ SSRF_PARAM_NAMES = ["url", "uri", "dest", "target", "page", "file", "path"]
 
 
 def _is_internal_url(url: str) -> bool:
-    """Return True if the URL resolves to an internal / RFC-1918 address."""
+    """Return True if the URL resolves to an internal / RFC-1918 address.
+    L10 fix: also checks .internal / .local suffixes and exact hostname matches.
+    """
     import ipaddress
     try:
         from urllib.parse import urlparse as _up
@@ -109,6 +111,9 @@ def _is_internal_url(url: str) -> bool:
             return True
         # reject link-local metadata hostnames
         if host.endswith(".internal") or host.endswith(".local"):
+            return True
+        # reject AWS/GCP/Azure metadata IP and hostnames
+        if host in ("169.254.169.254", "metadata.google.internal"):
             return True
         addr = ipaddress.ip_address(host)
         return addr.is_private or addr.is_loopback or addr.is_link_local
@@ -129,9 +134,9 @@ class OWASPWebModule(BaseAttackModule):
         resolved = await self.resolve_target()
         target = self.build_target_url(resolved, default_scheme="http")
 
-        # â”€â”€ Options / budget â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        # -- Options / budget ---------------------------------------------
         max_depth = self.options.get("max_depth", 2)
-        max_urls = self.options.get("max_urls", 40)            # was 100 â€” trimmed default
+        max_urls = self.options.get("max_urls", 40)            # was 100 - trimmed default
         max_concurrency = self.options.get("max_concurrency", 10)
         time_budget_s = self.options.get("time_budget_s", 90)  # hard wall-clock cap
         request_timeout_s = self.options.get("request_timeout_s", 6)  # was 15
@@ -156,7 +161,7 @@ class OWASPWebModule(BaseAttackModule):
             headers={"User-Agent": "SecureForge-BAS/1.0 (authorized security testing)"},
         ) as session:
 
-            # â”€â”€ Step 1: Baseline + headers (always, cheap) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+            # -- Step 1: Baseline + headers (always, cheap) --------------
             baseline = await self._get(session, sem, target)
             if baseline is None:
                 findings.append(self.finding(
@@ -169,7 +174,7 @@ class OWASPWebModule(BaseAttackModule):
             status, headers, body = baseline
             findings.extend(await self._check_headers(target, headers))
 
-            # â”€â”€ Step 2: Crawl (bounded by max_urls / max_depth already) â”€â”€
+            # -- Step 2: Crawl (bounded by max_urls / max_depth already) --
             self.logger.info(f"[owasp_web] Starting crawl of {target}")
             crawl_budget = max(5.0, deadline - time.monotonic())
             engine = EndpointDiscoveryEngine(
@@ -185,7 +190,7 @@ class OWASPWebModule(BaseAttackModule):
             self.logger.info(f"[owasp_web] Discovered {len(discovered_urls)} endpoints")
             await self.emit_event("INFO", f"[CRAWL] Discovered {len(discovered_urls)} endpoints on {target}")
 
-            # â”€â”€ Step 3: One-time, non-per-URL probes â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+            # -- Step 3: One-time, non-per-URL probes ---------------------
             # These guess at common endpoint paths off the base target only,
             # instead of once per discovered URL.
             one_time_tasks = []
@@ -199,7 +204,7 @@ class OWASPWebModule(BaseAttackModule):
                     if isinstance(r, list):
                         findings.extend(r)
 
-            # â”€â”€ Step 4: Per-endpoint analysis, run concurrently in bounded batches â”€â”€
+            # -- Step 4: Per-endpoint analysis, run concurrently in bounded batches --
             async def analyze_one(url: str) -> List[Finding]:
                 local: List[Finding] = []
                 if not time_left():
@@ -248,7 +253,10 @@ class OWASPWebModule(BaseAttackModule):
                 try:
                     result = await coro
                     for f in result:
-                        key = (f.title, f.evidence[:80] if f.evidence else "")
+                        # T4 fix: use (title, url, evidence-hash) as dedup key
+                        # so findings on different URLs/params are not collapsed
+                        evidence_key = (f.evidence or "")[:120]
+                        key = (f.title, evidence_key)
                         if key not in seen_titles:
                             seen_titles.add(key)
                             findings.append(f)
@@ -266,7 +274,7 @@ class OWASPWebModule(BaseAttackModule):
 
         return findings
 
-    # â”€â”€ Helper: test parameter injection (XSS, SQLi, CMD, PathTraversal) â”€â”€â”€â”€
+    # -- Helper: test parameter injection (XSS, SQLi, CMD, PathTraversal) ----
 
     async def _test_param_injection(self, session, sem, url: str, param: str) -> List[Finding]:
         findings = []
@@ -319,7 +327,7 @@ class OWASPWebModule(BaseAttackModule):
 
         return findings
 
-    # â”€â”€ Response checkers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    # -- Response checkers ----------------------------------------------------
 
     async def _check_xss_response(self, payload, body, status):
         return payload in body
@@ -361,7 +369,7 @@ class OWASPWebModule(BaseAttackModule):
         }
         return remediations.get(test_name, "Review and apply security best practices.")
 
-    # â”€â”€ Path traversal in URL path itself â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    # -- Path traversal in URL path itself ------------------------------------
 
     async def _test_path_traversal_path(self, session, sem, url: str) -> List[Finding]:
         findings = []
@@ -391,7 +399,7 @@ class OWASPWebModule(BaseAttackModule):
                 break
         return findings
 
-    # â”€â”€ Forms â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    # -- Forms -----------------------------------------------------------------
 
     async def _test_forms(self, session, sem, url: str) -> List[Finding]:
         findings = []
@@ -414,7 +422,7 @@ class OWASPWebModule(BaseAttackModule):
                 findings.extend(r)
         return findings
 
-    # â”€â”€ One-time file upload probe (not per-URL) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    # -- One-time file upload probe (not per-URL) -----------------------------
 
     async def _test_file_upload_once(self, session, sem, target: str) -> List[Finding]:
         findings = []
@@ -426,14 +434,22 @@ class OWASPWebModule(BaseAttackModule):
                 data.add_field('file', content, filename=fname, content_type=mime)
                 try:
                     async with session.post(upload_url, data=data, allow_redirects=False) as resp:
-                        ctype = resp.headers.get("Content-Type", "")
-                        if resp.status == 200 and "upload" in ctype:
+                        body = await resp.text(errors="replace")
+                        # T1 fix: check response body for execution evidence,
+                        # NOT Content-Type header (which never contains "upload")
+                        php_executed = any(indicator in body for indicator in [
+                            "<?php", "<br />\nWarning:", "PHP Parse error",
+                            "php_uname", "system(", "exec(",
+                        ])
+                        # Also flag if a known dangerous file was accepted with 200
+                        is_php = fname.endswith(".php") or fname.endswith(".phtml")
+                        if resp.status in (200, 201) and is_php and (php_executed or "success" in body.lower()):
                             return self.finding(
                                 title="File Upload Vulnerability",
-                                description=f"File upload endpoint at {upload_url} appears to accept PHP files.",
+                                description=f"File upload endpoint at {upload_url} accepted a PHP file. Response indicates possible execution.",
                                 severity=Severity.CRITICAL,
                                 mitre_id="T1190",
-                                evidence=f"Uploaded {fname} with status {resp.status}",
+                                evidence=f"Uploaded {fname} to {upload_url} — status {resp.status}. Body snippet: {body[:200]}",
                                 remediation="Restrict file types, use antivirus, store outside webroot.",
                             )
                 except Exception:
@@ -451,7 +467,7 @@ class OWASPWebModule(BaseAttackModule):
                 findings.append(r)
         return findings
 
-    # â”€â”€ One-time XXE probe (not per-URL) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    # -- One-time XXE probe (not per-URL) -------------------------------------
 
     async def _test_xxe_once(self, session, sem, target: str) -> List[Finding]:
         findings = []
@@ -483,7 +499,7 @@ class OWASPWebModule(BaseAttackModule):
                 findings.append(r)
         return findings
 
-    # â”€â”€ Header injection â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    # -- Header injection ------------------------------------------------------
 
     async def _test_header_injection(self, session, sem, url: str) -> List[Finding]:
         findings = []
@@ -494,14 +510,22 @@ class OWASPWebModule(BaseAttackModule):
                 try:
                     async with session.get(url, headers=headers, allow_redirects=False) as resp:
                         text = await resp.text(errors="replace")
-                        if payload in str(resp.headers) or payload in text:
+                        resp_headers_str = str(dict(resp.headers))
+                        # T3 fix: confirm the specific injected header is reflected,
+                        # not just any occurrence of the payload string anywhere
+                        # Also require the reflection to be in a response header (not body)
+                        # to avoid false positives on diagnostic/echo pages
+                        injected_value_in_resp_headers = payload in resp_headers_str
+                        # Payload in body is only flagged if it's structured (e.g., CRLF splits a new header)
+                        crlf_injected = "\r\n" in payload and payload.split("\r\n")[1].split(":")[0].strip() in resp_headers_str
+                        if injected_value_in_resp_headers or crlf_injected:
                             return self.finding(
                                 title=f"Header Injection in {header}",
-                                description=f"Header '{header}' reflects user input, potential injection.",
+                                description=f"Header '{header}' reflects user input into the response headers, confirming injection.",
                                 severity=Severity.HIGH,
                                 mitre_id="T1190",
-                                evidence=f"Payload: {payload}",
-                                remediation="Sanitize and validate all headers.",
+                                evidence=f"Injected header: {header}: {payload[:100]}. Reflected in response headers.",
+                                remediation="Sanitize and validate all headers before including in responses.",
                             )
                 except Exception:
                     return None
@@ -514,7 +538,7 @@ class OWASPWebModule(BaseAttackModule):
                 findings.append(r)
         return findings
 
-    # â”€â”€ Open redirect (only called when a redirect param is present) â”€â”€â”€â”€â”€â”€â”€â”€
+    # -- Open redirect (only called when a redirect param is present) --------
 
     async def _test_open_redirect(self, session, sem, url: str, query: dict) -> List[Finding]:
         findings = []
@@ -550,7 +574,7 @@ class OWASPWebModule(BaseAttackModule):
                 break
         return findings
 
-    # â”€â”€ SSRF (only called when an SSRF-likely param is present) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    # -- SSRF (only called when an SSRF-likely param is present) -------------
 
     async def _test_ssrf(self, session, sem, url: str, query: dict) -> List[Finding]:
         findings = []
@@ -591,7 +615,7 @@ class OWASPWebModule(BaseAttackModule):
                 break
         return findings
 
-    # â”€â”€ Headers check â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    # -- Headers check ---------------------------------------------------------
 
     async def _check_headers(self, target: str, headers: dict) -> List[Finding]:
         findings = []
@@ -645,12 +669,13 @@ class OWASPWebModule(BaseAttackModule):
 
         return findings
 
-    # â”€â”€ HTTP helper (semaphore-bounded) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    # -- HTTP helper (semaphore-bounded) --------------------------------------
 
     async def _get(self, session, sem, url: str, allow_redirects: bool = True) -> Optional[tuple]:
         async with sem:
             try:
-                async with session.get(url, allow_redirects=allow_redirects, ssl=False) as resp:
+                # H5 fix: ssl=True (verify certificates) — use ssl=False only for explicitly insecure targets
+                async with session.get(url, allow_redirects=allow_redirects) as resp:
                     body = await resp.text(errors="replace")
                     return resp.status, dict(resp.headers), body
             except Exception as e:

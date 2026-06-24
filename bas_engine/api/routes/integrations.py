@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 from sqlalchemy import select
 
 from bas_engine.database.connection import AsyncSessionLocal
@@ -7,10 +7,49 @@ from bas_engine.database.models import IntegrationDB
 
 router = APIRouter()
 
+# Allowed integration types
+_ALLOWED_TYPES = {"Slack", "Email", "Webhook", "Splunk", "QRadar", "Generic"}
+
 class IntegrationCreate(BaseModel):
     name: str
     type: str
     target: str
+
+    @field_validator("name")
+    @classmethod
+    def validate_name(cls, v: str) -> str:
+        v = v.strip()
+        if not v or len(v) > 128:
+            raise ValueError("name must be between 1 and 128 characters.")
+        return v
+
+    @field_validator("type")
+    @classmethod
+    def validate_type(cls, v: str) -> str:
+        if v not in _ALLOWED_TYPES:
+            raise ValueError(f"type must be one of: {', '.join(sorted(_ALLOWED_TYPES))}")
+        return v
+
+    @field_validator("target")
+    @classmethod
+    def validate_target(cls, v: str) -> str:
+        """M6 fix: block SSRF payloads in integration target URLs."""
+        v = v.strip()
+        if not v or len(v) > 2048:
+            raise ValueError("target must be between 1 and 2048 characters.")
+        _lower = v.lower()
+        # Block internal/metadata targets
+        blocked_keywords = [
+            "169.254.169.254", "metadata.google.internal",
+            "file://", "127.", "::1", "localhost",
+        ]
+        for kw in blocked_keywords:
+            if kw in _lower:
+                raise ValueError(
+                    f"target {v!r} is blocked by SSRF policy. "
+                    "Internal IPs, loopback, and cloud metadata URLs are not permitted."
+                )
+        return v
 
 @router.get("/")
 async def get_integrations():

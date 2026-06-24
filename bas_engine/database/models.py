@@ -12,8 +12,13 @@ from sqlalchemy.orm import relationship
 
 from bas_engine.database.connection import Base
 
-from datetime import datetime
+from datetime import datetime, timezone
 import uuid
+
+
+def _utcnow():
+    """Timezone-aware UTC datetime (replaces deprecated datetime.utcnow)."""
+    return datetime.now(timezone.utc)
 
 
 class SimulationDB(Base):
@@ -48,12 +53,13 @@ class SimulationDB(Base):
 
     created_at = Column(
         DateTime,
-        default=datetime.utcnow
+        default=_utcnow
     )
 
     updated_at = Column(
         DateTime,
-        default=datetime.utcnow
+        default=_utcnow,
+        onupdate=_utcnow
     )
 
     started_at = Column(DateTime)
@@ -115,7 +121,8 @@ class FindingDB(Base):
 
     id = Column(
         String,
-        primary_key=True
+        primary_key=True,
+        default=lambda: str(uuid.uuid4())  # L1 fix: always generate a UUID if caller omits it
     )
 
     module_result_id = Column(
@@ -184,5 +191,5 @@ class IntegrationDB(Base):
 
     created_at = Column(
         DateTime,
-        default=datetime.utcnow
+        default=_utcnow
     )
