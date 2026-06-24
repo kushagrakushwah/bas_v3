@@ -220,7 +220,8 @@ class PrivEscModule(BaseAttackModule):
         ssh_port = int(self.options.get("ssh_port", 22))
 
         if not ssh_user:
-            raise ValueError("Target execution requires 'ssh_user' in options.")
+            logger.error("Target execution requires 'ssh_user' in options.")
+            return ""
 
         import asyncssh
         from urllib.parse import urlparse

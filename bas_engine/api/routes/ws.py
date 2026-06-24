@@ -82,17 +82,32 @@ async def broadcast_event(
     event
 ):
     import logging
+    import json
+    import datetime
+
+    class DateTimeEncoder(json.JSONEncoder):
+        def default(self, obj):
+            if isinstance(obj, datetime.datetime):
+                return obj.isoformat()
+            return super().default(obj)
+
     logger = logging.getLogger("secureforge.ws")
     logger.info(f"Broadcasting event to {len(active_connections)} connections: {event.get('type')}")
     
     disconnected = []
 
+    try:
+        payload = json.dumps(event, cls=DateTimeEncoder)
+    except Exception as e:
+        logger.error(f"Failed to serialize event: {e}")
+        return
+
     for connection in active_connections:
 
         try:
 
-            await connection.send_json(
-                event
+            await connection.send_text(
+                payload
             )
 
         except Exception:

@@ -1,0 +1,827 @@
+﻿bas-engine-1  | INFO:     Started server process [1]
+bas-engine-1  | INFO:     Waiting for application startup.
+bas-engine-1  | 2026-06-24 12:31:49,389 [INFO] secureforge:   SecureForge BAS Engine starting up...
+bas-engine-1  | 2026-06-24 12:31:49,390 [INFO] secureforge.orchestrator: AttackOrchestrator initialized
+bas-engine-1  | 2026-06-24 12:31:49,390 [INFO] secureforge.elk: ELK Client initialized. Target: http://logstash.secureforge.svc.cluster.local:5044
+bas-engine-1  | INFO:     Application startup complete.
+bas-engine-1  | 2026-06-24 12:31:49,500 [INFO] secureforge:   All services initialized and ELK telemetry wired.
+bas-engine-1  | INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+bas-engine-1  | INFO:     172.19.0.5:56566 - "GET /api/v1/ws/ticket HTTP/1.1" 200 OK
+bas-engine-1  | INFO:     172.19.0.5:56568 - "GET /api/v1/modules HTTP/1.1" 307 Temporary Redirect
+bas-engine-1  | INFO:     172.19.0.5:56574 - "GET /api/v1/simulations HTTP/1.1" 307 Temporary Redirect
+bas-engine-1  | INFO:     172.19.0.5:56590 - "GET /api/v1/modules/ HTTP/1.1" 200 OK
+bas-engine-1  | INFO:     ('172.19.0.5', 56598) - "WebSocket /ws/events?ticket=b6738701-b454-48e4-a647-ca907d23c6b7" [accepted]
+bas-engine-1  | INFO:     connection open
+bas-engine-1  | INFO:     172.19.0.5:56592 - "GET /api/v1/simulations/ HTTP/1.1" 200 OK
+bas-engine-1  | INFO:     connection closed
+bas-engine-1  | INFO:     172.19.0.5:56566 - "GET /api/v1/ws/ticket HTTP/1.1" 200 OK
+bas-engine-1  | INFO:     172.19.0.5:56568 - "GET /api/v1/modules HTTP/1.1" 307 Temporary Redirect
+bas-engine-1  | INFO:     172.19.0.5:56566 - "GET /api/v1/modules/ HTTP/1.1" 200 OK
+bas-engine-1  | INFO:     172.19.0.5:56574 - "GET /api/v1/simulations HTTP/1.1" 307 Temporary Redirect
+bas-engine-1  | INFO:     ('172.19.0.5', 56604) - "WebSocket /ws/events?ticket=78f1bff5-1ccf-4212-828e-06d8cee955a6" [accepted]
+bas-engine-1  | INFO:     connection open
+bas-engine-1  | INFO:     172.19.0.5:56568 - "GET /api/v1/simulations/ HTTP/1.1" 200 OK
+bas-engine-1  | INFO:     172.19.0.5:42976 - "POST /api/v1/simulations HTTP/1.1" 307 Temporary Redirect
+bas-engine-1  | 2026-06-24 12:33:43,961 [INFO] secureforge.ws: Broadcasting event to 1 connections: simulation.queued
+bas-engine-1  | 2026-06-24 12:33:43,963 [INFO] secureforge.ws: Broadcasting event to 1 connections: simulation.started
+bas-engine-1  | 2026-06-24 12:33:43,963 [INFO] secureforge.orchestrator: Orchestrator loop starting batch: ['owasp_web', 'privilege_escalation', 'waf_detection', 'recon_exposure', 'impact_sim', 'nmap_scan', 'apt_killchain', 'ssh_bruteforce']
+bas-engine-1  | INFO:     172.19.0.5:42986 - "POST /api/v1/simulations/ HTTP/1.1" 200 OK
+bas-engine-1  | 2026-06-24 12:33:43,965 [INFO] secureforge.orchestrator: Loading module privilege_escalation variant: bas_engine.attack_modules.privilege_escalation_safe.PrivEscModule (detailed_enumeration=False)
+bas-engine-1  | 2026-06-24 12:33:43,971 [INFO] secureforge.orchestrator: Loading module impact_sim variant: bas_engine.attack_modules.impact_sim_safe.ImpactSimModule (detailed_enumeration=False)
+bas-engine-1  | INFO:     172.19.0.5:42976 - "GET /api/v1/simulations HTTP/1.1" 307 Temporary Redirect
+bas-engine-1  | INFO:     172.19.0.5:42986 - "GET /api/v1/simulations HTTP/1.1" 307 Temporary Redirect
+bas-engine-1  | 2026-06-24 12:33:44,246 [INFO] secureforge.ws: Broadcasting event to 1 connections: module.started
+bas-engine-1  | 2026-06-24 12:33:44,246 [INFO] secureforge.module.privilege_escalation: [privilege_escalation] Starting against 192.168.56.102
+bas-engine-1  | 2026-06-24 12:33:44,247 [INFO] secureforge.module.privilege_escalation: [INFO] privilege_escalation started
+bas-engine-1  | 2026-06-24 12:33:44,322 [INFO] secureforge.ws: Broadcasting event to 1 connections: module.started
+bas-engine-1  | 2026-06-24 12:33:44,322 [INFO] secureforge.module.owasp_web: [owasp_web] Starting against 192.168.56.102
+bas-engine-1  | 2026-06-24 12:33:44,323 [INFO] secureforge.module.owasp_web: [INFO] owasp_web started
+bas-engine-1  | 2026-06-24 12:33:44,404 [INFO] secureforge.ws: Broadcasting event to 1 connections: module.started
+bas-engine-1  | 2026-06-24 12:33:44,405 [INFO] secureforge.module.waf_detection: [waf_detection] Starting against 192.168.56.102
+bas-engine-1  | 2026-06-24 12:33:44,405 [INFO] secureforge.module.waf_detection: [INFO] waf_detection started
+bas-engine-1  | 2026-06-24 12:33:44,453 [INFO] secureforge.ws: Broadcasting event to 1 connections: module.started
+bas-engine-1  | 2026-06-24 12:33:44,453 [INFO] secureforge.module.ssh_bruteforce: [ssh_bruteforce] Starting against 192.168.56.102
+bas-engine-1  | 2026-06-24 12:33:44,453 [INFO] secureforge.module.ssh_bruteforce: [INFO] ssh_bruteforce started
+bas-engine-1  | 2026-06-24 12:33:44,455 [INFO] secureforge.ws: Broadcasting event to 1 connections: module.started
+bas-engine-1  | 2026-06-24 12:33:44,455 [INFO] secureforge.module.recon_exposure: [recon_exposure] Starting against 192.168.56.102
+bas-engine-1  | 2026-06-24 12:33:44,456 [INFO] secureforge.module.recon_exposure: [INFO] recon_exposure started
+bas-engine-1  | 2026-06-24 12:33:44,457 [INFO] secureforge.ws: Broadcasting event to 1 connections: module.started
+bas-engine-1  | 2026-06-24 12:33:44,458 [INFO] secureforge.module.impact_sim: [impact_sim] Starting against 192.168.56.102
+bas-engine-1  | 2026-06-24 12:33:44,458 [INFO] secureforge.module.impact_sim: [INFO] impact_sim started
+bas-engine-1  | 2026-06-24 12:33:44,459 [INFO] secureforge.ws: Broadcasting event to 1 connections: module.started
+bas-engine-1  | 2026-06-24 12:33:44,459 [INFO] secureforge.module.nmap_scan: [nmap_scan] Starting against 192.168.56.102
+bas-engine-1  | 2026-06-24 12:33:44,460 [INFO] secureforge.module.nmap_scan: [INFO] nmap_scan started
+bas-engine-1  | 2026-06-24 12:33:44,478 [INFO] secureforge.ws: Broadcasting event to 1 connections: module.started
+bas-engine-1  | 2026-06-24 12:33:44,479 [INFO] secureforge.module.apt_killchain: [apt_killchain] Starting against 192.168.56.102
+bas-engine-1  | 2026-06-24 12:33:44,479 [INFO] secureforge.module.apt_killchain: [INFO] apt_killchain started
+bas-engine-1  | INFO:     172.19.0.5:42986 - "GET /api/v1/simulations/ HTTP/1.1" 200 OK
+bas-engine-1  | INFO:     172.19.0.5:42996 - "GET /api/v1/simulations/ HTTP/1.1" 200 OK
+bas-engine-1  | 2026-06-24 12:33:44,507 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | 2026-06-24 12:33:44,528 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | 2026-06-24 12:33:44,529 [INFO] secureforge.module.nmap_scan: [nmap_scan] Target=192.168.56.102 | Profile=standard | Ports=1000 | Timeout=2.0s | Concurrency=200
+bas-engine-1  | 2026-06-24 12:33:44,529 [INFO] secureforge.module.nmap_scan: [nmap_scan] Starting scan on 192.168.56.102 (opts: {'profile': 'standard', 'ports': '1-1000', 'timing': 'T4', 'subnet_scan': False, 'detailed_enumeration': False})
+bas-engine-1  | 2026-06-24 12:33:44,530 [INFO] secureforge.module.nmap_scan: [INFO] [NMAP] Starting scan on 192.168.56.102
+bas-engine-1  | 2026-06-24 12:33:44,531 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | 2026-06-24 12:33:44,533 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | INFO:     172.19.0.5:42976 - "GET /api/v1/simulations HTTP/1.1" 307 Temporary Redirect
+bas-engine-1  | INFO:     172.19.0.5:42986 - "GET /api/v1/simulations HTTP/1.1" 307 Temporary Redirect
+bas-engine-1  | 2026-06-24 12:33:44,548 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | 2026-06-24 12:33:44,549 [INFO] secureforge.module.privilege_escalation: [SUCCESS] privilege_escalation completed
+bas-engine-1  | 2026-06-24 12:33:44,552 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | 2026-06-24 12:33:44,553 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | 2026-06-24 12:33:44,553 [INFO] secureforge.apt_killchain: 
+bas-engine-1  | ============================================================
+bas-engine-1  | 2026-06-24 12:33:44,554 [INFO] secureforge.apt_killchain: Adaptive APT Kill Chain v3
+bas-engine-1  | 2026-06-24 12:33:44,554 [INFO] secureforge.apt_killchain: TARGET: 192.168.56.102
+bas-engine-1  | 2026-06-24 12:33:44,554 [INFO] secureforge.apt_killchain: ============================================================
+bas-engine-1  | 2026-06-24 12:33:44,565 [INFO] secureforge.module.apt_killchain: [INFO] [APT] Stage 1: Reconnaissance
+bas-engine-1  | 2026-06-24 12:33:44,567 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | 2026-06-24 12:33:44,569 [INFO] secureforge.module.ssh_bruteforce: [INFO] 
+bas-engine-1  | [WORDLISTS] 6 usernames | 7 passwords
+bas-engine-1  | 2026-06-24 12:33:44,591 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | 2026-06-24 12:33:44,591 [INFO] secureforge.module.nmap_scan: [nmap_scan] Resolved 192.168.56.102 -> 192.168.56.102
+bas-engine-1  | 2026-06-24 12:33:44,703 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | 2026-06-24 12:33:44,703 [INFO] secureforge.module.privilege_escalation: [FINDING] Target Execution Blocked
+bas-engine-1  | 
+bas-engine-1  | === BASELINE ANALYSIS ===
+bas-engine-1  | {'reachable': True, 'baseline_allowed': True, 'baseline_status': 200, 'headers': {'Date': 'Thu, 18 Jun 2026 05:17:55 GMT', 'Server': 'Apache/2.2.8 (Ubuntu) DAV/2', 'X-Powered-By': 'PHP/5.2.4-2ubuntu5.10', 'Content-Length': '891', 'Connection': 'close', 'Content-Type': 'text/html'}, 'classification': {'proxy_detected': False, 'waf_detected': False, 'vendor': None, 'type': 'Web Server'}}
+bas-engine-1  | 2026-06-24 12:33:44,716 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | 2026-06-24 12:33:44,718 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | 2026-06-24 12:33:44,719 [INFO] secureforge.apt_killchain: 
+bas-engine-1  | === STAGE 1 ΓÇö RECON ===
+bas-engine-1  | 2026-06-24 12:33:44,720 [INFO] secureforge.apt_killchain: [E] / : /
+bas-engine-1  | INFO:     172.19.0.5:42976 - "GET /api/v1/simulations/ HTTP/1.1" 200 OK
+bas-engine-1  | INFO:     172.19.0.5:42996 - "GET /api/v1/simulations/ HTTP/1.1" 200 OK
+bas-engine-1  | 2026-06-24 12:33:44,762 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | 2026-06-24 12:33:44,764 [INFO] secureforge.module.ssh_bruteforce: [INFO] 
+bas-engine-1  | [SSH OPEN] 192.168.56.102:22
+bas-engine-1  | 2026-06-24 12:33:44,779 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | INFO:     172.19.0.5:42976 - "GET /api/v1/simulations HTTP/1.1" 307 Temporary Redirect
+bas-engine-1  | 2026-06-24 12:33:44,791 [INFO] secureforge.ws: Broadcasting event to 1 connections: module.completed
+bas-engine-1  | 2026-06-24 12:33:44,808 [ERROR] secureforge: Event broadcast error: Object of type datetime is not JSON serializable
+bas-engine-1  | INFO:     172.19.0.5:42986 - "GET /api/v1/simulations/ HTTP/1.1" 200 OK
+bas-engine-1  | 2026-06-24 12:33:44,840 [INFO] secureforge.apt_killchain: [E] /login : /login
+bas-engine-1  | INFO:     172.19.0.5:42976 - "GET /api/v1/simulations HTTP/1.1" 307 Temporary Redirect
+bas-engine-1  | [+] Probe: XSS 200 http://192.168.56.102/
+bas-engine-1  | 2026-06-24 12:33:44,860 [INFO] secureforge.module.waf_detection: [INFO] [WAF TEST] XSS: HTTP 200 (Blocked: False)
+bas-engine-1  | 2026-06-24 12:33:44,881 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | 2026-06-24 12:33:44,893 [INFO] secureforge.module.nmap_scan: [nmap_scan] 192.168.56.102:25 OPEN (SMTP)
+bas-engine-1  | 2026-06-24 12:33:44,894 [INFO] secureforge.module.nmap_scan: [INFO] [OPEN] 192.168.56.102:25 (SMTP)
+bas-engine-1  | INFO:     172.19.0.5:42986 - "GET /api/v1/simulations/ HTTP/1.1" 200 OK
+bas-engine-1  | 2026-06-24 12:33:44,903 [INFO] secureforge.module.nmap_scan: [nmap_scan] 192.168.56.102:21 OPEN (FTP)
+bas-engine-1  | 2026-06-24 12:33:44,904 [INFO] secureforge.module.nmap_scan: [INFO] [OPEN] 192.168.56.102:21 (FTP)
+bas-engine-1  | 2026-06-24 12:33:44,910 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | 2026-06-24 12:33:44,911 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | INFO:     172.19.0.5:42976 - "GET /api/v1/simulations HTTP/1.1" 307 Temporary Redirect
+bas-engine-1  | 2026-06-24 12:33:44,929 [INFO] secureforge.module.nmap_scan: [nmap_scan] 192.168.56.102:22 OPEN (SSH)
+bas-engine-1  | 2026-06-24 12:33:44,929 [INFO] secureforge.module.nmap_scan: [INFO] [OPEN] 192.168.56.102:22 (SSH)
+bas-engine-1  | 2026-06-24 12:33:44,946 [INFO] secureforge.module.owasp_web: [owasp_web] Starting crawl of http://192.168.56.102
+bas-engine-1  | 2026-06-24 12:33:44,948 [INFO] secureforge.module.ssh_bruteforce: [INFO] [BANNER] SSH-2.0-OpenSSH_4.7p1 Debian-8ubuntu1
+bas-engine-1  | 2026-06-24 12:33:44,950 [INFO] secureforge.module.nmap_scan: [nmap_scan] 192.168.56.102:23 OPEN (Telnet)
+bas-engine-1  | 2026-06-24 12:33:44,950 [INFO] secureforge.module.nmap_scan: [INFO] [OPEN] 192.168.56.102:23 (Telnet)
+bas-engine-1  | 2026-06-24 12:33:44,952 [INFO] secureforge.module.nmap_scan: [nmap_scan] 192.168.56.102:80 OPEN (HTTP)
+bas-engine-1  | 2026-06-24 12:33:44,952 [INFO] secureforge.module.nmap_scan: [INFO] [OPEN] 192.168.56.102:80 (HTTP)
+bas-engine-1  | INFO:     172.19.0.5:42986 - "GET /api/v1/simulations/ HTTP/1.1" 200 OK
+bas-engine-1  | 2026-06-24 12:33:44,961 [INFO] secureforge.apt_killchain: [E] /signin : /signin
+bas-engine-1  | 2026-06-24 12:33:44,965 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | 2026-06-24 12:33:44,969 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | 2026-06-24 12:33:44,969 [INFO] secureforge.module.ssh_bruteforce: [INFO] 
+bas-engine-1  | [LIVE SSH ATTACK]
+bas-engine-1  | 2026-06-24 12:33:44,971 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | 2026-06-24 12:33:44,972 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | INFO:     172.19.0.5:42976 - "GET /api/v1/simulations HTTP/1.1" 307 Temporary Redirect
+bas-engine-1  | 2026-06-24 12:33:44,983 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | INFO:     172.19.0.5:42986 - "GET /api/v1/simulations/ HTTP/1.1" 200 OK
+bas-engine-1  | INFO:     172.19.0.5:42976 - "GET /api/v1/simulations HTTP/1.1" 307 Temporary Redirect
+bas-engine-1  | INFO:     172.19.0.5:42986 - "GET /api/v1/simulations/ HTTP/1.1" 200 OK
+bas-engine-1  | 2026-06-24 12:33:45,081 [INFO] secureforge.apt_killchain: [E] /admin : /admin
+bas-engine-1  | INFO:     172.19.0.5:42976 - "GET /api/v1/simulations HTTP/1.1" 307 Temporary Redirect
+bas-engine-1  | 2026-06-24 12:33:45,206 [INFO] secureforge.apt_killchain: [E] /dashboard : /dashboard
+bas-engine-1  | INFO:     172.19.0.5:42986 - "GET /api/v1/simulations/ HTTP/1.1" 200 OK
+bas-engine-1  | INFO:     172.19.0.5:42976 - "GET /api/v1/simulations HTTP/1.1" 307 Temporary Redirect
+bas-engine-1  | INFO:     172.19.0.5:42986 - "GET /api/v1/simulations/ HTTP/1.1" 200 OK
+bas-engine-1  | INFO:     172.19.0.5:42976 - "GET /api/v1/simulations HTTP/1.1" 307 Temporary Redirect
+bas-engine-1  | 2026-06-24 12:33:45,328 [INFO] secureforge.apt_killchain: [E] /api : /api
+bas-engine-1  | INFO:     172.19.0.5:42986 - "GET /api/v1/simulations/ HTTP/1.1" 200 OK
+bas-engine-1  | INFO:     172.19.0.5:42976 - "GET /api/v1/simulations HTTP/1.1" 307 Temporary Redirect
+bas-engine-1  | INFO:     172.19.0.5:42986 - "GET /api/v1/simulations/ HTTP/1.1" 200 OK
+bas-engine-1  | INFO:     172.19.0.5:42976 - "GET /api/v1/simulations HTTP/1.1" 307 Temporary Redirect
+bas-engine-1  | INFO:     172.19.0.5:42986 - "GET /api/v1/simulations/ HTTP/1.1" 200 OK
+bas-engine-1  | 2026-06-24 12:33:45,449 [INFO] secureforge.apt_killchain: [E] /graphql : /graphql
+bas-engine-1  | INFO:     172.19.0.5:42976 - "GET /api/v1/simulations HTTP/1.1" 307 Temporary Redirect
+bas-engine-1  | INFO:     172.19.0.5:42986 - "GET /api/v1/simulations/ HTTP/1.1" 200 OK
+bas-engine-1  | INFO:     172.19.0.5:42976 - "GET /api/v1/simulations HTTP/1.1" 307 Temporary Redirect
+bas-engine-1  | INFO:     172.19.0.5:42986 - "GET /api/v1/simulations/ HTTP/1.1" 200 OK
+bas-engine-1  | 2026-06-24 12:33:45,571 [INFO] secureforge.apt_killchain: [E] /upload : /upload
+bas-engine-1  | INFO:     172.19.0.5:42976 - "GET /api/v1/simulations HTTP/1.1" 307 Temporary Redirect
+bas-engine-1  | INFO:     172.19.0.5:42986 - "GET /api/v1/simulations/ HTTP/1.1" 200 OK
+bas-engine-1  | INFO:     172.19.0.5:42976 - "GET /api/v1/simulations HTTP/1.1" 307 Temporary Redirect
+bas-engine-1  | 2026-06-24 12:33:45,693 [INFO] secureforge.apt_killchain: [E] /register : /register
+bas-engine-1  | INFO:     172.19.0.5:42986 - "GET /api/v1/simulations/ HTTP/1.1" 200 OK
+bas-engine-1  | INFO:     172.19.0.5:42976 - "GET /api/v1/simulations HTTP/1.1" 307 Temporary Redirect
+bas-engine-1  | INFO:     172.19.0.5:42986 - "GET /api/v1/simulations/ HTTP/1.1" 200 OK
+bas-engine-1  | INFO:     172.19.0.5:42976 - "GET /api/v1/simulations HTTP/1.1" 307 Temporary Redirect
+bas-engine-1  | [+] Probe: XSS_DOUBLE 200 http://192.168.56.102/
+bas-engine-1  | 2026-06-24 12:33:45,804 [INFO] secureforge.module.waf_detection: [INFO] [WAF TEST] XSS_DOUBLE: HTTP 200 (Blocked: False)
+bas-engine-1  | 2026-06-24 12:33:45,822 [INFO] secureforge.apt_killchain: [E] /auth : /auth
+bas-engine-1  | INFO:     172.19.0.5:42986 - "GET /api/v1/simulations/ HTTP/1.1" 200 OK
+bas-engine-1  | 2026-06-24 12:33:45,838 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | INFO:     172.19.0.5:42976 - "GET /api/v1/simulations HTTP/1.1" 307 Temporary Redirect
+bas-engine-1  | INFO:     172.19.0.5:42986 - "GET /api/v1/simulations/ HTTP/1.1" 200 OK
+bas-engine-1  | INFO:     172.19.0.5:42976 - "GET /api/v1/simulations HTTP/1.1" 307 Temporary Redirect
+bas-engine-1  | 2026-06-24 12:33:45,944 [INFO] secureforge.apt_killchain: [E] /manage : /manage
+bas-engine-1  | INFO:     172.19.0.5:42986 - "GET /api/v1/simulations/ HTTP/1.1" 200 OK
+bas-engine-1  | INFO:     172.19.0.5:42976 - "GET /api/v1/simulations HTTP/1.1" 307 Temporary Redirect
+bas-engine-1  | 2026-06-24 12:33:46,075 [INFO] secureforge.apt_killchain: [E] /config : /config
+bas-engine-1  | INFO:     172.19.0.5:42986 - "GET /api/v1/simulations/ HTTP/1.1" 200 OK
+bas-engine-1  | INFO:     172.19.0.5:42976 - "GET /api/v1/simulations HTTP/1.1" 307 Temporary Redirect
+bas-engine-1  | INFO:     172.19.0.5:42986 - "GET /api/v1/simulations/ HTTP/1.1" 200 OK
+bas-engine-1  | INFO:     172.19.0.5:42976 - "GET /api/v1/simulations HTTP/1.1" 307 Temporary Redirect
+bas-engine-1  | INFO:     172.19.0.5:42986 - "GET /api/v1/simulations/ HTTP/1.1" 200 OK
+bas-engine-1  | 2026-06-24 12:33:46,195 [INFO] secureforge.apt_killchain: 
+bas-engine-1  | [Γ£ô] Stage 1: Reconnaissance
+bas-engine-1  | 2026-06-24 12:33:46,196 [INFO] secureforge.apt_killchain:     Discovered 0 valid endpoints | 0 recursive links | Technologies: none
+bas-engine-1  | 2026-06-24 12:33:46,196 [INFO] secureforge.module.apt_killchain: [INFO] [APT] Stage 2: Login Attack
+bas-engine-1  | INFO:     172.19.0.5:42976 - "GET /api/v1/simulations HTTP/1.1" 307 Temporary Redirect
+bas-engine-1  | 2026-06-24 12:33:46,235 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | 2026-06-24 12:33:46,236 [INFO] secureforge.apt_killchain: 
+bas-engine-1  | === STAGE 2 ΓÇö LOGIN ATTACK ===
+bas-engine-1  | 2026-06-24 12:33:46,236 [INFO] secureforge.apt_killchain: 
+bas-engine-1  | [ΓÜá] Stage 2: Credential Attack
+bas-engine-1  | 2026-06-24 12:33:46,236 [INFO] secureforge.apt_killchain:     No login forms discovered
+bas-engine-1  | 2026-06-24 12:33:46,236 [INFO] secureforge.module.apt_killchain: [INFO] [APT] Stage 3: Session Validation
+bas-engine-1  | INFO:     172.19.0.5:42986 - "GET /api/v1/simulations/ HTTP/1.1" 200 OK
+bas-engine-1  | 2026-06-24 12:33:46,256 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | 2026-06-24 12:33:46,256 [INFO] secureforge.apt_killchain: 
+bas-engine-1  | === STAGE 3 ΓÇö SESSION VALIDATION ===
+bas-engine-1  | 2026-06-24 12:33:46,257 [INFO] secureforge.apt_killchain: 
+bas-engine-1  | [ΓÜá] Stage 3: Credential Use
+bas-engine-1  | 2026-06-24 12:33:46,257 [INFO] secureforge.apt_killchain:     No authenticated session
+bas-engine-1  | 2026-06-24 12:33:46,257 [INFO] secureforge.module.apt_killchain: [INFO] [APT] Stage 4: OWASP Web Scanning
+bas-engine-1  | INFO:     172.19.0.5:42976 - "GET /api/v1/simulations HTTP/1.1" 307 Temporary Redirect
+bas-engine-1  | 2026-06-24 12:33:46,268 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | 2026-06-24 12:33:46,269 [INFO] secureforge.apt_killchain: 
+bas-engine-1  | === STAGE 4 ΓÇö OWASP ATTACKS ===
+bas-engine-1  | 2026-06-24 12:33:46,269 [INFO] secureforge.apt_killchain: 
+bas-engine-1  | [ΓÜá] Stage 4: OWASP Attacks
+bas-engine-1  | 2026-06-24 12:33:46,269 [INFO] secureforge.apt_killchain:     No attackable endpoints discovered
+bas-engine-1  | 2026-06-24 12:33:46,269 [INFO] secureforge.module.apt_killchain: [INFO] [APT] Stage 5: Privilege Escalation Vectors
+bas-engine-1  | 2026-06-24 12:33:46,291 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | 2026-06-24 12:33:46,292 [INFO] secureforge.apt_killchain: 
+bas-engine-1  | === STAGE 5 ΓÇö PRIV ESC ===
+bas-engine-1  | 2026-06-24 12:33:46,292 [INFO] secureforge.apt_killchain: [E] /admin
+bas-engine-1  | INFO:     172.19.0.5:42986 - "GET /api/v1/simulations/ HTTP/1.1" 200 OK
+bas-engine-1  | INFO:     connection closed
+bas-engine-1  | INFO:     172.19.0.5:42976 - "GET /api/v1/simulations HTTP/1.1" 307 Temporary Redirect
+bas-engine-1  | INFO:     172.19.0.5:42986 - "GET /api/v1/simulations/ HTTP/1.1" 200 OK
+bas-engine-1  | INFO:     172.19.0.5:42976 - "GET /api/v1/ws/ticket HTTP/1.1" 200 OK
+bas-engine-1  | INFO:     172.19.0.5:42986 - "GET /api/v1/simulations HTTP/1.1" 307 Temporary Redirect
+bas-engine-1  | 2026-06-24 12:33:46,419 [INFO] secureforge.apt_killchain: [E] /admin/login
+bas-engine-1  | INFO:     172.19.0.5:42996 - "GET /api/v1/replay/recent/events HTTP/1.1" 200 OK
+bas-engine-1  | INFO:     ('172.19.0.5', 43024) - "WebSocket /ws/events?ticket=32fa0826-e643-4688-8b00-d1190ad979aa" [accepted]
+bas-engine-1  | INFO:     connection open
+bas-engine-1  | INFO:     172.19.0.5:43008 - "GET /api/v1/simulations/ HTTP/1.1" 200 OK
+bas-engine-1  | INFO:     172.19.0.5:42976 - "GET /api/v1/simulations HTTP/1.1" 307 Temporary Redirect
+bas-engine-1  | INFO:     172.19.0.5:42986 - "GET /api/v1/simulations/ HTTP/1.1" 200 OK
+bas-engine-1  | INFO:     172.19.0.5:42976 - "GET /api/v1/simulations HTTP/1.1" 307 Temporary Redirect
+bas-engine-1  | 2026-06-24 12:33:46,541 [INFO] secureforge.apt_killchain: [E] /dashboard
+bas-engine-1  | INFO:     172.19.0.5:42986 - "GET /api/v1/simulations/ HTTP/1.1" 200 OK
+bas-engine-1  | INFO:     172.19.0.5:42976 - "GET /api/v1/simulations HTTP/1.1" 307 Temporary Redirect
+bas-engine-1  | INFO:     172.19.0.5:42986 - "GET /api/v1/simulations/ HTTP/1.1" 200 OK
+bas-engine-1  | INFO:     172.19.0.5:42976 - "GET /api/v1/simulations HTTP/1.1" 307 Temporary Redirect
+bas-engine-1  | 2026-06-24 12:33:46,667 [INFO] secureforge.apt_killchain: [E] /manage
+bas-engine-1  | INFO:     172.19.0.5:42986 - "GET /api/v1/simulations/ HTTP/1.1" 200 OK
+bas-engine-1  | 2026-06-24 12:33:46,787 [INFO] secureforge.apt_killchain: [E] /config
+bas-engine-1  | 2026-06-24 12:33:46,978 [INFO] secureforge.apt_killchain: [E] /settings
+bas-engine-1  | 2026-06-24 12:33:46,981 [INFO] secureforge.module.nmap_scan: [nmap_scan] 192.168.56.102:53 OPEN (DNS)
+bas-engine-1  | 2026-06-24 12:33:46,981 [INFO] secureforge.module.nmap_scan: [INFO] [OPEN] 192.168.56.102:53 (DNS)
+bas-engine-1  | 2026-06-24 12:33:46,983 [INFO] secureforge.module.nmap_scan: [nmap_scan] 192.168.56.102:111 OPEN (unknown-111)
+bas-engine-1  | 2026-06-24 12:33:46,983 [INFO] secureforge.module.nmap_scan: [INFO] [OPEN] 192.168.56.102:111 (unknown-111)
+bas-engine-1  | 2026-06-24 12:33:46,984 [INFO] secureforge.module.nmap_scan: [nmap_scan] 192.168.56.102:139 OPEN (NetBIOS)
+bas-engine-1  | 2026-06-24 12:33:46,985 [INFO] secureforge.module.nmap_scan: [INFO] [OPEN] 192.168.56.102:139 (NetBIOS)
+bas-engine-1  | 2026-06-24 12:33:46,997 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | 2026-06-24 12:33:46,998 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | 2026-06-24 12:33:46,999 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | 2026-06-24 12:33:47,100 [INFO] secureforge.apt_killchain: [E] /administrator
+bas-engine-1  | 2026-06-24 12:33:47,221 [INFO] secureforge.apt_killchain: [E] /console
+bas-engine-1  | 2026-06-24 12:33:47,343 [INFO] secureforge.apt_killchain: 
+bas-engine-1  | [Γ£ô] Stage 5: Privilege Escalation
+bas-engine-1  | 2026-06-24 12:33:47,343 [INFO] secureforge.apt_killchain:     No exposed admin endpoints
+bas-engine-1  | 2026-06-24 12:33:47,343 [INFO] secureforge.module.apt_killchain: [INFO] [APT] Stage 6: Persistence Probes
+bas-engine-1  | 2026-06-24 12:33:47,354 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | 2026-06-24 12:33:47,354 [INFO] secureforge.apt_killchain: 
+bas-engine-1  | === STAGE 6 ΓÇö PERSISTENCE ===
+bas-engine-1  | 2026-06-24 12:33:47,355 [INFO] secureforge.apt_killchain: [E] /upload
+bas-engine-1  | [+] Probe: SQLI 200 http://192.168.56.102/
+bas-engine-1  | 2026-06-24 12:33:47,387 [INFO] secureforge.module.waf_detection: [INFO] [WAF TEST] SQLI: HTTP 200 (Blocked: False)
+bas-engine-1  | 2026-06-24 12:33:47,400 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | 2026-06-24 12:33:47,475 [INFO] secureforge.apt_killchain: [E] /uploads
+bas-engine-1  | 2026-06-24 12:33:47,547 [INFO] secureforge.module.ssh_bruteforce: [INFO] [FAIL] root:123456
+bas-engine-1  | 2026-06-24 12:33:47,563 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | 2026-06-24 12:33:47,597 [INFO] secureforge.apt_killchain: [E] /backup
+bas-engine-1  | 2026-06-24 12:33:47,618 [INFO] secureforge.module.ssh_bruteforce: [INFO] [FAIL] admin:123456
+bas-engine-1  | 2026-06-24 12:33:47,632 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | 2026-06-24 12:33:47,675 [INFO] secureforge.module.ssh_bruteforce: [INFO] [FAIL] test:123456
+bas-engine-1  | 2026-06-24 12:33:47,679 [INFO] secureforge.module.ssh_bruteforce: [INFO] [FAIL] user:123456
+bas-engine-1  | 2026-06-24 12:33:47,683 [INFO] secureforge.module.ssh_bruteforce: [INFO] [FAIL] user35@tlsoc.cse.iitb.ac.in:123456
+bas-engine-1  | 2026-06-24 12:33:47,690 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | 2026-06-24 12:33:47,691 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | 2026-06-24 12:33:47,699 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | 2026-06-24 12:33:47,717 [INFO] secureforge.apt_killchain: [E] /backups
+bas-engine-1  | 2026-06-24 12:33:47,838 [INFO] secureforge.apt_killchain: [E] /plugins
+bas-engine-1  | 2026-06-24 12:33:47,959 [INFO] secureforge.apt_killchain: [E] /extensions
+bas-engine-1  | 2026-06-24 12:33:48,080 [INFO] secureforge.apt_killchain: [E] /api/upload
+bas-engine-1  | 2026-06-24 12:33:48,200 [INFO] secureforge.apt_killchain: [E] /storage
+bas-engine-1  | 2026-06-24 12:33:48,321 [INFO] secureforge.apt_killchain: 
+bas-engine-1  | [Γ£ô] Stage 6: Persistence Probe
+bas-engine-1  | 2026-06-24 12:33:48,321 [INFO] secureforge.apt_killchain:     No persistence paths exposed
+bas-engine-1  | 2026-06-24 12:33:48,322 [INFO] secureforge.module.apt_killchain: [SUCCESS] apt_killchain completed
+bas-engine-1  | 2026-06-24 12:33:48,356 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | 2026-06-24 12:33:48,357 [INFO] secureforge.module.apt_killchain: [FINDING] APT Stage 1: Reconnaissance
+bas-engine-1  | 2026-06-24 12:33:48,372 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | 2026-06-24 12:33:48,373 [INFO] secureforge.module.apt_killchain: [FINDING] APT Stage 2: Credential Attack
+bas-engine-1  | 2026-06-24 12:33:48,388 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | 2026-06-24 12:33:48,388 [INFO] secureforge.module.apt_killchain: [FINDING] APT Stage 3: Credential Use
+bas-engine-1  | 2026-06-24 12:33:48,406 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | 2026-06-24 12:33:48,407 [INFO] secureforge.module.apt_killchain: [FINDING] APT Stage 4: OWASP Attacks
+bas-engine-1  | 2026-06-24 12:33:48,420 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | 2026-06-24 12:33:48,421 [INFO] secureforge.module.apt_killchain: [FINDING] APT Stage 5: Privilege Escalation
+bas-engine-1  | 2026-06-24 12:33:48,433 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | 2026-06-24 12:33:48,434 [INFO] secureforge.module.apt_killchain: [FINDING] APT Stage 6: Persistence Probe
+bas-engine-1  | 2026-06-24 12:33:48,446 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | 2026-06-24 12:33:48,468 [INFO] secureforge.ws: Broadcasting event to 1 connections: module.completed
+bas-engine-1  | 2026-06-24 12:33:48,476 [ERROR] secureforge: Event broadcast error: Object of type datetime is not JSON serializable
+bas-engine-1  | 2026-06-24 12:33:48,483 [ERROR] secureforge: Event broadcast error: Object of type datetime is not JSON serializable
+bas-engine-1  | 2026-06-24 12:33:48,489 [ERROR] secureforge: Event broadcast error: Object of type datetime is not JSON serializable
+bas-engine-1  | 2026-06-24 12:33:48,495 [ERROR] secureforge: Event broadcast error: Object of type datetime is not JSON serializable
+bas-engine-1  | 2026-06-24 12:33:48,504 [ERROR] secureforge: Event broadcast error: Object of type datetime is not JSON serializable
+bas-engine-1  | 2026-06-24 12:33:48,509 [ERROR] secureforge: Event broadcast error: Object of type datetime is not JSON serializable
+bas-engine-1  | [+] Probe: TRAVERSAL 200 http://192.168.56.102/
+bas-engine-1  | 2026-06-24 12:33:49,369 [INFO] secureforge.module.waf_detection: [INFO] [WAF TEST] TRAVERSAL: HTTP 200 (Blocked: False)
+bas-engine-1  | 2026-06-24 12:33:49,474 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | 2026-06-24 12:33:49,906 [INFO] secureforge.module.nmap_scan: [nmap_scan] 192.168.56.102:514 OPEN (unknown-514)
+bas-engine-1  | 2026-06-24 12:33:49,906 [INFO] secureforge.module.nmap_scan: [INFO] [OPEN] 192.168.56.102:514 (unknown-514)
+bas-engine-1  | 2026-06-24 12:33:49,919 [INFO] secureforge.module.nmap_scan: [nmap_scan] 192.168.56.102:512 OPEN (unknown-512)
+bas-engine-1  | 2026-06-24 12:33:49,919 [INFO] secureforge.module.nmap_scan: [INFO] [OPEN] 192.168.56.102:512 (unknown-512)
+bas-engine-1  | 2026-06-24 12:33:49,938 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | 2026-06-24 12:33:49,940 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | [+] Probe: LOG4SHELL 200 http://192.168.56.102/
+bas-engine-1  | 2026-06-24 12:33:50,282 [INFO] secureforge.module.waf_detection: [INFO] [WAF TEST] LOG4SHELL: HTTP 200 (Blocked: False)
+bas-engine-1  | 2026-06-24 12:33:50,294 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | 2026-06-24 12:33:50,342 [INFO] secureforge.module.ssh_bruteforce: [INFO] [FAIL] test:password
+bas-engine-1  | 2026-06-24 12:33:50,359 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | 2026-06-24 12:33:50,365 [INFO] secureforge.module.ssh_bruteforce: [INFO] [FAIL] user:password
+bas-engine-1  | 2026-06-24 12:33:50,379 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | 2026-06-24 12:33:50,467 [INFO] secureforge.module.ssh_bruteforce: [INFO] [FAIL] msfadmin:123456
+bas-engine-1  | 2026-06-24 12:33:50,480 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | 2026-06-24 12:33:50,490 [INFO] secureforge.module.ssh_bruteforce: [INFO] [FAIL] admin:password
+bas-engine-1  | 2026-06-24 12:33:50,503 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | 2026-06-24 12:33:50,534 [INFO] secureforge.module.ssh_bruteforce: [INFO] [FAIL] root:password
+bas-engine-1  | 2026-06-24 12:33:50,549 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | [+] Probe: XSS 200 http://192.168.56.102/
+bas-engine-1  | 2026-06-24 12:33:51,416 [INFO] secureforge.module.waf_detection: [INFO] [WAF TEST] XSS: HTTP 200 (Blocked: False)
+bas-engine-1  | 2026-06-24 12:33:51,444 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | 2026-06-24 12:33:51,800 [INFO] secureforge.module.nmap_scan: [nmap_scan] 192.168.56.102:443 OPEN (HTTPS)
+bas-engine-1  | 2026-06-24 12:33:51,800 [INFO] secureforge.module.nmap_scan: [INFO] [OPEN] 192.168.56.102:443 (HTTPS)
+bas-engine-1  | 2026-06-24 12:33:51,802 [INFO] secureforge.module.nmap_scan: [nmap_scan] 192.168.56.102:445 OPEN (SMB)
+bas-engine-1  | 2026-06-24 12:33:51,802 [INFO] secureforge.module.nmap_scan: [INFO] [OPEN] 192.168.56.102:445 (SMB)
+bas-engine-1  | 2026-06-24 12:33:51,815 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | 2026-06-24 12:33:51,816 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | 2026-06-24 12:33:52,322 [INFO] secureforge.module.nmap_scan: [nmap_scan] 192.168.56.102:513 OPEN (unknown-513)
+bas-engine-1  | 2026-06-24 12:33:52,322 [INFO] secureforge.module.nmap_scan: [INFO] [OPEN] 192.168.56.102:513 (unknown-513)
+bas-engine-1  | 2026-06-24 12:33:52,332 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | [+] Probe: XSS_DOUBLE 200 http://192.168.56.102/
+bas-engine-1  | 2026-06-24 12:33:52,593 [INFO] secureforge.module.waf_detection: [INFO] [WAF TEST] XSS_DOUBLE: HTTP 200 (Blocked: False)
+bas-engine-1  | 2026-06-24 12:33:52,634 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | [+] Probe: SQLI 200 http://192.168.56.102/
+bas-engine-1  | 2026-06-24 12:33:54,057 [INFO] secureforge.module.waf_detection: [INFO] [WAF TEST] SQLI: HTTP 200 (Blocked: False)
+bas-engine-1  | 2026-06-24 12:33:54,096 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | 2026-06-24 12:33:54,178 [INFO] secureforge.module.ssh_bruteforce: [INFO] [FAIL] msfadmin:password
+bas-engine-1  | 2026-06-24 12:33:54,190 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | 2026-06-24 12:33:54,298 [INFO] secureforge.module.ssh_bruteforce: [INFO] [FAIL] user35@tlsoc.cse.iitb.ac.in:password
+bas-engine-1  | 2026-06-24 12:33:54,319 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | 2026-06-24 12:33:54,325 [INFO] secureforge.module.ssh_bruteforce: [INFO] [FAIL] root:12345678
+bas-engine-1  | 2026-06-24 12:33:54,344 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | 2026-06-24 12:33:54,356 [INFO] secureforge.module.ssh_bruteforce: [INFO] [FAIL] admin:12345678
+bas-engine-1  | 2026-06-24 12:33:54,367 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | 2026-06-24 12:33:54,438 [INFO] secureforge.module.ssh_bruteforce: [INFO] [FAIL] user:12345678
+bas-engine-1  | 2026-06-24 12:33:54,485 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | 2026-06-24 12:33:55,017 [INFO] secureforge.module.nmap_scan: [SUCCESS] nmap_scan completed
+bas-engine-1  | 2026-06-24 12:33:55,045 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | 2026-06-24 12:33:55,046 [INFO] secureforge.module.nmap_scan: [FINDING] Open Port 21/FTP on 192.168.56.102
+bas-engine-1  | 2026-06-24 12:33:55,057 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | 2026-06-24 12:33:55,057 [INFO] secureforge.module.nmap_scan: [FINDING] Open Port 22/SSH on 192.168.56.102
+bas-engine-1  | 2026-06-24 12:33:55,070 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | 2026-06-24 12:33:55,071 [INFO] secureforge.module.nmap_scan: [FINDING] Open Port 23/Telnet on 192.168.56.102
+bas-engine-1  | 2026-06-24 12:33:55,082 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | 2026-06-24 12:33:55,082 [INFO] secureforge.module.nmap_scan: [FINDING] Open Port 25/SMTP on 192.168.56.102
+bas-engine-1  | 2026-06-24 12:33:55,093 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | 2026-06-24 12:33:55,094 [INFO] secureforge.module.nmap_scan: [FINDING] Open Port 53/DNS on 192.168.56.102
+bas-engine-1  | 2026-06-24 12:33:55,105 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | 2026-06-24 12:33:55,106 [INFO] secureforge.module.nmap_scan: [FINDING] Open Port 80/HTTP on 192.168.56.102
+bas-engine-1  | 2026-06-24 12:33:55,117 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | 2026-06-24 12:33:55,118 [INFO] secureforge.module.nmap_scan: [FINDING] Open Port 111/unknown-111 on 192.168.56.102
+bas-engine-1  | 2026-06-24 12:33:55,130 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | 2026-06-24 12:33:55,130 [INFO] secureforge.module.nmap_scan: [FINDING] Open Port 139/NetBIOS on 192.168.56.102
+bas-engine-1  | 2026-06-24 12:33:55,141 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | 2026-06-24 12:33:55,142 [INFO] secureforge.module.nmap_scan: [FINDING] Open Port 443/HTTPS on 192.168.56.102
+bas-engine-1  | 2026-06-24 12:33:55,153 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | 2026-06-24 12:33:55,154 [INFO] secureforge.module.nmap_scan: [FINDING] Open Port 445/SMB on 192.168.56.102
+bas-engine-1  | 2026-06-24 12:33:55,166 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | 2026-06-24 12:33:55,167 [INFO] secureforge.module.nmap_scan: [FINDING] Open Port 512/unknown-512 on 192.168.56.102
+bas-engine-1  | 2026-06-24 12:33:55,179 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | 2026-06-24 12:33:55,180 [INFO] secureforge.module.nmap_scan: [FINDING] Open Port 513/unknown-513 on 192.168.56.102
+bas-engine-1  | 2026-06-24 12:33:55,192 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | 2026-06-24 12:33:55,193 [INFO] secureforge.module.nmap_scan: [FINDING] Open Port 514/unknown-514 on 192.168.56.102
+bas-engine-1  | 2026-06-24 12:33:55,204 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | 2026-06-24 12:33:55,205 [INFO] secureforge.module.nmap_scan: [FINDING] Attack Surface Summary ΓÇö 192.168.56.102
+bas-engine-1  | 2026-06-24 12:33:55,216 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | 2026-06-24 12:33:55,232 [INFO] secureforge.ws: Broadcasting event to 1 connections: module.completed
+bas-engine-1  | 2026-06-24 12:33:55,238 [ERROR] secureforge: Event broadcast error: Object of type datetime is not JSON serializable
+bas-engine-1  | 2026-06-24 12:33:55,246 [ERROR] secureforge: Event broadcast error: Object of type datetime is not JSON serializable
+bas-engine-1  | 2026-06-24 12:33:55,253 [ERROR] secureforge: Event broadcast error: Object of type datetime is not JSON serializable
+bas-engine-1  | 2026-06-24 12:33:55,259 [ERROR] secureforge: Event broadcast error: Object of type datetime is not JSON serializable
+bas-engine-1  | 2026-06-24 12:33:55,265 [ERROR] secureforge: Event broadcast error: Object of type datetime is not JSON serializable
+bas-engine-1  | 2026-06-24 12:33:55,272 [ERROR] secureforge: Event broadcast error: Object of type datetime is not JSON serializable
+bas-engine-1  | 2026-06-24 12:33:55,279 [ERROR] secureforge: Event broadcast error: Object of type datetime is not JSON serializable
+bas-engine-1  | 2026-06-24 12:33:55,285 [ERROR] secureforge: Event broadcast error: Object of type datetime is not JSON serializable
+bas-engine-1  | 2026-06-24 12:33:55,291 [ERROR] secureforge: Event broadcast error: Object of type datetime is not JSON serializable
+bas-engine-1  | 2026-06-24 12:33:55,298 [ERROR] secureforge: Event broadcast error: Object of type datetime is not JSON serializable
+bas-engine-1  | 2026-06-24 12:33:55,305 [ERROR] secureforge: Event broadcast error: Object of type datetime is not JSON serializable
+bas-engine-1  | 2026-06-24 12:33:55,311 [ERROR] secureforge: Event broadcast error: Object of type datetime is not JSON serializable
+bas-engine-1  | 2026-06-24 12:33:55,318 [ERROR] secureforge: Event broadcast error: Object of type datetime is not JSON serializable
+bas-engine-1  | 2026-06-24 12:33:55,324 [ERROR] secureforge: Event broadcast error: Object of type datetime is not JSON serializable
+bas-engine-1  | 2026-06-24 12:33:55,971 [INFO] secureforge.module.recon_exposure: [INFO] Stage 1 starting: Credential Exposure
+bas-engine-1  | [+] Probe: TRAVERSAL 200 http://192.168.56.102/
+bas-engine-1  | 2026-06-24 12:33:55,976 [INFO] secureforge.module.waf_detection: [INFO] [WAF TEST] TRAVERSAL: HTTP 200 (Blocked: False)
+bas-engine-1  | 2026-06-24 12:33:55,995 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | 2026-06-24 12:33:55,997 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | [+] Probe: LOG4SHELL 200 http://192.168.56.102/
+bas-engine-1  | 2026-06-24 12:33:56,420 [INFO] secureforge.module.waf_detection: [INFO] [WAF TEST] LOG4SHELL: HTTP 200 (Blocked: False)
+bas-engine-1  | 2026-06-24 12:33:56,433 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | 2026-06-24 12:33:56,482 [INFO] secureforge.module.ssh_bruteforce: [INFO] [FAIL] test:12345678
+bas-engine-1  | 2026-06-24 12:33:56,495 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | 2026-06-24 12:33:56,539 [INFO] secureforge.module.recon_exposure: [INFO] Stage 2 starting: Data Exfiltration Vectors
+bas-engine-1  | 2026-06-24 12:33:56,552 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | 2026-06-24 12:33:56,633 [INFO] secureforge.module.ssh_bruteforce: [INFO] [FAIL] user35@tlsoc.cse.iitb.ac.in:12345678
+bas-engine-1  | 2026-06-24 12:33:56,648 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | [+] Probe: XSS 200 http://192.168.56.102/
+bas-engine-1  | 2026-06-24 12:33:56,704 [INFO] secureforge.module.waf_detection: [INFO] [WAF TEST] XSS: HTTP 200 (Blocked: False)
+bas-engine-1  | 2026-06-24 12:33:56,716 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | 2026-06-24 12:33:57,141 [INFO] secureforge.module.owasp_web: [owasp_web] Discovered 40 endpoints
+bas-engine-1  | 2026-06-24 12:33:57,141 [INFO] secureforge.module.owasp_web: [INFO] [CRAWL] Discovered 40 endpoints on http://192.168.56.102
+bas-engine-1  | [+] Probe: XSS_DOUBLE 200 http://192.168.56.102/
+bas-engine-1  | 2026-06-24 12:33:57,143 [INFO] secureforge.module.waf_detection: [INFO] [WAF TEST] XSS_DOUBLE: HTTP 200 (Blocked: False)
+bas-engine-1  | 2026-06-24 12:33:57,173 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | 2026-06-24 12:33:57,174 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | 2026-06-24 12:33:57,471 [INFO] secureforge.module.owasp_web: [INFO] [OWASP] Analyzing endpoint: http://192.168.56.102
+bas-engine-1  | 2026-06-24 12:33:57,473 [INFO] secureforge.module.owasp_web: [INFO] [OWASP] Analyzing endpoint: http://192.168.56.102/twiki
+bas-engine-1  | 2026-06-24 12:33:57,475 [INFO] secureforge.module.owasp_web: [INFO] [OWASP] Analyzing endpoint: http://192.168.56.102/phpMyAdmin
+bas-engine-1  | 2026-06-24 12:33:57,476 [INFO] secureforge.module.owasp_web: [INFO] [OWASP] Analyzing endpoint: http://192.168.56.102/mutillidae
+bas-engine-1  | 2026-06-24 12:33:57,478 [INFO] secureforge.module.owasp_web: [INFO] [OWASP] Analyzing endpoint: http://192.168.56.102/dvwa/login.php
+bas-engine-1  | 2026-06-24 12:33:57,479 [INFO] secureforge.module.owasp_web: [INFO] [OWASP] Analyzing endpoint: http://192.168.56.102/dav
+bas-engine-1  | 2026-06-24 12:33:57,481 [INFO] secureforge.module.owasp_web: [INFO] [OWASP] Analyzing endpoint: http://192.168.56.102/login
+bas-engine-1  | 2026-06-24 12:33:57,483 [INFO] secureforge.module.owasp_web: [INFO] [OWASP] Analyzing endpoint: http://192.168.56.102/signin
+bas-engine-1  | 2026-06-24 12:33:57,485 [INFO] secureforge.module.owasp_web: [INFO] [OWASP] Analyzing endpoint: http://192.168.56.102/admin
+bas-engine-1  | 2026-06-24 12:33:57,488 [INFO] secureforge.module.owasp_web: [INFO] [OWASP] Analyzing endpoint: http://192.168.56.102/dashboard
+bas-engine-1  | 2026-06-24 12:33:57,494 [INFO] secureforge.module.owasp_web: [INFO] [OWASP] Analyzing endpoint: http://192.168.56.102/manage
+bas-engine-1  | 2026-06-24 12:33:57,495 [INFO] secureforge.module.owasp_web: [INFO] [OWASP] Analyzing endpoint: http://192.168.56.102/account
+bas-engine-1  | 2026-06-24 12:33:57,497 [INFO] secureforge.module.owasp_web: [INFO] [OWASP] Analyzing endpoint: http://192.168.56.102/api
+bas-engine-1  | 2026-06-24 12:33:57,592 [INFO] secureforge.module.owasp_web: [INFO] [OWASP] Analyzing endpoint: http://192.168.56.102/graphql
+bas-engine-1  | 2026-06-24 12:33:57,594 [INFO] secureforge.module.owasp_web: [INFO] [OWASP] Analyzing endpoint: http://192.168.56.102/rest
+bas-engine-1  | 2026-06-24 12:33:57,596 [INFO] secureforge.module.owasp_web: [INFO] [OWASP] Analyzing endpoint: http://192.168.56.102/search
+bas-engine-1  | 2026-06-24 12:33:57,596 [INFO] secureforge.module.owasp_web: [INFO] [OWASP] Analyzing endpoint: http://192.168.56.102/upload
+bas-engine-1  | 2026-06-24 12:33:57,597 [INFO] secureforge.module.owasp_web: [INFO] [OWASP] Analyzing endpoint: http://192.168.56.102/uploads
+bas-engine-1  | 2026-06-24 12:33:57,598 [INFO] secureforge.module.owasp_web: [INFO] [OWASP] Analyzing endpoint: http://192.168.56.102/files
+bas-engine-1  | 2026-06-24 12:33:57,598 [INFO] secureforge.module.owasp_web: [INFO] [OWASP] Analyzing endpoint: http://192.168.56.102/download
+bas-engine-1  | 2026-06-24 12:33:57,598 [INFO] secureforge.module.owasp_web: [INFO] [OWASP] Analyzing endpoint: http://192.168.56.102/downloads
+bas-engine-1  | 2026-06-24 12:33:57,599 [INFO] secureforge.module.owasp_web: [INFO] [OWASP] Analyzing endpoint: http://192.168.56.102/reports
+bas-engine-1  | 2026-06-24 12:33:57,600 [INFO] secureforge.module.owasp_web: [INFO] [OWASP] Analyzing endpoint: http://192.168.56.102/data
+bas-engine-1  | 2026-06-24 12:33:57,600 [INFO] secureforge.module.owasp_web: [INFO] [OWASP] Analyzing endpoint: http://192.168.56.102/readme.txt
+bas-engine-1  | 2026-06-24 12:33:57,600 [INFO] secureforge.module.owasp_web: [INFO] [OWASP] Analyzing endpoint: http://192.168.56.102/license.txt
+bas-engine-1  | 2026-06-24 12:33:57,601 [INFO] secureforge.module.owasp_web: [INFO] [OWASP] Analyzing endpoint: http://192.168.56.102/TWikiDocumentation.html
+bas-engine-1  | 2026-06-24 12:33:57,601 [INFO] secureforge.module.owasp_web: [INFO] [OWASP] Analyzing endpoint: http://192.168.56.102/TWikiHistory.html
+bas-engine-1  | 2026-06-24 12:33:57,602 [INFO] secureforge.module.owasp_web: [INFO] [OWASP] Analyzing endpoint: http://192.168.56.102/bin/view/Main/WebHome
+bas-engine-1  | 2026-06-24 12:33:57,602 [INFO] secureforge.module.owasp_web: [INFO] [OWASP] Analyzing endpoint: http://192.168.56.102/favicon.ico
+bas-engine-1  | 2026-06-24 12:33:57,603 [INFO] secureforge.module.owasp_web: [INFO] [OWASP] Analyzing endpoint: http://192.168.56.102/phpmyadmin.css.php?lang=en-utf-8&convcharset=utf-8&token=d3394635144f4cdf0d3b6692c02851d5&js_frame=right&nocache=2457687151
+bas-engine-1  | 2026-06-24 12:33:57,603 [INFO] secureforge.module.owasp_web: [INFO] [OWASP] Analyzing endpoint: http://192.168.56.102/print.css
+bas-engine-1  | 2026-06-24 12:33:57,603 [INFO] secureforge.module.owasp_web: [INFO] [OWASP] Analyzing endpoint: http://192.168.56.102/set-up-database.php
+bas-engine-1  | 2026-06-24 12:33:57,604 [INFO] secureforge.module.owasp_web: [INFO] [OWASP] Analyzing endpoint: http://192.168.56.102/mutillidae/?page=add-to-your-blog.php
+bas-engine-1  | 2026-06-24 12:33:57,604 [INFO] secureforge.module.owasp_web: [INFO] [OWASP] Analyzing endpoint: http://192.168.56.102/mutillidae/?page=view-someones-blog.php
+bas-engine-1  | 2026-06-24 12:33:57,605 [INFO] secureforge.module.owasp_web: [INFO] [OWASP] Analyzing endpoint: http://192.168.56.102/mutillidae/?page=show-log.php
+bas-engine-1  | 2026-06-24 12:33:57,605 [INFO] secureforge.module.owasp_web: [INFO] [OWASP] Analyzing endpoint: http://192.168.56.102/mutillidae/?page=text-file-viewer.php
+bas-engine-1  | 2026-06-24 12:33:57,606 [INFO] secureforge.module.owasp_web: [INFO] [OWASP] Analyzing endpoint: http://192.168.56.102/mutillidae/?page=user-info.php
+bas-engine-1  | 2026-06-24 12:33:57,606 [INFO] secureforge.module.owasp_web: [INFO] [OWASP] Analyzing endpoint: http://192.168.56.102/mutillidae/?page=login.php
+bas-engine-1  | 2026-06-24 12:33:57,606 [INFO] secureforge.module.owasp_web: [INFO] [OWASP] Analyzing endpoint: http://192.168.56.102/mutillidae/?page=credits.php
+bas-engine-1  | 2026-06-24 12:33:57,607 [INFO] secureforge.module.owasp_web: [INFO] [OWASP] Analyzing endpoint: http://192.168.56.102/mutillidae/?page=source-viewer.php
+bas-engine-1  | [+] Probe: SQLI 200 http://192.168.56.102/
+bas-engine-1  | 2026-06-24 12:33:57,609 [INFO] secureforge.module.waf_detection: [INFO] [WAF TEST] SQLI: HTTP 200 (Blocked: False)
+bas-engine-1  | 2026-06-24 12:33:57,989 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | 2026-06-24 12:33:57,995 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | 2026-06-24 12:33:57,995 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | 2026-06-24 12:33:57,996 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | 2026-06-24 12:33:57,996 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | 2026-06-24 12:33:57,997 [INFO] secureforge.module.ssh_bruteforce: [INFO] [FAIL] admin:qwerty
+bas-engine-1  | 2026-06-24 12:33:57,998 [INFO] secureforge.module.ssh_bruteforce: [INFO] [FAIL] root:qwerty
+bas-engine-1  | 2026-06-24 12:33:58,020 [INFO] secureforge.module.ssh_bruteforce: [INFO] [FAIL] msfadmin:12345678
+bas-engine-1  | 2026-06-24 12:33:58,028 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | 2026-06-24 12:33:58,032 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | 2026-06-24 12:33:58,032 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | 2026-06-24 12:33:58,033 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | 2026-06-24 12:33:58,034 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | 2026-06-24 12:33:58,035 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | 2026-06-24 12:33:58,036 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | 2026-06-24 12:33:58,036 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | 2026-06-24 12:33:58,037 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | 2026-06-24 12:33:58,037 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | 2026-06-24 12:33:58,053 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | 2026-06-24 12:33:58,059 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | 2026-06-24 12:33:58,060 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | 2026-06-24 12:33:58,060 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | 2026-06-24 12:33:58,061 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | 2026-06-24 12:33:58,076 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | 2026-06-24 12:33:58,081 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | 2026-06-24 12:33:58,081 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | 2026-06-24 12:33:58,082 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | 2026-06-24 12:33:58,083 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | 2026-06-24 12:33:58,083 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | 2026-06-24 12:33:58,088 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | 2026-06-24 12:33:58,092 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | 2026-06-24 12:33:58,093 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | 2026-06-24 12:33:58,093 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | 2026-06-24 12:33:58,094 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | 2026-06-24 12:33:58,095 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | 2026-06-24 12:33:58,095 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | 2026-06-24 12:33:58,096 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | 2026-06-24 12:33:58,106 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | 2026-06-24 12:33:58,110 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | 2026-06-24 12:33:58,111 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | 2026-06-24 12:33:58,112 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | 2026-06-24 12:33:58,112 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | 2026-06-24 12:33:58,113 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | 2026-06-24 12:33:58,113 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | 2026-06-24 12:33:58,114 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | 2026-06-24 12:33:58,114 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | 2026-06-24 12:33:58,114 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | 2026-06-24 12:33:58,677 [INFO] secureforge.module.ssh_bruteforce: [INFO] [FAIL] user:qwerty
+bas-engine-1  | 2026-06-24 12:33:58,705 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | [+] Probe: TRAVERSAL 200 http://192.168.56.102/
+bas-engine-1  | 2026-06-24 12:33:58,927 [INFO] secureforge.module.waf_detection: [INFO] [WAF TEST] TRAVERSAL: HTTP 200 (Blocked: False)
+bas-engine-1  | 2026-06-24 12:33:58,942 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | 2026-06-24 12:33:59,407 [INFO] secureforge.module.ssh_bruteforce: [INFO] [FAIL] test:qwerty
+bas-engine-1  | 2026-06-24 12:33:59,435 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | [+] Probe: LOG4SHELL 200 http://192.168.56.102/
+bas-engine-1  | 2026-06-24 12:33:59,447 [INFO] secureforge.module.waf_detection: [INFO] [WAF TEST] LOG4SHELL: HTTP 200 (Blocked: False)
+bas-engine-1  | 2026-06-24 12:33:59,481 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | [+] Probe: XSS 404 http://192.168.56.102/login
+bas-engine-1  | 2026-06-24 12:33:59,816 [INFO] secureforge.module.waf_detection: [INFO] [WAF TEST] XSS: HTTP 404 (Blocked: False)
+bas-engine-1  | 2026-06-24 12:33:59,827 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | [+] Probe: XSS_DOUBLE 404 http://192.168.56.102/login
+bas-engine-1  | 2026-06-24 12:34:00,183 [INFO] secureforge.module.waf_detection: [INFO] [WAF TEST] XSS_DOUBLE: HTTP 404 (Blocked: False)
+bas-engine-1  | 2026-06-24 12:34:00,194 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | 2026-06-24 12:34:00,314 [INFO] secureforge.module.owasp_web: [INFO] [VULNERABILITY] XSS found in parameter 'page'
+bas-engine-1  | 2026-06-24 12:34:00,326 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | 2026-06-24 12:34:01,009 [INFO] secureforge.module.ssh_bruteforce: [INFO] [FAIL] msfadmin:qwerty
+bas-engine-1  | 2026-06-24 12:34:01,020 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | 2026-06-24 12:34:01,030 [INFO] secureforge.module.ssh_bruteforce: [INFO] [FAIL] admin:123456789
+bas-engine-1  | 2026-06-24 12:34:01,040 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | [+] Probe: SQLI 404 http://192.168.56.102/login
+bas-engine-1  | 2026-06-24 12:34:01,142 [INFO] secureforge.module.waf_detection: [INFO] [WAF TEST] SQLI: HTTP 404 (Blocked: False)
+bas-engine-1  | 2026-06-24 12:34:01,152 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | 2026-06-24 12:34:01,720 [INFO] secureforge.module.ssh_bruteforce: [INFO] [FAIL] user35@tlsoc.cse.iitb.ac.in:qwerty
+bas-engine-1  | 2026-06-24 12:34:01,731 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | 2026-06-24 12:34:01,984 [INFO] secureforge.module.impact_sim: [SUCCESS] impact_sim completed
+bas-engine-1  | 2026-06-24 12:34:01,995 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | 2026-06-24 12:34:02,013 [INFO] secureforge.ws: Broadcasting event to 1 connections: module.completed
+bas-engine-1  | [+] Probe: TRAVERSAL 404 http://192.168.56.102/login
+bas-engine-1  | 2026-06-24 12:34:02,025 [INFO] secureforge.module.waf_detection: [INFO] [WAF TEST] TRAVERSAL: HTTP 404 (Blocked: False)
+bas-engine-1  | 2026-06-24 12:34:02,036 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | [+] Probe: LOG4SHELL 404 http://192.168.56.102/login
+bas-engine-1  | 2026-06-24 12:34:02,537 [INFO] secureforge.module.waf_detection: [INFO] [WAF TEST] LOG4SHELL: HTTP 404 (Blocked: False)
+bas-engine-1  | 2026-06-24 12:34:02,549 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | 2026-06-24 12:34:02,762 [INFO] secureforge.module.recon_exposure: [INFO] Stage 3 starting: Lateral Movement Vectors
+bas-engine-1  | 2026-06-24 12:34:02,774 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | [+] Probe: XSS 404 http://192.168.56.102/login
+bas-engine-1  | 2026-06-24 12:34:02,886 [INFO] secureforge.module.waf_detection: [INFO] [WAF TEST] XSS: HTTP 404 (Blocked: False)
+bas-engine-1  | 2026-06-24 12:34:02,897 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | [+] Probe: XSS_DOUBLE 404 http://192.168.56.102/login
+bas-engine-1  | 2026-06-24 12:34:03,339 [INFO] secureforge.module.waf_detection: [INFO] [WAF TEST] XSS_DOUBLE: HTTP 404 (Blocked: False)
+bas-engine-1  | 2026-06-24 12:34:03,366 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | [+] Probe: SQLI 404 http://192.168.56.102/login
+bas-engine-1  | 2026-06-24 12:34:03,888 [INFO] secureforge.module.waf_detection: [INFO] [WAF TEST] SQLI: HTTP 404 (Blocked: False)
+bas-engine-1  | 2026-06-24 12:34:03,930 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | [+] Probe: TRAVERSAL 404 http://192.168.56.102/login
+bas-engine-1  | 2026-06-24 12:34:04,355 [INFO] secureforge.module.waf_detection: [INFO] [WAF TEST] TRAVERSAL: HTTP 404 (Blocked: False)
+bas-engine-1  | 2026-06-24 12:34:04,366 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | [+] Probe: LOG4SHELL 404 http://192.168.56.102/login
+bas-engine-1  | 2026-06-24 12:34:04,972 [INFO] secureforge.module.waf_detection: [INFO] [WAF TEST] LOG4SHELL: HTTP 404 (Blocked: False)
+bas-engine-1  | 2026-06-24 12:34:05,002 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | 2026-06-24 12:34:05,277 [INFO] secureforge.module.ssh_bruteforce: [INFO] [FAIL] root:123456789
+bas-engine-1  | 2026-06-24 12:34:05,289 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | 2026-06-24 12:34:05,345 [INFO] secureforge.module.ssh_bruteforce: [INFO] [FAIL] test:123456789
+bas-engine-1  | 2026-06-24 12:34:05,356 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | 2026-06-24 12:34:05,391 [INFO] secureforge.module.ssh_bruteforce: [INFO] [FAIL] user35@tlsoc.cse.iitb.ac.in:123456789
+bas-engine-1  | 2026-06-24 12:34:05,402 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | 2026-06-24 12:34:05,463 [INFO] secureforge.module.ssh_bruteforce: [INFO] [FAIL] user:123456789
+bas-engine-1  | 2026-06-24 12:34:05,480 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | 2026-06-24 12:34:05,492 [INFO] secureforge.module.ssh_bruteforce: [INFO] [FAIL] msfadmin:123456789
+bas-engine-1  | 2026-06-24 12:34:05,504 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | [+] Probe: XSS 404 http://192.168.56.102/login
+bas-engine-1  | 2026-06-24 12:34:05,859 [INFO] secureforge.module.waf_detection: [INFO] [WAF TEST] XSS: HTTP 404 (Blocked: False)
+bas-engine-1  | 2026-06-24 12:34:05,966 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | [+] Probe: XSS_DOUBLE 404 http://192.168.56.102/login
+bas-engine-1  | 2026-06-24 12:34:06,358 [INFO] secureforge.module.waf_detection: [INFO] [WAF TEST] XSS_DOUBLE: HTTP 404 (Blocked: False)
+bas-engine-1  | 2026-06-24 12:34:06,535 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | [+] Probe: SQLI 404 http://192.168.56.102/login
+bas-engine-1  | 2026-06-24 12:34:07,102 [INFO] secureforge.module.waf_detection: [INFO] [WAF TEST] SQLI: HTTP 404 (Blocked: False)
+bas-engine-1  | 2026-06-24 12:34:07,113 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | 2026-06-24 12:34:07,519 [INFO] secureforge.module.ssh_bruteforce: [INFO] [FAIL] root:user35
+bas-engine-1  | 2026-06-24 12:34:07,530 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | 2026-06-24 12:34:07,662 [INFO] secureforge.module.ssh_bruteforce: [INFO] [FAIL] admin:user35
+bas-engine-1  | 2026-06-24 12:34:07,677 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | 2026-06-24 12:34:07,679 [INFO] secureforge.module.ssh_bruteforce: [INFO] [FAIL] user:user35
+bas-engine-1  | 2026-06-24 12:34:07,699 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | 2026-06-24 12:34:07,738 [INFO] secureforge.module.ssh_bruteforce: [INFO] [FAIL] user35@tlsoc.cse.iitb.ac.in:user35
+bas-engine-1  | 2026-06-24 12:34:07,746 [INFO] secureforge.module.ssh_bruteforce: [INFO] [FAIL] test:user35
+bas-engine-1  | 2026-06-24 12:34:07,753 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | 2026-06-24 12:34:07,754 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | [+] Probe: TRAVERSAL 404 http://192.168.56.102/login
+bas-engine-1  | 2026-06-24 12:34:07,981 [INFO] secureforge.module.waf_detection: [INFO] [WAF TEST] TRAVERSAL: HTTP 404 (Blocked: False)
+bas-engine-1  | 2026-06-24 12:34:08,009 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | [+] Probe: LOG4SHELL 404 http://192.168.56.102/login
+bas-engine-1  | 2026-06-24 12:34:08,464 [INFO] secureforge.module.waf_detection: [INFO] [WAF TEST] LOG4SHELL: HTTP 404 (Blocked: False)
+bas-engine-1  | 2026-06-24 12:34:08,475 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | [+] Probe: XSS 404 http://192.168.56.102/search
+bas-engine-1  | 2026-06-24 12:34:09,576 [INFO] secureforge.module.waf_detection: [INFO] [WAF TEST] XSS: HTTP 404 (Blocked: False)
+bas-engine-1  | 2026-06-24 12:34:09,607 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | 2026-06-24 12:34:09,891 [INFO] secureforge.module.ssh_bruteforce: [INFO] [FAIL] msfadmin:user35
+bas-engine-1  | 2026-06-24 12:34:09,902 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | [+] Probe: XSS_DOUBLE 404 http://192.168.56.102/search
+bas-engine-1  | 2026-06-24 12:34:10,230 [INFO] secureforge.module.waf_detection: [INFO] [WAF TEST] XSS_DOUBLE: HTTP 404 (Blocked: False)
+bas-engine-1  | 2026-06-24 12:34:10,278 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | 2026-06-24 12:34:10,381 [INFO] secureforge.module.ssh_bruteforce: [INFO] [FAIL] admin:msfadmin
+bas-engine-1  | 2026-06-24 12:34:10,392 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | 2026-06-24 12:34:10,425 [INFO] secureforge.module.ssh_bruteforce: [INFO] [FAIL] root:msfadmin
+bas-engine-1  | 2026-06-24 12:34:10,436 [INFO] secureforge.module.ssh_bruteforce: [INFO] [FAIL] test:msfadmin
+bas-engine-1  | 2026-06-24 12:34:10,438 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | 2026-06-24 12:34:10,449 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | 2026-06-24 12:34:10,482 [INFO] secureforge.module.ssh_bruteforce: [INFO] [FAIL] user:msfadmin
+bas-engine-1  | 2026-06-24 12:34:10,494 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | 2026-06-24 12:34:10,813 [INFO] secureforge.module.ssh_bruteforce: [INFO] 
+bas-engine-1  | [COMPROMISED] msfadmin:msfadmin
+bas-engine-1  | 
+bas-engine-1  | 2026-06-24 12:34:10,825 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | [+] Probe: SQLI 404 http://192.168.56.102/search
+bas-engine-1  | 2026-06-24 12:34:11,286 [INFO] secureforge.module.waf_detection: [INFO] [WAF TEST] SQLI: HTTP 404 (Blocked: False)
+bas-engine-1  | 2026-06-24 12:34:11,314 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | [+] Probe: TRAVERSAL 404 http://192.168.56.102/search
+bas-engine-1  | 2026-06-24 12:34:12,033 [INFO] secureforge.module.waf_detection: [INFO] [WAF TEST] TRAVERSAL: HTTP 404 (Blocked: False)
+bas-engine-1  | 2026-06-24 12:34:12,061 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | 2026-06-24 12:34:12,325 [INFO] secureforge.module.recon_exposure: [INFO] Stage 4 starting: Supply Chain Risks
+bas-engine-1  | 2026-06-24 12:34:12,349 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | 2026-06-24 12:34:12,444 [INFO] secureforge.module.ssh_bruteforce: [INFO] [FAIL] user35@tlsoc.cse.iitb.ac.in:msfadmin
+bas-engine-1  | 2026-06-24 12:34:12,458 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | 2026-06-24 12:34:12,610 [INFO] secureforge.module.ssh_bruteforce: [INFO] 
+bas-engine-1  | [COMPLETE] 42 attempts | 1 successes
+bas-engine-1  | 2026-06-24 12:34:12,627 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | 2026-06-24 12:34:12,627 [INFO] secureforge.module.ssh_bruteforce: [SUCCESS] ssh_bruteforce completed
+bas-engine-1  | 2026-06-24 12:34:12,645 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | 2026-06-24 12:34:12,645 [INFO] secureforge.module.ssh_bruteforce: [FINDING] SSH Credential Compromise
+bas-engine-1  | 2026-06-24 12:34:12,668 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | 2026-06-24 12:34:12,669 [INFO] secureforge.module.ssh_bruteforce: [FINDING] SSH Attack Telemetry
+bas-engine-1  | 2026-06-24 12:34:12,687 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | 2026-06-24 12:34:12,706 [INFO] secureforge.ws: Broadcasting event to 1 connections: module.completed
+bas-engine-1  | 2026-06-24 12:34:12,713 [ERROR] secureforge: Event broadcast error: Object of type datetime is not JSON serializable
+bas-engine-1  | 2026-06-24 12:34:12,720 [ERROR] secureforge: Event broadcast error: Object of type datetime is not JSON serializable
+bas-engine-1  | [+] Probe: LOG4SHELL 404 http://192.168.56.102/search
+bas-engine-1  | 2026-06-24 12:34:12,790 [INFO] secureforge.module.waf_detection: [INFO] [WAF TEST] LOG4SHELL: HTTP 404 (Blocked: False)
+bas-engine-1  | 2026-06-24 12:34:12,800 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | [+] Probe: XSS 404 http://192.168.56.102/search
+bas-engine-1  | 2026-06-24 12:34:13,645 [INFO] secureforge.module.waf_detection: [INFO] [WAF TEST] XSS: HTTP 404 (Blocked: False)
+bas-engine-1  | 2026-06-24 12:34:13,672 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | [+] Probe: XSS_DOUBLE 404 http://192.168.56.102/search
+bas-engine-1  | 2026-06-24 12:34:14,230 [INFO] secureforge.module.waf_detection: [INFO] [WAF TEST] XSS_DOUBLE: HTTP 404 (Blocked: False)
+bas-engine-1  | 2026-06-24 12:34:14,241 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | [+] Probe: SQLI 404 http://192.168.56.102/search
+bas-engine-1  | 2026-06-24 12:34:14,763 [INFO] secureforge.module.waf_detection: [INFO] [WAF TEST] SQLI: HTTP 404 (Blocked: False)
+bas-engine-1  | 2026-06-24 12:34:14,893 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | [+] Probe: TRAVERSAL 404 http://192.168.56.102/search
+bas-engine-1  | 2026-06-24 12:34:15,527 [INFO] secureforge.module.waf_detection: [INFO] [WAF TEST] TRAVERSAL: HTTP 404 (Blocked: False)
+bas-engine-1  | 2026-06-24 12:34:15,574 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | 2026-06-24 12:34:15,799 [INFO] secureforge.module.recon_exposure: [SUCCESS] recon_exposure completed
+bas-engine-1  | 2026-06-24 12:34:15,814 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | 2026-06-24 12:34:15,815 [INFO] secureforge.module.recon_exposure: [FINDING] Recon & Exposure Scan Complete
+bas-engine-1  | 2026-06-24 12:34:15,825 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | 2026-06-24 12:34:15,844 [INFO] secureforge.ws: Broadcasting event to 1 connections: module.completed
+bas-engine-1  | 2026-06-24 12:34:15,851 [ERROR] secureforge: Event broadcast error: Object of type datetime is not JSON serializable
+bas-engine-1  | [+] Probe: LOG4SHELL 404 http://192.168.56.102/search
+bas-engine-1  | 2026-06-24 12:34:16,436 [INFO] secureforge.module.waf_detection: [INFO] [WAF TEST] LOG4SHELL: HTTP 404 (Blocked: False)
+bas-engine-1  | 2026-06-24 12:34:16,447 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | [+] Probe: XSS 404 http://192.168.56.102/search
+bas-engine-1  | 2026-06-24 12:34:17,594 [INFO] secureforge.module.waf_detection: [INFO] [WAF TEST] XSS: HTTP 404 (Blocked: False)
+bas-engine-1  | 2026-06-24 12:34:17,606 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | [+] Probe: XSS_DOUBLE 404 http://192.168.56.102/search
+bas-engine-1  | 2026-06-24 12:34:18,140 [INFO] secureforge.module.waf_detection: [INFO] [WAF TEST] XSS_DOUBLE: HTTP 404 (Blocked: False)
+bas-engine-1  | 2026-06-24 12:34:18,168 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | [+] Probe: SQLI 404 http://192.168.56.102/search
+bas-engine-1  | 2026-06-24 12:34:19,085 [INFO] secureforge.module.waf_detection: [INFO] [WAF TEST] SQLI: HTTP 404 (Blocked: False)
+bas-engine-1  | 2026-06-24 12:34:19,112 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | [+] Probe: TRAVERSAL 404 http://192.168.56.102/search
+bas-engine-1  | 2026-06-24 12:34:19,754 [INFO] secureforge.module.waf_detection: [INFO] [WAF TEST] TRAVERSAL: HTTP 404 (Blocked: False)
+bas-engine-1  | 2026-06-24 12:34:19,820 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | [+] Probe: LOG4SHELL 404 http://192.168.56.102/search
+bas-engine-1  | 2026-06-24 12:34:20,336 [INFO] secureforge.module.waf_detection: [INFO] [WAF TEST] LOG4SHELL: HTTP 404 (Blocked: False)
+bas-engine-1  | 2026-06-24 12:34:20,349 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | [+] Probe: XSS 404 http://192.168.56.102/admin
+bas-engine-1  | 2026-06-24 12:34:20,912 [INFO] secureforge.module.waf_detection: [INFO] [WAF TEST] XSS: HTTP 404 (Blocked: False)
+bas-engine-1  | 2026-06-24 12:34:20,942 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | [+] Probe: XSS_DOUBLE 404 http://192.168.56.102/admin
+bas-engine-1  | 2026-06-24 12:34:21,338 [INFO] secureforge.module.waf_detection: [INFO] [WAF TEST] XSS_DOUBLE: HTTP 404 (Blocked: False)
+bas-engine-1  | 2026-06-24 12:34:21,368 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | [+] Probe: SQLI 404 http://192.168.56.102/admin
+bas-engine-1  | 2026-06-24 12:34:22,208 [INFO] secureforge.module.waf_detection: [INFO] [WAF TEST] SQLI: HTTP 404 (Blocked: False)
+bas-engine-1  | 2026-06-24 12:34:22,219 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | [+] Probe: TRAVERSAL 404 http://192.168.56.102/admin
+bas-engine-1  | 2026-06-24 12:34:22,821 [INFO] secureforge.module.waf_detection: [INFO] [WAF TEST] TRAVERSAL: HTTP 404 (Blocked: False)
+bas-engine-1  | 2026-06-24 12:34:22,848 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | [+] Probe: LOG4SHELL 404 http://192.168.56.102/admin
+bas-engine-1  | 2026-06-24 12:34:23,674 [INFO] secureforge.module.waf_detection: [INFO] [WAF TEST] LOG4SHELL: HTTP 404 (Blocked: False)
+bas-engine-1  | 2026-06-24 12:34:23,702 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | [+] Probe: XSS 404 http://192.168.56.102/admin
+bas-engine-1  | 2026-06-24 12:34:24,475 [INFO] secureforge.module.waf_detection: [INFO] [WAF TEST] XSS: HTTP 404 (Blocked: False)
+bas-engine-1  | 2026-06-24 12:34:24,503 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | [+] Probe: XSS_DOUBLE 404 http://192.168.56.102/admin
+bas-engine-1  | 2026-06-24 12:34:25,317 [INFO] secureforge.module.waf_detection: [INFO] [WAF TEST] XSS_DOUBLE: HTTP 404 (Blocked: False)
+bas-engine-1  | 2026-06-24 12:34:25,363 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | [+] Probe: SQLI 404 http://192.168.56.102/admin
+bas-engine-1  | 2026-06-24 12:34:25,985 [INFO] secureforge.module.waf_detection: [INFO] [WAF TEST] SQLI: HTTP 404 (Blocked: False)
+bas-engine-1  | 2026-06-24 12:34:26,014 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | [+] Probe: TRAVERSAL 404 http://192.168.56.102/admin
+bas-engine-1  | 2026-06-24 12:34:26,588 [INFO] secureforge.module.waf_detection: [INFO] [WAF TEST] TRAVERSAL: HTTP 404 (Blocked: False)
+bas-engine-1  | 2026-06-24 12:34:26,600 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | [+] Probe: LOG4SHELL 404 http://192.168.56.102/admin
+bas-engine-1  | 2026-06-24 12:34:27,292 [INFO] secureforge.module.waf_detection: [INFO] [WAF TEST] LOG4SHELL: HTTP 404 (Blocked: False)
+bas-engine-1  | 2026-06-24 12:34:27,320 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | [+] Probe: XSS 404 http://192.168.56.102/admin
+bas-engine-1  | 2026-06-24 12:34:27,695 [INFO] secureforge.module.waf_detection: [INFO] [WAF TEST] XSS: HTTP 404 (Blocked: False)
+bas-engine-1  | 2026-06-24 12:34:27,724 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | [+] Probe: XSS_DOUBLE TIMEOUT http://192.168.56.102/admin
+bas-engine-1  | 2026-06-24 12:34:33,907 [INFO] secureforge.module.waf_detection: [INFO] [WAF TEST] XSS_DOUBLE: HTTP TIMEOUT (Blocked: False)
+bas-engine-1  | 2026-06-24 12:34:34,010 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | [+] Probe: SQLI 404 http://192.168.56.102/admin
+bas-engine-1  | 2026-06-24 12:34:34,587 [INFO] secureforge.module.waf_detection: [INFO] [WAF TEST] SQLI: HTTP 404 (Blocked: False)
+bas-engine-1  | 2026-06-24 12:34:34,598 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | [+] Probe: TRAVERSAL 404 http://192.168.56.102/admin
+bas-engine-1  | 2026-06-24 12:34:35,231 [INFO] secureforge.module.waf_detection: [INFO] [WAF TEST] TRAVERSAL: HTTP 404 (Blocked: False)
+bas-engine-1  | 2026-06-24 12:34:35,243 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | [+] Probe: LOG4SHELL 404 http://192.168.56.102/admin
+bas-engine-1  | 2026-06-24 12:34:36,104 [INFO] secureforge.module.waf_detection: [INFO] [WAF TEST] LOG4SHELL: HTTP 404 (Blocked: False)
+bas-engine-1  | 2026-06-24 12:34:36,132 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | 
+bas-engine-1  | === ATTACK SURFACE INTELLIGENCE ===
+bas-engine-1  | {'target': 'http://192.168.56.102', 'reachable': True, 'proxy_detected': False, 'waf_detected': False, 'waf_vendor': None, 'infrastructure_type': 'Web Server', 'confidence': 0, 'baseline_behavior': 'allowed', 'payloads_tested': 60, 'blocked': 0, 'bypassed': 60, 'normalization_depth': 'none', 'risk_level': 'high'}
+bas-engine-1  | 2026-06-24 12:34:36,215 [INFO] secureforge.module.waf_detection: [SUCCESS] waf_detection completed
+bas-engine-1  | 2026-06-24 12:34:36,227 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | 2026-06-24 12:34:36,227 [INFO] secureforge.module.waf_detection: [FINDING] Adaptive WAF Intelligence Analysis
+bas-engine-1  | 2026-06-24 12:34:36,237 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | 2026-06-24 12:34:36,257 [INFO] secureforge.ws: Broadcasting event to 1 connections: module.completed
+bas-engine-1  | 2026-06-24 12:34:36,263 [ERROR] secureforge: Event broadcast error: Object of type datetime is not JSON serializable
+bas-engine-1  | 2026-06-24 12:35:05,786 [INFO] secureforge.module.owasp_web: [INFO] [VULNERABILITY] XSS found in parameter 'page'
+bas-engine-1  | 2026-06-24 12:35:05,851 [INFO] secureforge.module.owasp_web: [INFO] [VULNERABILITY] XSS found in parameter 'page'
+bas-engine-1  | 2026-06-24 12:35:05,853 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | 2026-06-24 12:35:05,866 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | 2026-06-24 12:35:11,541 [INFO] secureforge.module.owasp_web: [INFO] [VULNERABILITY] XSS found in parameter 'page'
+bas-engine-1  | 2026-06-24 12:35:11,604 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | 2026-06-24 12:35:11,729 [INFO] secureforge.module.owasp_web: [INFO] [VULNERABILITY] XSS found in parameter 'page'
+bas-engine-1  | 2026-06-24 12:35:11,740 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | 2026-06-24 12:35:12,788 [INFO] secureforge.module.owasp_web: [INFO] [VULNERABILITY] XSS found in parameter 'page'
+bas-engine-1  | 2026-06-24 12:35:12,799 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | 2026-06-24 12:35:13,024 [INFO] secureforge.module.owasp_web: [INFO] [VULNERABILITY] XSS found in parameter 'page'
+bas-engine-1  | 2026-06-24 12:35:13,052 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | 2026-06-24 12:35:13,191 [INFO] secureforge.module.owasp_web: [INFO] [VULNERABILITY] XSS found in parameter 'page'
+bas-engine-1  | 2026-06-24 12:35:13,202 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | 2026-06-24 12:35:13,640 [INFO] secureforge.module.owasp_web: [INFO] [VULNERABILITY] XSS found in parameter 'page'
+bas-engine-1  | 2026-06-24 12:35:13,653 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | INFO:     connection closed
+bas-engine-1  | INFO:     172.19.0.5:47688 - "GET /api/v1/ws/ticket HTTP/1.1" 200 OK
+bas-engine-1  | INFO:     172.19.0.5:47688 - "GET /api/v1/simulations HTTP/1.1" 307 Temporary Redirect
+bas-engine-1  | INFO:     ('172.19.0.5', 47710) - "WebSocket /ws/events?ticket=0c3b5ce7-facd-45f6-be11-b11beddeb1c2" [accepted]
+bas-engine-1  | INFO:     connection open
+bas-engine-1  | INFO:     172.19.0.5:47678 - "GET /api/v1/simulations/summary HTTP/1.1" 200 OK
+bas-engine-1  | INFO:     172.19.0.5:47694 - "GET /api/v1/simulations/ HTTP/1.1" 200 OK
+bas-engine-1  | INFO:     connection closed
+bas-engine-1  | INFO:     172.19.0.5:35818 - "GET /api/v1/simulations HTTP/1.1" 307 Temporary Redirect
+bas-engine-1  | INFO:     172.19.0.5:35832 - "GET /api/v1/simulations/ HTTP/1.1" 200 OK
+bas-engine-1  | INFO:     172.19.0.5:35818 - "GET /api/v1/simulations HTTP/1.1" 307 Temporary Redirect
+bas-engine-1  | INFO:     172.19.0.5:35832 - "GET /api/v1/simulations/ HTTP/1.1" 200 OK
+bas-engine-1  | INFO:     172.19.0.5:35818 - "GET /api/v1/simulations HTTP/1.1" 307 Temporary Redirect
+bas-engine-1  | INFO:     172.19.0.5:35832 - "GET /api/v1/simulations/ HTTP/1.1" 200 OK
+bas-engine-1  | INFO:     172.19.0.5:35818 - "GET /api/v1/simulations HTTP/1.1" 307 Temporary Redirect
+bas-engine-1  | INFO:     172.19.0.5:35834 - "GET /api/v1/simulations/ HTTP/1.1" 200 OK
+bas-engine-1  | INFO:     172.19.0.5:35818 - "GET /api/v1/simulations HTTP/1.1" 307 Temporary Redirect
+bas-engine-1  | INFO:     172.19.0.5:35834 - "GET /api/v1/simulations/ HTTP/1.1" 200 OK
+bas-engine-1  | INFO:     172.19.0.5:35818 - "GET /api/v1/simulations HTTP/1.1" 307 Temporary Redirect
+bas-engine-1  | INFO:     172.19.0.5:35834 - "GET /api/v1/simulations/ HTTP/1.1" 200 OK
+bas-engine-1  | INFO:     172.19.0.5:35818 - "GET /api/v1/simulations HTTP/1.1" 307 Temporary Redirect
+bas-engine-1  | INFO:     172.19.0.5:35834 - "GET /api/v1/simulations/ HTTP/1.1" 200 OK
+bas-engine-1  | INFO:     172.19.0.5:35818 - "GET /api/v1/ws/ticket HTTP/1.1" 200 OK
+bas-engine-1  | INFO:     172.19.0.5:35834 - "GET /api/v1/replay/recent/events HTTP/1.1" 200 OK
+bas-engine-1  | INFO:     ('172.19.0.5', 60572) - "WebSocket /ws/events?ticket=27f65a03-07c0-4a1e-bb94-c6764aecf8ea" [accepted]
+bas-engine-1  | INFO:     connection open
+bas-engine-1  | INFO:     connection closed
+bas-engine-1  | INFO:     172.19.0.5:38528 - "GET /api/v1/infrastructure HTTP/1.1" 307 Temporary Redirect
+bas-engine-1  | INFO:     172.19.0.5:38534 - "GET /api/v1/metrics HTTP/1.1" 307 Temporary Redirect
+bas-engine-1  | 2026-06-24 12:35:52,070 [ERROR] secureforge.metrics: Metrics fetch failed: Invalid kube-config file. No configuration found.
+bas-engine-1  | INFO:     172.19.0.5:38528 - "GET /api/v1/metrics/ HTTP/1.1" 200 OK
+bas-engine-1  | INFO:     172.19.0.5:38538 - "GET /api/v1/infrastructure/ HTTP/1.1" 200 OK
+bas-engine-1  | INFO:     172.19.0.5:38528 - "GET /api/v1/infrastructure HTTP/1.1" 307 Temporary Redirect
+bas-engine-1  | INFO:     172.19.0.5:38534 - "GET /api/v1/metrics HTTP/1.1" 307 Temporary Redirect
+bas-engine-1  | INFO:     172.19.0.5:38538 - "GET /api/v1/infrastructure/ HTTP/1.1" 200 OK
+bas-engine-1  | 2026-06-24 12:35:52,327 [ERROR] secureforge.metrics: Metrics fetch failed: Invalid kube-config file. No configuration found.
+bas-engine-1  | INFO:     172.19.0.5:38542 - "GET /api/v1/metrics/ HTTP/1.1" 200 OK
+bas-engine-1  | INFO:     172.19.0.5:38528 - "GET /api/v1/ws/ticket HTTP/1.1" 200 OK
+bas-engine-1  | INFO:     172.19.0.5:38534 - "GET /api/v1/simulations HTTP/1.1" 307 Temporary Redirect
+bas-engine-1  | INFO:     ('172.19.0.5', 38548) - "WebSocket /ws/events?ticket=04682c67-7024-44c7-b2ad-2b27224df366" [accepted]
+bas-engine-1  | INFO:     connection open
+bas-engine-1  | INFO:     172.19.0.5:38528 - "GET /api/v1/simulations/ HTTP/1.1" 200 OK
+bas-engine-1  | INFO:     172.19.0.5:38528 - "GET /api/v1/integrations HTTP/1.1" 307 Temporary Redirect
+bas-engine-1  | INFO:     172.19.0.5:38534 - "GET /api/v1/integrations/ HTTP/1.1" 200 OK
+bas-engine-1  | INFO:     connection closed
+bas-engine-1  | INFO:     172.19.0.5:38528 - "GET /api/v1/simulations HTTP/1.1" 307 Temporary Redirect
+bas-engine-1  | INFO:     172.19.0.5:38534 - "GET /api/v1/simulations/ HTTP/1.1" 200 OK
+bas-engine-1  | INFO:     172.19.0.5:38534 - "GET /api/v1/ws/ticket HTTP/1.1" 200 OK
+bas-engine-1  | INFO:     172.19.0.5:38528 - "GET /api/v1/replay/recent/events HTTP/1.1" 200 OK
+bas-engine-1  | INFO:     ('172.19.0.5', 38550) - "WebSocket /ws/events?ticket=ff7b3418-2347-4ef5-8009-b99596233b16" [accepted]
+bas-engine-1  | INFO:     connection open
+bas-engine-1  | 2026-06-24 12:36:02,958 [INFO] secureforge.module.owasp_web: [INFO] [VULNERABILITY] XSS found in parameter 'page'
+bas-engine-1  | 2026-06-24 12:36:02,978 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | 2026-06-24 12:36:03,205 [INFO] secureforge.module.owasp_web: [INFO] [VULNERABILITY] XSS found in parameter 'page'
+bas-engine-1  | 2026-06-24 12:36:03,256 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | 2026-06-24 12:37:02,246 [INFO] secureforge.module.owasp_web: [INFO] [VULNERABILITY] PathTraversal found in parameter 'page'
+bas-engine-1  | 2026-06-24 12:37:02,284 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | 2026-06-24 12:37:03,687 [WARNING] secureforge.module.owasp_web: [owasp_web] Time budget exhausted, stopping early
+bas-engine-1  | 2026-06-24 12:37:03,700 [INFO] secureforge.module.owasp_web: [SUCCESS] owasp_web completed
+bas-engine-1  | /app/bas_engine/attack_modules/base.py:247: RuntimeWarning: coroutine 'as_completed.<locals>._wait_for_one' was never awaited
+bas-engine-1  |   findings = await self.execute()
+bas-engine-1  | RuntimeWarning: Enable tracemalloc to get the object allocation traceback
+bas-engine-1  | 2026-06-24 12:37:03,726 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | 2026-06-24 12:37:03,726 [INFO] secureforge.module.owasp_web: [FINDING] Server Version Disclosed
+bas-engine-1  | 2026-06-24 12:37:03,738 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | 2026-06-24 12:37:03,739 [INFO] secureforge.module.owasp_web: [FINDING] X-Powered-By Header Exposed
+bas-engine-1  | 2026-06-24 12:37:03,751 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | 2026-06-24 12:37:03,751 [INFO] secureforge.module.owasp_web: [FINDING] Missing Security Headers
+bas-engine-1  | 2026-06-24 12:37:03,762 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | 2026-06-24 12:37:03,763 [INFO] secureforge.module.owasp_web: [FINDING] HTTP Only (No TLS)
+bas-engine-1  | 2026-06-24 12:37:03,775 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | 2026-06-24 12:37:03,775 [INFO] secureforge.module.owasp_web: [FINDING] XSS Vulnerability in page
+bas-engine-1  | 2026-06-24 12:37:03,787 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | 2026-06-24 12:37:03,787 [INFO] secureforge.module.owasp_web: [FINDING] PathTraversal Vulnerability in page
+bas-engine-1  | 2026-06-24 12:37:03,798 [INFO] secureforge.ws: Broadcasting event to 1 connections: raw_event
+bas-engine-1  | 2026-06-24 12:37:03,815 [INFO] secureforge.ws: Broadcasting event to 1 connections: module.completed
+bas-engine-1  | 2026-06-24 12:37:03,822 [ERROR] secureforge: Event broadcast error: Object of type datetime is not JSON serializable
+bas-engine-1  | 2026-06-24 12:37:03,828 [ERROR] secureforge: Event broadcast error: Object of type datetime is not JSON serializable
+bas-engine-1  | 2026-06-24 12:37:03,833 [ERROR] secureforge: Event broadcast error: Object of type datetime is not JSON serializable
+bas-engine-1  | 2026-06-24 12:37:03,839 [ERROR] secureforge: Event broadcast error: Object of type datetime is not JSON serializable
+bas-engine-1  | 2026-06-24 12:37:03,845 [ERROR] secureforge: Event broadcast error: Object of type datetime is not JSON serializable
+bas-engine-1  | 2026-06-24 12:37:03,851 [ERROR] secureforge: Event broadcast error: Object of type datetime is not JSON serializable
+bas-engine-1  | 2026-06-24 12:37:03,912 [INFO] secureforge.ws: Broadcasting event to 1 connections: simulation.completed

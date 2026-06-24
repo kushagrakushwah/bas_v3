@@ -95,6 +95,19 @@ async def process_alert(event):
     if event_type not in interesting:
         return
 
+    import datetime
+
+    class DateTimeEncoder(json.JSONEncoder):
+        def default(self, obj):
+            if isinstance(obj, datetime.datetime):
+                return obj.isoformat()
+            return super().default(obj)
+
+    try:
+        payload_str = json.dumps(payload, indent=2, cls=DateTimeEncoder)
+    except Exception:
+        payload_str = str(payload)
+
     message = f"""
 🚨 SecureForge Alert
 
@@ -102,7 +115,7 @@ Event:
 {event_type}
 
 Payload:
-{json.dumps(payload, indent=2)}
+{payload_str}
 """
 
     async with AsyncSessionLocal() as session:

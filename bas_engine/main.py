@@ -36,7 +36,7 @@ from bas_engine.utils.logger import setup_logging
 from bas_engine.utils.elk_client import ELKClient
 from bas_engine.database.connection import engine, Base
 import bas_engine.database.models
-from bas_engine.api.middleware.api_key_auth import verify_api_key, verify_api_key_value, verify_jwt_token
+from bas_engine.api.middleware.api_key_auth import verify_api_key, verify_api_key_value, verify_jwt_token, _JWT_SECRET
 
 # Setup
 setup_logging()
@@ -51,7 +51,7 @@ app = FastAPI(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:3000", "http://localhost:3001"],
-    allow_credentials=True,
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -66,6 +66,7 @@ PUBLIC_PATH_PREFIXES = (
 @app.middleware("http")
 async def global_api_key_middleware(request: Request, call_next):
     """Enforce API key on all /api/v1/ routes except public paths."""
+    request.state.role = "Operator" # Default role
     path = request.url.path
     # Allow public paths and WebSocket upgrades
     if path == "/" or path.startswith("/ws/") or path.startswith("/api/v1/health") or path.startswith("/api/v1/auth"):
@@ -76,10 +77,17 @@ async def global_api_key_middleware(request: Request, call_next):
         if auth_header and auth_header.startswith("Bearer "):
             token = auth_header.split(" ")[1]
             if verify_jwt_token(token):
+                import jwt
+                try:
+                    payload = jwt.decode(token, _JWT_SECRET, algorithms=["HS256"])
+                    request.state.role = payload.get("role", "Operator")
+                except:
+                    pass
                 return await call_next(request)
 
         key = request.headers.get("X-API-Key", "")
         if verify_api_key_value(key):
+            request.state.role = "Administrator"
             return await call_next(request)
 
         return JSONResponse(

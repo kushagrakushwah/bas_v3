@@ -268,6 +268,18 @@ class SimulationRepository:
                 )
             )
 
+        metadata = db_sim.metadata_json or {}
+        
+        # Reconstruct detection_validation from distinct columns
+        if getattr(db_sim, 'detection_summary', None) is not None:
+            metadata["detection_validation"] = db_sim.detection_summary
+        elif getattr(db_sim, 'soc_score', None) is not None or getattr(db_sim, 'blindspot_data', None) is not None:
+            metadata["detection_validation"] = {
+                "soc_score": {"soc_score": db_sim.soc_score} if db_sim.soc_score is not None else {},
+                "blindspots": db_sim.blindspot_data or {},
+                "sigma_rules": getattr(db_sim, 'sigma_rules', []) or []
+            }
+
         return SimulationResult(
             id=db_sim.id,
             name=db_sim.name,
@@ -275,7 +287,7 @@ class SimulationRepository:
             modules=db_sim.modules or [],
             status=db_sim.status,
             module_results=module_results,
-            metadata=db_sim.metadata_json or {},
+            metadata=metadata,
             created_at=db_sim.created_at,
             updated_at=db_sim.updated_at,
             started_at=db_sim.started_at,

@@ -489,9 +489,6 @@ class NmapScanModule(BaseAttackModule):
                 ))
                 return findings
 
-            self.logger.info(f"[{self.MODULE_NAME}] Starting scan on {target} (opts: {options})")
-            await self.emit_event("INFO", f"[NMAP] Starting scan on {target}")
-
             self.logger.info(f"[nmap_scan] Resolved {target} -> {resolved_ip}")
             t0 = time.monotonic()
             open_ports = await self._scan_host(resolved_ip, ports, timeout, concurrency)

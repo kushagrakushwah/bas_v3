@@ -209,6 +209,8 @@ class OWASPWebModule(BaseAttackModule):
                 local: List[Finding] = []
                 if not time_left():
                     return local
+                
+                await self.emit_event("INFO", f"[OWASP] Analyzing endpoint: {url}")
 
                 parsed = urlparse(url)
                 query = parse_qs(parsed.query)
@@ -245,23 +247,33 @@ class OWASPWebModule(BaseAttackModule):
                 return local
 
             # Run endpoint analysis concurrently, but still respect overall deadline
-            pending = [analyze_one(u) for u in discovered_urls]
-            for coro in asyncio.as_completed(pending):
+            tasks = [asyncio.create_task(analyze_one(u)) for u in discovered_urls]
+            
+            while tasks:
                 if not time_left():
                     self.logger.warning("[owasp_web] Time budget exhausted, stopping early")
+                    for t in tasks:
+                        if not t.done():
+                            t.cancel()
+                    await asyncio.gather(*tasks, return_exceptions=True)
                     break
-                try:
-                    result = await coro
-                    for f in result:
-                        # T4 fix: use (title, url, evidence-hash) as dedup key
-                        # so findings on different URLs/params are not collapsed
-                        evidence_key = (f.evidence or "")[:120]
-                        key = (f.title, evidence_key)
-                        if key not in seen_titles:
-                            seen_titles.add(key)
-                            findings.append(f)
-                except Exception as e:
-                    self.logger.debug(f"[owasp_web] endpoint analysis failed: {e}")
+                
+                done, pending = await asyncio.wait(tasks, timeout=2.0, return_when=asyncio.FIRST_COMPLETED)
+                for t in done:
+                    try:
+                        result = await t
+                        for f in result:
+                            # T4 fix: use (title, url, evidence-hash) as dedup key
+                            # so findings on different URLs/params are not collapsed
+                            evidence_key = (f.evidence or "")[:120]
+                            key = (f.title, evidence_key)
+                            if key not in seen_titles:
+                                seen_titles.add(key)
+                                findings.append(f)
+                    except Exception as e:
+                        self.logger.debug(f"[owasp_web] endpoint analysis failed: {e}")
+                
+                tasks = list(pending)
 
         if not findings:
             findings.append(self.finding(
@@ -314,6 +326,7 @@ class OWASPWebModule(BaseAttackModule):
                     is_vuln = await check_func(payload, body, status)
                     
                 if is_vuln:
+                    await self.emit_event("INFO", f"[VULNERABILITY] {test_name} found in parameter '{param}'")
                     findings.append(self.finding(
                         title=f"{test_name} Vulnerability in {param}",
                         description=f"Parameter '{param}' is vulnerable to {test_name}.",
@@ -333,8 +346,9 @@ class OWASPWebModule(BaseAttackModule):
         return payload in body
 
     async def _check_sqli_response(self, payload, body, status, elapsed=0.0):
-        if elapsed > 4.5:
-            return True
+        if "sleep" in payload.lower() or "waitfor" in payload.lower():
+            if elapsed > 4.5:
+                return True
         return any(re.search(p, body, re.IGNORECASE) for p in SQLI_ERROR_PATTERNS)
 
     async def _check_cmd_response(self, payload, body, status):

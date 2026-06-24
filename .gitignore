@@ -128,3 +128,8 @@ secureforge-frontend/.turbo/
 # TypeScript
 
 *.tsbuildinfo
+cookies.txt
+fulldata.txt
+engine_logs.txt
+fix_mojibake.py
+verify_endpoints.py

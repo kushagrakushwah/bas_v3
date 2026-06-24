@@ -40,6 +40,8 @@ interface KnownModuleOptions {
   ssh_bruteforce?: SSHBruteForceOptions;
   nmap_scan?: NmapScanOptions;
   impact_sim?: ImpactSimOptions;
+  ssh_user?: string;
+  ssh_pass?: string;
 }
 
 // Extra module option bags (unknown modules) use a plain record

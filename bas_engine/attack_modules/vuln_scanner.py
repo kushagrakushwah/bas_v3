@@ -81,6 +81,20 @@ DEFAULT_TEMPLATES = {
         "param": "",
         "headers": "{}",
         "port": 80
+    },
+    "csrf": {
+        "description": "Test for Cross-Site Request Forgery",
+        "method": "POST",
+        "payload": "csrf_token=invalid_token_test",
+        "param": "",
+        "headers": '{"Content-Type": "application/x-www-form-urlencoded"}'
+    },
+    "ssti": {
+        "description": "Test for Server-Side Template Injection",
+        "method": "GET",
+        "payload": "{{7*7}}",
+        "param": "q",
+        "headers": "{}"
     }
 }
 
@@ -107,6 +121,8 @@ class VulnScannerModule(BaseAttackModule):
         ) or re.search(r"127\.\d+\.\d+\.\d+", _lower) or "localhost" in _lower:
             raise ValueError(f"options.url {raw_url!r} is blocked by SSRF policy.")
         target = raw_url
+        if "://" not in target:
+            target = "http://" + target
 
         method = options.get("method", template.get("method", "GET"))
 
@@ -124,6 +140,9 @@ class VulnScannerModule(BaseAttackModule):
         timeout_sec = options.get("timeout", 10)
         inject_param = options.get("inject_param", template.get("param", ""))
 
+        logger.error(f"VULN_SCANNER DEBUG: options={options}")
+        logger.error(f"VULN_SCANNER DEBUG: body={body!r}, inject_param={inject_param!r}")
+
         # Brute force mode intentionally checks exactly one credential pair.
         if test_type == "bruteforce":
             findings.extend(await self._run_bruteforce(target, options, timeout_sec))
@@ -137,25 +156,36 @@ class VulnScannerModule(BaseAttackModule):
                 # Inject into URL query
                 parsed = urlparse(target)
                 query = parse_qs(parsed.query)
-                query[inject_param] = payload
+                # parse_qs returns lists, so we assign a list back
+                query[inject_param] = [payload]
                 new_query = urlencode(query, doseq=True)
                 target = urlunparse(parsed._replace(query=new_query))
             elif inject_param and method.upper() in ("POST", "PUT", "PATCH"):
                 # Inject into body (assume JSON or form)
                 # If body is JSON, parse and update
                 try:
-                    body_json = json.loads(body)
-                    body_json[inject_param] = payload
-                    body = json.dumps(body_json)
-                    headers["Content-Type"] = "application/json"
+                    # If body is already JSON, parse and update
+                    if "{" in body:
+                        body_json = json.loads(body)
+                        body_json[inject_param] = payload
+                        body = json.dumps(body_json)
+                        headers["Content-Type"] = "application/json"
+                    else:
+                        raise ValueError("Not JSON")
                 except Exception as e:
                     # If not JSON, treat as form data
-                    body = f"{inject_param}={payload}"
+                    # Need to parse existing form data to retain other fields like submit buttons
+                    parsed_body = parse_qs(body)
+                    parsed_body[inject_param] = [payload]
+                    body = urlencode(parsed_body, doseq=True)
                     if "Content-Type" not in headers:
                         headers["Content-Type"] = "application/x-www-form-urlencoded"
             else:
                 if payload and method.upper() == "GET":
-                    if payload.startswith("http://") or payload.startswith("https://"):
+                    if inject_param:
+                        # We handled inject_param earlier, nothing to do here
+                        pass
+                    elif payload.startswith("http://") or payload.startswith("https://"):
                         if "?" in target:
                             target = target + payload
                         else:
@@ -201,16 +231,22 @@ class VulnScannerModule(BaseAttackModule):
                             is_vulnerable = has_error or elapsed >= 9.0
                         elif test_type == "cmd_injection":
                             # Command output markers — require text evidence, not just timing
-                            cmd_markers = ["uid=0", "uid=(", "root:x:0:0", "ttl=", "bytes from"]
+                            cmd_markers = ["uid=0", "uid=(", "root:x:0:0", "ttl=", "bytes from", "uid=33"]
                             has_marker = any(m in body_lower for m in cmd_markers)
                             # Timing alone at a high threshold as secondary confirmation
                             is_vulnerable = has_marker or elapsed >= 8.0
                         elif test_type == "path_traversal" or test_type == "xxe":
                             # Reading /etc/passwd
-                            is_vulnerable = "root:x:0:0" in response_body
+                            is_vulnerable = "root:x:0:0" in response_body or "root:x:0:0" in body_lower
                         elif test_type == "ssrf":
                             # Assuming AWS metadata test
                             is_vulnerable = "ami-id" in body_lower or "instance-id" in body_lower or '"Token"' in response_body
+                        elif test_type == "csrf":
+                            # If accepted without valid token and didn't complain about CSRF
+                            is_vulnerable = resp.status in (200, 201, 302) and "invalid csrf" not in body_lower and "forbidden" not in body_lower
+                        elif test_type == "ssti":
+                            # Check if template expression evaluated to 49 instead of reflecting {{7*7}}
+                            is_vulnerable = "49" in response_body and "{{7*7}}" not in response_body
                         else:
                             # Fallback generic reflection check
                             is_vulnerable = payload and payload in response_body

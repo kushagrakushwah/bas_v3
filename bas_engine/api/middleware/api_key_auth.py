@@ -61,18 +61,24 @@ async def verify_api_key(request: Request) -> None:
     FastAPI dependency.
     Raises 403 if valid JWT or API Key is missing.
     """
+    request.state.role = "Operator"
+
     auth_header = request.headers.get("Authorization")
     if auth_header and auth_header.startswith("Bearer "):
         token = auth_header.split(" ")[1]
-        if verify_jwt_token(token):
+        try:
+            payload = jwt.decode(token, _JWT_SECRET, algorithms=["HS256"])
+            request.state.role = payload.get("role", "Operator")
             return
+        except jwt.PyJWTError as e:
+            logger.debug(f"JWT verification failed: {e}")
 
     api_key = request.headers.get("X-API-Key", "")
     if verify_api_key_value(api_key):
+        request.state.role = "Administrator"
         return
 
     raise HTTPException(
         status_code=status.HTTP_403_FORBIDDEN,
         detail="Invalid or missing authentication. Pass Authorization Bearer token or X-API-Key.",
     )
-

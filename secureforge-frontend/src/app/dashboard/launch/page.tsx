@@ -104,6 +104,8 @@ export default function LaunchPage() {
   const [concurrency, setConcurrency] = useState(50);
 
   // ── SSH / Webmail brute force options ───────────────────────
+  const [sshUser, setSshUser] = useState("");
+  const [sshPass, setSshPass] = useState("");
   const [sshAuthType, setSshAuthType] = useState<"ssh" | "webmail">("ssh");
   const [webmailLoginUrl, setWebmailLoginUrl] = useState("");
 
@@ -183,10 +185,18 @@ export default function LaunchPage() {
     }
 
     try {
+      if (detailedEnumeration && (selectedModules.includes("impact_sim") || selectedModules.includes("privilege_escalation"))) {
+        const confirmed = window.confirm("WARNING: Danger mode is enabled. Modules will run in RED TEAM mode (e.g. destructive actions, real exploits). Continue?");
+        if (!confirmed) return;
+      }
+
       setLaunching(true);
       setMessage("");
 
-      const options: SimulationRequest["options"] = {};
+      const options: any = {
+        ssh_user: sshUser,
+        ssh_pass: sshPass,
+      };
 
       if (selectedModules.includes("nmap_scan")) {
         options.nmap_scan = {
@@ -199,8 +209,8 @@ export default function LaunchPage() {
 
       if (selectedModules.includes("impact_sim")) {
         options.impact_sim = {
-          request_count: requestCount,
-          concurrency: concurrency,
+          ddos_requests: requestCount,
+          ddos_concurrency: concurrency,
         };
       }
 
@@ -350,6 +360,25 @@ export default function LaunchPage() {
               value={target}
               onChange={(e) => setTarget(e.target.value)}
               placeholder="https://example.com"
+              className="mt-2 w-full rounded-2xl border border-white/10 bg-black/30 p-4"
+            />
+          </div>
+          <div>
+            <label className="text-sm text-white/50">Global SSH User</label>
+            <input
+              value={sshUser}
+              onChange={(e) => setSshUser(e.target.value)}
+              placeholder="root"
+              className="mt-2 w-full rounded-2xl border border-white/10 bg-black/30 p-4"
+            />
+          </div>
+          <div>
+            <label className="text-sm text-white/50">Global SSH Password</label>
+            <input
+              type="password"
+              value={sshPass}
+              onChange={(e) => setSshPass(e.target.value)}
+              placeholder="secret"
               className="mt-2 w-full rounded-2xl border border-white/10 bg-black/30 p-4"
             />
           </div>

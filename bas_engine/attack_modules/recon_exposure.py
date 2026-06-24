@@ -340,7 +340,7 @@ class ReconExposureModule(BaseAttackModule):
                         findings.append(self.finding(
                             title=f"Sensitive Path Exists But Blocked: {path}",
                             description=f"'{path}' returned HTTP 403. The file exists but is currently blocked.",
-                            severity=Severity.MEDIUM,
+                            severity=Severity.INFO,
                             mitre_id="T1552",
                             evidence=f"GET {url} → HTTP 403",
                             remediation=f"Move {path} outside web root entirely.",
@@ -534,7 +534,7 @@ class ReconExposureModule(BaseAttackModule):
                                 f"'{path}' returned HTTP 403. If credentials are obtained (e.g., via "
                                 "password spraying), an attacker can use this interface to pivot internally."
                             ),
-                            severity=Severity.MEDIUM,
+                            severity=Severity.INFO,
                             mitre_id="T1021",
                             evidence=f"GET {url} → HTTP 403",
                             remediation=(
