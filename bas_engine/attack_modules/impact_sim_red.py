@@ -213,9 +213,10 @@ class ImpactSimModule(BaseAttackModule):
 
     async def _stage_ddos(self, target: str) -> List[Finding]:
         findings = []
-        req_count = int(self.options.get("ddos_requests", 10000))
-        concurrency = int(self.options.get("ddos_concurrency", 200))
-        duration = int(self.options.get("ddos_duration", 60))
+        req_count = min(int(self.options.get("ddos_requests", 500)), 1000)      # hard cap: 1000
+        concurrency = min(int(self.options.get("ddos_concurrency", 20)), 50)    # hard cap: 50
+        duration = min(int(self.options.get("ddos_duration", 15)), 30)          # hard cap: 30s
+
 
         connector = aiohttp.TCPConnector(ssl=True, limit=concurrency, force_close=True)
         timeout = aiohttp.ClientTimeout(total=5)

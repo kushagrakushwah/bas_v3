@@ -111,11 +111,43 @@ class SimulationRequest(BaseModel):
                 # If resolution fails, we pass it and let the module fail later
                 return target_str
 
-        # Enforce basic safety (no loopback to avoid hitting the engine itself, and no cloud metadata)
-        if ip_obj.is_loopback or str(ip_obj) == "169.254.169.254" or ip_obj.is_unspecified:
-            raise ValueError(f"Target resolves to a prohibited loopback or metadata IP address ({ip_obj})")
+        # Enforce comprehensive SSRF safety:
+        # Block ALL loopback, private (RFC-1918), link-local, reserved, and multicast addresses.
+        # Also block cloud metadata endpoints by name before DNS resolution.
+        _BLOCKED_HOSTNAMES = {
+            "localhost",
+            "metadata.google.internal",
+            "metadata.internal",
+        }
+        if hostname.lower() in _BLOCKED_HOSTNAMES:
+            raise ValueError(f"Target hostname '{hostname}' is blocked by SSRF policy.")
+
+        # Loopback and cloud metadata are ALWAYS blocked — even for lab targets
+        if ip_obj.is_loopback or ip_obj.is_unspecified:
+            raise ValueError(
+                f"Target resolves to a prohibited loopback address ({ip_obj})."
+            )
+        if str(ip_obj) == "169.254.169.254":
+            raise ValueError("AWS metadata endpoint is blocked unconditionally.")
+
+        # Private/RFC-1918 ranges: blocked by default UNLESS the operator
+        # explicitly adds the IP to the LAB_TARGETS allowlist in .env
+        # e.g. LAB_TARGETS=192.168.56.102,10.0.0.5
+        if ip_obj.is_private or ip_obj.is_link_local or ip_obj.is_reserved or ip_obj.is_multicast:
+            import os
+            lab_targets_raw = os.getenv("LAB_TARGETS", "")
+            approved_lab_ips = {t.strip() for t in lab_targets_raw.split(",") if t.strip()}
+            if str(ip_obj) not in approved_lab_ips:
+                raise ValueError(
+                    f"Target {ip_obj} is a private/reserved IP. "
+                    "To scan a controlled lab VM, add it to LAB_TARGETS in your .env file. "
+                    "Example: LAB_TARGETS=192.168.56.102"
+                )
 
         return target_str
+
+
+
 
 
 # ── Simulation Result ──────────────────────────────────────────────────────────

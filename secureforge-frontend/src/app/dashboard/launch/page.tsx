@@ -80,6 +80,20 @@ const DEFAULT_TEMPLATES = {
     headers: "{}",
     port: 80,
   },
+  csrf: {
+    description: "Test for Cross-Site Request Forgery",
+    method: "POST",
+    payload: "csrf_token=invalid_token_test",
+    param: "",
+    headers: '{"Content-Type": "application/x-www-form-urlencoded"}',
+  },
+  ssti: {
+    description: "Test for Server-Side Template Injection",
+    method: "GET",
+    payload: "{{7*7}}",
+    param: "q",
+    headers: "{}",
+  },
 };
 
 export default function LaunchPage() {
@@ -570,6 +584,8 @@ export default function LaunchPage() {
                 "ssrf",
                 "bruteforce",
                 "portscan",
+                "csrf",
+                "ssti",
               ].map((type) => (
                 <button
                   key={type}

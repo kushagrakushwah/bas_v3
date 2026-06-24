@@ -9,11 +9,16 @@ from sqlalchemy.orm import (
 )
 
 import os
+import sys
 
-DATABASE_URL = os.getenv(
-    "DATABASE_URL",
-    "postgresql+asyncpg://secureforge:secureforge@localhost/secureforge"
-)
+
+DATABASE_URL = os.getenv("DATABASE_URL")
+if not DATABASE_URL:
+    sys.exit(
+        "[FATAL] DATABASE_URL environment variable is not set. "
+        "Set it in your .env file or docker-compose.yml before starting the engine."
+    )
+
 
 engine = create_async_engine(
     DATABASE_URL,

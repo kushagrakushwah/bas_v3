@@ -140,9 +140,6 @@ class VulnScannerModule(BaseAttackModule):
         timeout_sec = options.get("timeout", 10)
         inject_param = options.get("inject_param", template.get("param", ""))
 
-        logger.error(f"VULN_SCANNER DEBUG: options={options}")
-        logger.error(f"VULN_SCANNER DEBUG: body={body!r}, inject_param={inject_param!r}")
-
         # Brute force mode intentionally checks exactly one credential pair.
         if test_type == "bruteforce":
             findings.extend(await self._run_bruteforce(target, options, timeout_sec))
@@ -224,11 +221,13 @@ class VulnScannerModule(BaseAttackModule):
                             # Check if payload is reflected without encoding
                             is_vulnerable = payload in response_body
                         elif test_type == "sqli":
-                            # M1/M2 fix: require BOTH error strings AND timing — reduces false positives
                             sql_errors = ["syntax error", "mysql_fetch", "sqlite3", "ora-", "postgresql", "unclosed quotation", "you have an error in your sql syntax"]
                             has_error = any(err in body_lower for err in sql_errors)
-                            # Timing-only finding requires a very high bar (10s) to reduce false positives
-                            is_vulnerable = has_error or elapsed >= 9.0
+                            # Primary: error string evidence (reliable)
+                            # Secondary: timing ≥ 9s WITHOUT error is suspicious but not conclusive
+                            # — reported as MEDIUM to avoid false CRITICAL on slow servers
+                            is_vulnerable = has_error
+                            timing_only_suspect = (not has_error) and elapsed >= 9.0
                         elif test_type == "cmd_injection":
                             # Command output markers — require text evidence, not just timing
                             cmd_markers = ["uid=0", "uid=(", "root:x:0:0", "ttl=", "bytes from", "uid=33"]
@@ -242,8 +241,20 @@ class VulnScannerModule(BaseAttackModule):
                             # Assuming AWS metadata test
                             is_vulnerable = "ami-id" in body_lower or "instance-id" in body_lower or '"Token"' in response_body
                         elif test_type == "csrf":
-                            # If accepted without valid token and didn't complain about CSRF
-                            is_vulnerable = resp.status in (200, 201, 302) and "invalid csrf" not in body_lower and "forbidden" not in body_lower
+                            # Improved CSRF detection: inspect headers for CSRF mitigations
+                            # Only flag if server accepted the request AND shows no CSRF protections
+                            resp_headers_lower = {k.lower(): v.lower() for k, v in resp.headers.items()}
+                            has_samesite = "samesite=strict" in str(resp_headers_lower.get("set-cookie", "")) or \
+                                           "samesite=lax" in str(resp_headers_lower.get("set-cookie", ""))
+                            has_csrf_header = "x-csrf-token" in resp_headers_lower or \
+                                              "x-xsrf-token" in resp_headers_lower or \
+                                              "x-frame-options" in resp_headers_lower
+                            accepted_request = resp.status in (200, 201, 302)
+                            no_rejection_text = "invalid csrf" not in body_lower and \
+                                                "forbidden" not in body_lower and \
+                                                "csrf" not in body_lower
+                            is_vulnerable = accepted_request and no_rejection_text and \
+                                            not has_samesite and not has_csrf_header
                         elif test_type == "ssti":
                             # Check if template expression evaluated to 49 instead of reflecting {{7*7}}
                             is_vulnerable = "49" in response_body and "{{7*7}}" not in response_body
@@ -269,14 +280,23 @@ class VulnScannerModule(BaseAttackModule):
                             }
                         }
 
-                        severity = Severity.CRITICAL if is_vulnerable else Severity.INFO
+                        # Resolve severity — handle SQLi timing-only case specially
+                        timing_only_suspect = locals().get("timing_only_suspect", False)
+                        if timing_only_suspect:
+                            severity = Severity.MEDIUM
+                        elif is_vulnerable:
+                            severity = Severity.CRITICAL
+                        else:
+                            severity = Severity.INFO
 
-                        if is_vulnerable:
+                        if is_vulnerable or timing_only_suspect:
                             await self.emit_event("INFO", f"[VULNERABILITY] {test_type.upper()} indicator found at {target}")
 
+                        title_suffix = "Potential" if is_vulnerable else ("Timing Anomaly — Manual Confirmation Required" if timing_only_suspect else "No")
                         findings.append(self.finding(
-                            title=f"{test_type.upper()} Test - {'Potential' if is_vulnerable else 'No'} Indicator",
-                            description=f"Sent {test_type} probe to {target}. Status: {resp.status}",
+                            title=f"{test_type.upper()} Test - {title_suffix} Indicator",
+                            description=f"Sent {test_type} probe to {target}. Status: {resp.status}" +
+                                        (f" (Response delayed {elapsed:.1f}s — possible blind SQLi, needs manual verification)" if timing_only_suspect else ""),
                             severity=severity,
                             mitre_id="T1190",
                             evidence=json.dumps(evidence, indent=2),
@@ -284,6 +304,7 @@ class VulnScannerModule(BaseAttackModule):
                             mode="safe",
                             evidence_type="vuln_scan"
                         ))
+
 
                 except asyncio.TimeoutError:
                     findings.append(self.finding(

@@ -2,6 +2,7 @@ import asyncio
 import uuid
 import logging
 import importlib
+import collections
 from datetime import datetime
 from typing import Dict, Optional, List
 from enum import Enum
@@ -57,7 +58,9 @@ class AttackOrchestrator:
     def __init__(self, event_bus: EventBus):
         self.event_bus = event_bus
         self.repo = SimulationRepository()
-        self._store: Dict[str, SimulationResult] = {}
+        self._store: collections.OrderedDict = collections.OrderedDict()
+        self._STORE_MAX = 100  # evict oldest when cap is hit
+
         self._tasks: Dict[str, asyncio.Task] = {}
         self._semaphore = asyncio.Semaphore(5)
         self.validation_engine = DetectionValidationEngine()
@@ -80,7 +83,11 @@ class AttackOrchestrator:
         )
 
         self._store[sim_id] = result
+        # Evict oldest entry if cap is exceeded
+        while len(self._store) > self._STORE_MAX:
+            self._store.popitem(last=False)
         await self.repo.create_simulation(result)
+
 
         task = asyncio.create_task(self._run_simulation(sim_id, request))
         self._tasks[sim_id] = task

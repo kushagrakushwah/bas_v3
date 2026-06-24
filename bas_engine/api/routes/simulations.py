@@ -7,7 +7,7 @@ router = APIRouter()
 @router.post("/", response_model=SimulationResult)
 async def launch_simulation(request: Request, sim_req: SimulationRequest):
     """Launch a new Breach & Attack Simulation."""
-    if sim_req.options.get("detailed_enumeration") and getattr(request.state, "role", "") != "Administrator":
+    if sim_req.detailed_enumeration and getattr(request.state, "role", "") != "Administrator":
         raise HTTPException(
             status_code=403,
             detail="Administrator privileges required to launch red team modules."

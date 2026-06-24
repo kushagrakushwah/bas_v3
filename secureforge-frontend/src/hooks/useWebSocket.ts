@@ -1,81 +1,79 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 
 export function useWebSocket(url: string) {
   const [messages, setMessages] = useState<any[]>([]);
   const [connected, setConnected] = useState(false);
 
   const socketRef = useRef<WebSocket | null>(null);
+  const retryDelay = useRef<number>(1000);
+  const retryTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const unmounted = useRef(false);
 
-  useEffect(() => {
-    let socket: WebSocket;
-
-    if (!url) {
-      return;
-    }
+  const connect = useCallback(() => {
+    if (!url || unmounted.current) return;
 
     try {
-      socket = new WebSocket(url);
-
+      const socket = new WebSocket(url);
       socketRef.current = socket;
 
       socket.onopen = () => {
-        console.log(
-          "[SecureForge] WebSocket Connected"
-        );
-
+        if (unmounted.current) return;
+        console.log("[SecureForge] WebSocket Connected");
         setConnected(true);
+        retryDelay.current = 1000; // reset backoff on successful connect
       };
 
       socket.onmessage = (event) => {
+        if (unmounted.current) return;
         try {
-          const payload = JSON.parse(
-            event.data
-          );
-
-          setMessages((prev) => [
-            ...prev,
-            payload,
-          ]);
+          const payload = JSON.parse(event.data);
+          setMessages((prev) => [...prev, payload]);
         } catch {
           setMessages((prev) => [
             ...prev,
             {
               type: "raw_event",
               payload: event.data,
-              timestamp:
-                new Date().toISOString(),
+              timestamp: new Date().toISOString(),
             },
           ]);
         }
       };
 
       socket.onerror = (error) => {
-        console.error(
-          "[SecureForge] WebSocket Error",
-          error
-        );
+        console.error("[SecureForge] WebSocket Error", error);
       };
 
       socket.onclose = () => {
-        console.log(
-          "[SecureForge] WebSocket Closed"
-        );
-
+        if (unmounted.current) return;
+        console.log(`[SecureForge] WebSocket Closed — retrying in ${retryDelay.current}ms`);
         setConnected(false);
+
+        // Exponential backoff: 1s → 2s → 4s → 8s → 16s → max 30s
+        retryTimer.current = setTimeout(() => {
+          if (!unmounted.current) {
+            retryDelay.current = Math.min(retryDelay.current * 2, 30000);
+            connect();
+          }
+        }, retryDelay.current);
       };
     } catch (err) {
-      console.error(err);
+      console.error("[SecureForge] WebSocket failed to construct:", err);
     }
-
-    return () => {
-      socket?.close();
-    };
   }, [url]);
 
-  return {
-    connected,
-    messages,
-  };
+  useEffect(() => {
+    unmounted.current = false;
+    connect();
+
+    return () => {
+      unmounted.current = true;
+      if (retryTimer.current) clearTimeout(retryTimer.current);
+      socketRef.current?.close();
+    };
+  }, [connect]);
+
+  return { connected, messages };
 }

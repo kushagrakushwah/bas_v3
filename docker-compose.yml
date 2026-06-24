@@ -47,6 +47,9 @@ services:
       - ELASTICSEARCH_URL=http://elasticsearch:9200
       # C4 fix: API_KEY must be set in .env — no default value
       - API_KEY=${API_KEY:?API_KEY is required in env}
+      # Lab VM allowlist — private IPs listed here bypass the SSRF block
+      - LAB_TARGETS=${LAB_TARGETS:-}
+
     # M10 fix: removed source volume mount — use image-baked code in production
     depends_on:
       postgres:
