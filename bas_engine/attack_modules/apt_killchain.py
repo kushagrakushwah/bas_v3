@@ -385,7 +385,7 @@ class APTKillChainModule(BaseAttackModule):
 
                 url,
 
-                ssl=False,
+                ssl=True,
 
                 timeout=6,
 
@@ -457,7 +457,7 @@ class APTKillChainModule(BaseAttackModule):
 
                     url,
 
-                    ssl=False,
+                    ssl=True,
 
                     timeout=6,
 
@@ -679,7 +679,7 @@ class APTKillChainModule(BaseAttackModule):
 
                         data=data,
 
-                        ssl=False,
+                        ssl=True,
 
                         allow_redirects=False,
 
@@ -863,7 +863,7 @@ class APTKillChainModule(BaseAttackModule):
 
                         attack_url,
 
-                        ssl=False,
+                        ssl=True,
 
                         allow_redirects=False,
 
@@ -959,7 +959,7 @@ class APTKillChainModule(BaseAttackModule):
 
                     url,
 
-                    ssl=False,
+                    ssl=True,
 
                     allow_redirects=False,
 
@@ -1049,7 +1049,7 @@ class APTKillChainModule(BaseAttackModule):
 
                     url,
 
-                    ssl=False,
+                    ssl=True,
 
                     allow_redirects=False,
 
@@ -1135,7 +1135,7 @@ class APTKillChainModule(BaseAttackModule):
         logger.info("=" * 60)
 
         connector = aiohttp.TCPConnector(
-            ssl=False
+            ssl=True
         )
 
         async with aiohttp.ClientSession(

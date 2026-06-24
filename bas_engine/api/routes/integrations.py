@@ -37,18 +37,25 @@ class IntegrationCreate(BaseModel):
         v = v.strip()
         if not v or len(v) > 2048:
             raise ValueError("target must be between 1 and 2048 characters.")
-        _lower = v.lower()
-        # Block internal/metadata targets
-        blocked_keywords = [
-            "169.254.169.254", "metadata.google.internal",
-            "file://", "127.", "::1", "localhost",
-        ]
-        for kw in blocked_keywords:
-            if kw in _lower:
-                raise ValueError(
-                    f"target {v!r} is blocked by SSRF policy. "
-                    "Internal IPs, loopback, and cloud metadata URLs are not permitted."
-                )
+        
+        import urllib.parse
+        import socket
+        import ipaddress
+
+        parsed = urllib.parse.urlparse(v)
+        hostname = parsed.hostname or v
+        
+        try:
+            ip_str = socket.gethostbyname(hostname)
+            ip_obj = ipaddress.ip_address(ip_str)
+            if (ip_obj.is_private or ip_obj.is_loopback or 
+                ip_obj.is_link_local or ip_obj.is_multicast or 
+                ip_obj.is_unspecified):
+                raise ValueError(f"Target resolves to a prohibited internal or reserved IP address ({ip_str})")
+        except socket.gaierror:
+            # If DNS resolution fails, allow it. It will simply fail to connect during runtime.
+            pass
+            
         return v
 
 @router.get("/")

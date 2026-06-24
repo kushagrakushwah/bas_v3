@@ -150,7 +150,7 @@ class OWASPWebModule(BaseAttackModule):
         sem = asyncio.Semaphore(max_concurrency)
 
         timeout = aiohttp.ClientTimeout(total=request_timeout_s, connect=5, sock_connect=5, sock_read=request_timeout_s)
-        connector = aiohttp.TCPConnector(ssl=False, limit=max_concurrency)
+        connector = aiohttp.TCPConnector(ssl=True, limit=max_concurrency)
 
         def time_left() -> bool:
             return time.monotonic() < deadline
@@ -674,7 +674,7 @@ class OWASPWebModule(BaseAttackModule):
     async def _get(self, session, sem, url: str, allow_redirects: bool = True) -> Optional[tuple]:
         async with sem:
             try:
-                # H5 fix: ssl=True (verify certificates) — use ssl=False only for explicitly insecure targets
+                # H5 fix: ssl=True (verify certificates) — use ssl=True only for explicitly insecure targets
                 async with session.get(url, allow_redirects=allow_redirects) as resp:
                     body = await resp.text(errors="replace")
                     return resp.status, dict(resp.headers), body

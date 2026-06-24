@@ -186,10 +186,21 @@ export default function RealtimeOperations() {
 
   const [recentEvents, setRecentEvents] = useState<EventItem[]>([]);
   const [loadingReplay, setLoadingReplay] = useState(true);
+  const [wsUrl, setWsUrl] = useState<string>("");
+
+  useEffect(() => {
+    let mounted = true;
+    api.getWebSocketTicket().then(res => {
+      if (mounted && res?.ticket) {
+        setWsUrl(api.getWebSocketUrl(res.ticket));
+      }
+    }).catch(err => console.error("Failed to fetch WS ticket:", err));
+    return () => { mounted = false; };
+  }, []);
 
   // This hook can return { connected, messages } in the current version.
   // Using "any" here keeps the page resilient if the hook shape changes slightly.
-  const socketState = useWebSocket(api.getWebSocketUrl()) as any;
+  const socketState = useWebSocket(wsUrl) as any;
 
   const connected = Boolean(socketState?.connected);
   const liveMessages: EventItem[] = Array.isArray(socketState?.messages)

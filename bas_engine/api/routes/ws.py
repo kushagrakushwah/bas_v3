@@ -9,13 +9,48 @@ router = APIRouter()
 active_connections = []
 
 # ---------------------------------------------------
+# TICKETS
+# ---------------------------------------------------
+
+import uuid
+import time
+from typing import Dict
+from fastapi import Depends
+from bas_engine.api.middleware.api_key_auth import verify_api_key
+
+valid_tickets: Dict[str, float] = {}
+
+def create_ticket() -> str:
+    ticket = str(uuid.uuid4())
+    # valid for 60 seconds
+    valid_tickets[ticket] = time.time() + 60
+    return ticket
+
+def validate_ticket(ticket: str) -> bool:
+    if ticket in valid_tickets:
+        if valid_tickets[ticket] > time.time():
+            del valid_tickets[ticket]
+            return True
+        else:
+            del valid_tickets[ticket]
+    return False
+
+@router.get("/api/v1/ws/ticket", dependencies=[Depends(verify_api_key)])
+async def get_ws_ticket():
+    return {"ticket": create_ticket()}
+
+# ---------------------------------------------------
 # WEBSOCKET ENDPOINT
 # ---------------------------------------------------
 
 @router.websocket("/ws/events")
 async def websocket_events(
-    websocket: WebSocket
+    websocket: WebSocket,
+    ticket: str = None
 ):
+    if not ticket or not validate_ticket(ticket):
+        await websocket.close(code=1008)
+        return
 
     await websocket.accept()
 
@@ -46,7 +81,10 @@ async def websocket_events(
 async def broadcast_event(
     event
 ):
-
+    import logging
+    logger = logging.getLogger("secureforge.ws")
+    logger.info(f"Broadcasting event to {len(active_connections)} connections: {event.get('type')}")
+    
     disconnected = []
 
     for connection in active_connections:

@@ -13,3 +13,4 @@ asyncpg
 kubernetes
 cryptography
 aiosmtplib
+PyJWT==2.8.0

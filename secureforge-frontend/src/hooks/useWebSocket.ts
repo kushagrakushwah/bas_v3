@@ -11,6 +11,10 @@ export function useWebSocket(url: string) {
   useEffect(() => {
     let socket: WebSocket;
 
+    if (!url) {
+      return;
+    }
+
     try {
       socket = new WebSocket(url);
 

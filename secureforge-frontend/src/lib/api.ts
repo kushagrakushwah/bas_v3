@@ -52,17 +52,17 @@ export const api = {
     );
   },
 
-  getWebSocketUrl() {
-    // H3 fix: derive WebSocket URL dynamically from the current window host
-    // Use wss:// when the page is served over https://, ws:// otherwise
+  getWebSocketTicket() {
+    return request<{ ticket: string }>("/ws/ticket");
+  },
+
+  getWebSocketUrl(ticket: string) {
     if (typeof window === "undefined") {
-      return "ws://localhost:8000/ws/events";
+      return `ws://localhost:8000/ws/events?ticket=${ticket}`;
     }
     const proto = window.location.protocol === "https:" ? "wss" : "ws";
     const host = window.location.host;
-    // Connect via the Next.js proxy WebSocket path if available,
-    // otherwise fall back to direct backend URL
-    return `${proto}://${host.replace("3001", "8000")}/ws/events`;
+    return `${proto}://${host}/ws/events?ticket=${ticket}`;
   },
   getMetrics() {
     return request<any>(

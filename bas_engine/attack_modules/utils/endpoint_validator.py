@@ -17,14 +17,14 @@ async def is_real_endpoint(
 
         async with session.get(
             base_url,
-            ssl=False
+            ssl=True
         ) as base_resp:
 
             base_text = await base_resp.text()
 
         async with session.get(
             probe_url,
-            ssl=False
+            ssl=True
         ) as probe_resp:
 
             if probe_resp.status != 200:

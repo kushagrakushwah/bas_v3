@@ -1,4 +1,4 @@
-﻿"""
+"""
 Shared endpoint discovery helpers for web attack modules - FIXED EDITION.
 
 Same public interface as the original (`EndpointDiscoveryEngine(session, target,
@@ -178,7 +178,7 @@ class EndpointDiscoveryEngine:
         async with self._sem:
             try:
                 async with self.session.get(
-                    url, allow_redirects=True, ssl=False, timeout=_ct
+                    url, allow_redirects=True, ssl=True, timeout=_ct
                 ) as resp:
                     body = await resp.text(errors="replace")
                     return resp.status, str(resp.url), body

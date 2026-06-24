@@ -234,7 +234,7 @@ class WAFEvasionModule(BaseAttackModule):
 
                 target,
 
-                ssl=False,
+                ssl=True,
 
                 timeout=6,
 
@@ -315,7 +315,7 @@ class WAFEvasionModule(BaseAttackModule):
 
                 url,
 
-                ssl=False,
+                ssl=True,
 
                 allow_redirects=False,
 
@@ -388,7 +388,7 @@ class WAFEvasionModule(BaseAttackModule):
         path_block_counter = {}
 
         connector = aiohttp.TCPConnector(
-            ssl=False
+            ssl=True
         )
 
         async with aiohttp.ClientSession(

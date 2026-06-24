@@ -1,35 +1,48 @@
 """
-API Key Authentication Middleware
+API Key & JWT Authentication Middleware
 ===================================
-Validates the X-API-Key header on protected routes.
+Validates the X-API-Key header or Authorization Bearer JWT on protected routes.
 The key is read from the API_KEY environment variable.
+The JWT secret is read from the NEXTAUTH_SECRET or API_KEY environment variable.
 
 Usage (in main.py):
-    The global middleware calls verify_api_key_value(key).
-    FastAPI dependency verify_api_key is kept for backward compatibility.
+    The global middleware calls verify_api_key_value(key) or verify_jwt(token).
 """
 
 import os
 import secrets
 import logging
-from fastapi import Header, HTTPException, status
+import jwt
+from fastapi import Header, HTTPException, status, Request
+from fastapi.responses import JSONResponse
 
 logger = logging.getLogger("secureforge.api.auth")
 
 # Load the expected key at import time
 _API_KEY = os.getenv("API_KEY", "")
+_JWT_SECRET = os.getenv("NEXTAUTH_SECRET", _API_KEY)
 
 if not _API_KEY:
     # Auto-generate a key if none is configured
     _API_KEY = secrets.token_hex(32)
+    _JWT_SECRET = _API_KEY
     logger.warning(
         "No API_KEY environment variable set. "
         "An auto-generated key is active for this session. "
         "Set API_KEY in your .env file to make this permanent."
     )
 else:
-    logger.info("API key authentication enabled.")
+    logger.info("API key and JWT authentication enabled.")
 
+
+def verify_jwt_token(token: str) -> bool:
+    """Verify a JWT token using the shared secret."""
+    try:
+        jwt.decode(token, _JWT_SECRET, algorithms=["HS256"])
+        return True
+    except jwt.PyJWTError as e:
+        logger.debug(f"JWT verification failed: {e}")
+        return False
 
 def verify_api_key_value(key: str) -> bool:
     """
@@ -43,14 +56,23 @@ def verify_api_key_value(key: str) -> bool:
     except Exception:
         return False
 
+async def verify_api_key(request: Request) -> None:
+    """
+    FastAPI dependency.
+    Raises 403 if valid JWT or API Key is missing.
+    """
+    auth_header = request.headers.get("Authorization")
+    if auth_header and auth_header.startswith("Bearer "):
+        token = auth_header.split(" ")[1]
+        if verify_jwt_token(token):
+            return
 
-async def verify_api_key(x_api_key: str = Header(None, alias="X-API-Key")) -> None:
-    """
-    FastAPI dependency (kept for backward compat).
-    Raises 403 if the X-API-Key header is missing or invalid.
-    """
-    if not verify_api_key_value(x_api_key or ""):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Invalid or missing API key. Pass X-API-Key header.",
-        )
+    api_key = request.headers.get("X-API-Key", "")
+    if verify_api_key_value(api_key):
+        return
+
+    raise HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail="Invalid or missing authentication. Pass Authorization Bearer token or X-API-Key.",
+    )
+

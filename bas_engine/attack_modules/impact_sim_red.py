@@ -216,7 +216,7 @@ class ImpactSimModule(BaseAttackModule):
         concurrency = int(self.options.get("ddos_concurrency", 200))
         duration = int(self.options.get("ddos_duration", 60))
 
-        connector = aiohttp.TCPConnector(ssl=False, limit=concurrency, force_close=True)
+        connector = aiohttp.TCPConnector(ssl=True, limit=concurrency, force_close=True)
         timeout = aiohttp.ClientTimeout(total=5)
 
         start_time = time.time()

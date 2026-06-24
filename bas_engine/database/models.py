@@ -17,8 +17,8 @@ import uuid
 
 
 def _utcnow():
-    """Timezone-aware UTC datetime (replaces deprecated datetime.utcnow)."""
-    return datetime.now(timezone.utc)
+    """Timezone-naive UTC datetime (to match naive DateTime columns)."""
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 class SimulationDB(Base):

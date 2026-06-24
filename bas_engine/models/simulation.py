@@ -87,12 +87,35 @@ class SimulationRequest(BaseModel):
     def validate_target(cls, v):
         if not v or not v.strip():
             raise ValueError("Target cannot be empty")
-        v_stripped = v.strip().lower()
-        if "169.254.169.254" in v_stripped:
-            raise ValueError("Cloud metadata IPs are prohibited (SSRF protection).")
-        if "127." in v_stripped or "localhost" in v_stripped:
-            raise ValueError("Loopback targets are prohibited (SSRF protection).")
-        return v.strip()
+        
+        target_str = v.strip()
+        import urllib.parse
+        import socket
+        import ipaddress
+
+        if "://" not in target_str:
+            parse_target = "http://" + target_str
+        else:
+            parse_target = target_str
+            
+        parsed = urllib.parse.urlparse(parse_target)
+        hostname = parsed.hostname or target_str.split(':')[0]
+        
+        try:
+            ip_obj = ipaddress.ip_address(hostname)
+        except ValueError:
+            try:
+                ip_str = socket.gethostbyname(hostname)
+                ip_obj = ipaddress.ip_address(ip_str)
+            except Exception:
+                # If resolution fails, we pass it and let the module fail later
+                return target_str
+
+        # Enforce basic safety (no loopback to avoid hitting the engine itself, and no cloud metadata)
+        if ip_obj.is_loopback or str(ip_obj) == "169.254.169.254" or ip_obj.is_unspecified:
+            raise ValueError(f"Target resolves to a prohibited loopback or metadata IP address ({ip_obj})")
+
+        return target_str
 
 
 # ── Simulation Result ──────────────────────────────────────────────────────────

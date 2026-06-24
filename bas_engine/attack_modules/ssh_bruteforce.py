@@ -66,6 +66,13 @@ class SSHBruteForceModule(BaseAttackModule):
 
     def load_wordlist(self, path, limit=None):
         """Generator — yields stripped non-empty lines from wordlist."""
+        import os
+        base_dir = os.path.abspath("bas_engine/attack_modules/wordlists")
+        target_path = os.path.abspath(path)
+        if not target_path.startswith(base_dir):
+            self.logger.error(f"Path Traversal Attempt Blocked: {path}")
+            return
+
         try:
             with open(path, "r") as f:
                 count = 0

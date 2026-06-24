@@ -4,36 +4,30 @@ import { useEffect, useState } from "react";
 
 import { api } from "@/lib/api";
 
-const WS_URL = api.getWebSocketUrl();
-
 export function useEvents() {
-
-  const [events, setEvents] =
-    useState<any[]>([]);
+  const [events, setEvents] = useState<any[]>([]);
 
   useEffect(() => {
+    let ws: WebSocket;
+    let mounted = true;
 
-    const ws = new WebSocket(
-      WS_URL
-    );
-
-    ws.onmessage = (event) => {
-
-      const data = JSON.parse(
-        event.data
-      );
-
-      setEvents((prev) => [
-        data,
-        ...prev,
-      ]);
-    };
+    api.getWebSocketTicket().then(res => {
+      if (!mounted || !res?.ticket) return;
+      
+      ws = new WebSocket(api.getWebSocketUrl(res.ticket));
+      
+      ws.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          setEvents((prev) => [data, ...prev]);
+        } catch(e) {}
+      };
+    }).catch(console.error);
 
     return () => {
-
-      ws.close();
+      mounted = false;
+      if (ws) ws.close();
     };
-
   }, []);
 
   return events;

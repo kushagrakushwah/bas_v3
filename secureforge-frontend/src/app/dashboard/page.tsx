@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Shield, Target, AlertTriangle, Activity } from "lucide-react";
+import DOMPurify from "dompurify";
 import {
   ResponsiveContainer,
   BarChart,
@@ -244,7 +245,7 @@ export default function DashboardHomePage() {
                   </div>
 
                   <div className="mt-2 text-sm text-white/60">
-                    {finding.description}
+                    <span dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(finding.description) }} />
                   </div>
 
                   <div className="mt-2 text-xs text-purple-300">

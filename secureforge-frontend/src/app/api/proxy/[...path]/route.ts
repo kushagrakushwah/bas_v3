@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getToken } from "next-auth/jwt";
 
 const API_BASE = process.env.INTERNAL_API_URL || "http://bas-engine:8000";
 
@@ -14,6 +15,7 @@ const ALLOWED_PATH_PREFIXES = [
   "api/v1/replay",
   "api/v1/recon",
   "api/v1/health",
+  "api/v1/ws",
 ];
 
 // H4 fix: only forward safe, non-sensitive headers
@@ -57,6 +59,12 @@ async function proxy(
   // H4 fix: build a clean header set — only forward safe headers
   const forwardHeaders = new Headers();
   forwardHeaders.set("X-API-Key", process.env.API_KEY || "");
+  
+  const token = await getToken({ req: request as any });
+  if (token && token.backendToken) {
+    forwardHeaders.set("Authorization", `Bearer ${token.backendToken}`);
+  }
+  
   forwardHeaders.set("Content-Type", "application/json");
 
   request.headers.forEach((value, key) => {

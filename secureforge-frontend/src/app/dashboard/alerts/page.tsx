@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import DOMPurify from "dompurify";
 import {
   Bell,
   Webhook,
@@ -239,9 +240,7 @@ export default function AlertsPage() {
                   </div>
 
                   <div className="text-sm text-white/60 mt-2">
-                    {
-                      alert.description
-                    }
+                    <span dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(alert.description) }} />
                   </div>
                 </div>
               )

@@ -10,12 +10,25 @@ const handler = NextAuth({
         password: { label: "Password", type: "password" }
       },
       async authorize(credentials) {
-        // Matches the authentication validation inside dashboard/views/login.py
-        if (
-          (credentials?.username === "admin" && credentials?.password === "admin123") ||
-          (credentials?.username === "operator" && credentials?.password === "operator123")
-        ) {
-          return { id: "1", name: credentials.username, role: credentials.username === "admin" ? "Administrator" : "Operator" };
+        try {
+          const baseUrl = process.env.INTERNAL_API_URL || "http://127.0.0.1:8000";
+          const res = await fetch(`${baseUrl}/api/v1/auth/login`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              username: credentials?.username,
+              password: credentials?.password,
+            }),
+          });
+          
+          if (res.ok) {
+            const data = await res.json();
+            if (data.status === "success" && data.user) {
+              return { ...data.user, backendToken: data.token };
+            }
+          }
+        } catch (error) {
+          console.error("Auth backend unreachable", error);
         }
         return null;
       }
@@ -26,11 +39,17 @@ const handler = NextAuth({
   },
   callbacks: {
     async jwt({ token, user }) {
-      if (user) token.role = (user as any).role;
+      if (user) {
+        token.role = (user as any).role;
+        token.backendToken = (user as any).backendToken;
+      }
       return token;
     },
     async session({ session, token }) {
-      if (session.user) (session.user as any).role = token.role;
+      if (session.user) {
+        (session.user as any).role = token.role;
+      }
+      (session as any).backendToken = token.backendToken;
       return session;
     }
   }
