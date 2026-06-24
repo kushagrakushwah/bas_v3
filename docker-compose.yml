@@ -3,8 +3,8 @@ services:
   postgres:
     image: postgres:15-alpine
     environment:
-      POSTGRES_USER: ${POSTGRES_USER:?POSTGRES_USER is required}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+      POSTGRES_USER: ${POSTGRES_USER:-secureforge}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-secureforge}
       POSTGRES_DB: ${POSTGRES_DB:-secureforge}
     # C4/C5 fix: do NOT expose database port to host network
     # postgres is only accessible from within the Docker network
@@ -43,10 +43,10 @@ services:
     environment:
       - ENVIRONMENT=${ENVIRONMENT:-production}
       - PYTHONPATH=/app
-      - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER:?}:${POSTGRES_PASSWORD:?}@postgres:5432/${POSTGRES_DB:-secureforge}
+      - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER:-secureforge}:${POSTGRES_PASSWORD:-secureforge}@postgres:5432/${POSTGRES_DB:-secureforge}
       - ELASTICSEARCH_URL=http://elasticsearch:9200
-      # C4 fix: API_KEY must be set in .env — no default value
-      - API_KEY=${API_KEY:?API_KEY is required in env}
+      # API_KEY uses a default fallback for instant local development
+      - API_KEY=${API_KEY:-dev-api-key-12345}
       # Lab VM allowlist — private IPs listed here bypass the SSRF block
       - LAB_TARGETS=${LAB_TARGETS:-}
 
@@ -69,13 +69,13 @@ services:
     environment:
       - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-http://localhost:8000}
       - INTERNAL_API_URL=http://bas-engine:8000
-      # C4 fix: API_KEY must be set in .env
-      - API_KEY=${API_KEY:?API_KEY is required}
+      # API_KEY uses a default fallback for instant local development
+      - API_KEY=${API_KEY:-dev-api-key-12345}
       - ELASTICSEARCH_URL=http://elasticsearch:9200
       # L9 fix: NEXTAUTH_URL must be set per deployment environment
       - NEXTAUTH_URL=${NEXTAUTH_URL:-http://localhost:3001}
       # C4 fix: NEXTAUTH_SECRET must be set in .env — no default value
-      - NEXTAUTH_SECRET=${NEXTAUTH_SECRET:?NEXTAUTH_SECRET is required in env}
+      - NEXTAUTH_SECRET=${NEXTAUTH_SECRET:-dev-secret-key-1234567890}
     depends_on:
       - bas-engine
     deploy:

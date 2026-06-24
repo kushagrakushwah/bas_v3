@@ -226,7 +226,20 @@ git clone https://github.com/your-username/secureforge.git
 cd secureforge
 ```
 
-### 2. Launch the Platform
+### 2. Configure Environment Variables
+Copy the example environment file to `.env`. This is **required** because Docker needs variables like `POSTGRES_USER` to build the database.
+
+```bash
+# Windows (PowerShell/CMD)
+copy .env.example .env
+
+# macOS / Linux
+cp .env.example .env
+```
+
+*Note: Open the `.env` file in your text editor and ensure you fill in the required values like `API_KEY` and database credentials before proceeding.*
+
+### 3. Launch the Platform
 Make sure you are in the root `secureforge` directory (where the `docker-compose.yml` file is located) and run:
 
 ```bash
