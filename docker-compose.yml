@@ -49,7 +49,9 @@ services:
       - API_KEY=${API_KEY:-dev-api-key-12345}
       # Lab VM allowlist — private IPs listed here bypass the SSRF block
       - LAB_TARGETS=${LAB_TARGETS:-}
-
+      # Admin and Operator credentials for the dashboard
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-admin123}
+      - OPERATOR_PASSWORD=${OPERATOR_PASSWORD:-operator123}
     # M10 fix: removed source volume mount — use image-baked code in production
     depends_on:
       postgres:
