@@ -14,3 +14,4 @@ kubernetes
 cryptography
 aiosmtplib
 PyJWT==2.8.0
+psutil
