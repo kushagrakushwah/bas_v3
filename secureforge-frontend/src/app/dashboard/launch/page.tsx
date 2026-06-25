@@ -137,6 +137,8 @@ export default function LaunchPage() {
   const [vulnLoginUrl, setVulnLoginUrl] = useState("");
   const [vulnUsername, setVulnUsername] = useState("admin");
   const [vulnPassword, setVulnPassword] = useState("admin");
+  const [vulnCredentialsList, setVulnCredentialsList] = useState<{username: string; password: string}[]>([]);
+  const [vulnBruteMode, setVulnBruteMode] = useState<"single" | "bulk">("single");
   // Port‑scan specific
   const [vulnPort, setVulnPort] = useState(80);
 
@@ -263,8 +265,10 @@ export default function LaunchPage() {
             ...common,
             auth_type: vulnAuthType,
             login_url: vulnLoginUrl.trim() || "",
-            username: vulnUsername.trim(),
-            password: vulnPassword.trim(),
+            ...(vulnBruteMode === "single" 
+              ? { username: vulnUsername.trim(), password: vulnPassword.trim() }
+              : { credentials_list: vulnCredentialsList }
+            )
           };
         } else if (vulnTestType === "portscan") {
           options.vuln_scanner = {
@@ -314,6 +318,8 @@ export default function LaunchPage() {
         setVulnUsername(template.username || "admin");
         setVulnPassword(template.password || "admin");
         setVulnLoginUrl(template.loginUrl || "");
+        setVulnCredentialsList([]);
+        setVulnBruteMode("single");
       }
       if (type === "portscan") {
         setVulnPort(template.port || 80);
@@ -712,28 +718,129 @@ export default function LaunchPage() {
                       className="mt-2 w-full rounded-2xl border border-white/10 bg-black/30 p-4"
                     />
                   </div>
-                  <div>
-                    <label className="text-sm text-white/50">Username</label>
-                    <input
-                      value={vulnUsername}
-                      onChange={(e) => setVulnUsername(e.target.value)}
-                      placeholder="e.g. admin"
-                      className="mt-2 w-full rounded-2xl border border-white/10 bg-black/30 p-4"
-                    />
+                  <div className="md:col-span-2">
+                    <div className="flex gap-4 mb-4">
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="radio"
+                          className="accent-purple-500"
+                          checked={vulnBruteMode === "single"}
+                          onChange={() => setVulnBruteMode("single")}
+                        />
+                        <span className="text-sm text-white/80">Single Credential</span>
+                      </label>
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="radio"
+                          className="accent-purple-500"
+                          checked={vulnBruteMode === "bulk"}
+                          onChange={() => setVulnBruteMode("bulk")}
+                        />
+                        <span className="text-sm text-white/80">Bulk Upload (CSV/JSON)</span>
+                      </label>
+                    </div>
                   </div>
-                  <div>
-                    <label className="text-sm text-white/50">Password</label>
-                    <input
-                      type="password"
-                      value={vulnPassword}
-                      onChange={(e) => setVulnPassword(e.target.value)}
-                      placeholder="e.g. secret123"
-                      className="mt-2 w-full rounded-2xl border border-white/10 bg-black/30 p-4"
-                    />
-                  </div>
+                  
+                  {vulnBruteMode === "single" ? (
+                    <>
+                      <div>
+                        <label className="text-sm text-white/50">Username</label>
+                        <input
+                          value={vulnUsername}
+                          onChange={(e) => setVulnUsername(e.target.value)}
+                          placeholder="e.g. admin"
+                          className="mt-2 w-full rounded-2xl border border-white/10 bg-black/30 p-4"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-sm text-white/50">Password</label>
+                        <input
+                          type="password"
+                          value={vulnPassword}
+                          onChange={(e) => setVulnPassword(e.target.value)}
+                          placeholder="e.g. secret123"
+                          className="mt-2 w-full rounded-2xl border border-white/10 bg-black/30 p-4"
+                        />
+                      </div>
+                    </>
+                  ) : (
+                    <div className="md:col-span-2">
+                      <label className="text-sm text-white/50 mb-2 block">Upload Credentials File (Max 100 pairs)</label>
+                      <input
+                        type="file"
+                        accept=".csv,.json"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (!file) return;
+                          
+                          const reader = new FileReader();
+                          reader.onload = (event) => {
+                            try {
+                              const content = event.target?.result as string;
+                              let parsed: {username: string; password: string}[] = [];
+                              
+                              if (file.name.endsWith('.json')) {
+                                parsed = JSON.parse(content);
+                              } else if (file.name.endsWith('.csv')) {
+                                const lines = content.split('\n').filter(l => l.trim());
+                                // Skip header if it exists
+                                const startIdx = lines[0].toLowerCase().includes('username') ? 1 : 0;
+                                for (let i = startIdx; i < lines.length; i++) {
+                                  const parts = lines[i].split(',');
+                                  if (parts.length >= 2) {
+                                    parsed.push({
+                                      username: parts[0].trim(),
+                                      password: parts[1].trim()
+                                    });
+                                  }
+                                }
+                              }
+                              
+                              if (parsed.length > 100) {
+                                alert("Maximum 100 credentials allowed. The list will be truncated.");
+                                parsed = parsed.slice(0, 100);
+                              }
+                              setVulnCredentialsList(parsed);
+                            } catch (err) {
+                              alert("Failed to parse file. Ensure it's valid JSON or CSV.");
+                              setVulnCredentialsList([]);
+                            }
+                          };
+                          reader.readAsText(file);
+                        }}
+                        className="w-full text-sm text-white/70 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-purple-500/20 file:text-purple-300 hover:file:bg-purple-500/30"
+                      />
+                      
+                      {vulnCredentialsList.length > 0 && (
+                        <div className="mt-3 text-sm text-green-400">
+                          Loaded {vulnCredentialsList.length} credential pair(s).
+                        </div>
+                      )}
+
+                      <div className="mt-4 grid grid-cols-2 gap-4 text-xs text-white/50">
+                        <div className="p-3 bg-black/40 rounded-xl border border-white/5">
+                          <div className="font-semibold text-white/70 mb-1">Expected JSON:</div>
+                          <pre>
+[
+  {`{`}"username": "admin", "password": "123"{`}`},
+  {`{`}"username": "root", "password": "abc"{`}`}
+]
+                          </pre>
+                        </div>
+                        <div className="p-3 bg-black/40 rounded-xl border border-white/5">
+                          <div className="font-semibold text-white/70 mb-1">Expected CSV:</div>
+                          <pre>
+username,password
+admin,123
+root,abc
+                          </pre>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
                   <div className="md:col-span-2 rounded-xl bg-purple-500/10 border border-purple-500/20 px-4 py-3 text-xs text-purple-300">
-                    Checks exactly one username/password pair. Auto mode probes port 22 first:
-                    SSH open → SSH auth test, otherwise → webmail/HTTP login check.
+                    Auto mode probes port 22 first: SSH open → SSH auth test, otherwise → webmail/HTTP login check.
                   </div>
                 </>
               )}

@@ -338,34 +338,41 @@ class VulnScannerModule(BaseAttackModule):
 
     async def _run_bruteforce(self, target: str, options: dict, timeout: int) -> List[Finding]:
         """
-        Check one username/password pair against SSH or webmail.
-
-        This intentionally does not call SSHBruteForceModule and does not load
-        username/password wordlists. The vuln scanner tab is a one-shot
-        credential verifier, independent from the full attack module.
+        Check username/password pairs against SSH or webmail.
+        Supports single pairs (username/password) or bulk lists (credentials_list).
         """
         import asyncssh
         import re
         import ssl
 
-        username = str(options.get("username", "")).strip()
-        password = str(options.get("password", "")).strip()
-        auth_type = str(options.get("auth_type", "auto")).strip().lower()
-
-        if not username or not password:
+        credentials_list = options.get("credentials_list", [])
+        if not credentials_list:
+            # Fallback to single credential
+            username = str(options.get("username", "")).strip()
+            password = str(options.get("password", "")).strip()
+            if username and password:
+                credentials_list = [{"username": username, "password": password}]
+        
+        if not credentials_list:
             return [
                 self.finding(
                     title="Credential Check Missing Input",
-                    description="A username and password are required for the vuln_scanner brute force check.",
+                    description="A username and password (or credentials_list) are required for the vuln_scanner brute force check.",
                     severity=Severity.MEDIUM,
                     mitre_id="T1110",
                     evidence="Missing username or password.",
-                    remediation="Provide exactly one username and one password.",
+                    remediation="Provide exactly one username and one password, or a list of credentials.",
                     mode="safe",
                     evidence_type="bruteforce",
                 )
             ]
 
+        # Enforce maximum of 100 credentials per scan for safety
+        if len(credentials_list) > 100:
+            credentials_list = credentials_list[:100]
+            await self.emit_event("WARNING", "Credentials list truncated to maximum of 100 pairs.")
+
+        auth_type = str(options.get("auth_type", "auto")).strip().lower()
         if auth_type not in ("auto", "ssh", "webmail"):
             auth_type = "auto"
 
@@ -390,15 +397,6 @@ class VulnScannerModule(BaseAttackModule):
                     f"{'open, checking SSH' if ssh_open else 'closed, checking webmail'}",
                 )
 
-        if auth_type == "ssh":
-            return await self._vuln_single_ssh_check(
-                host=host,
-                port=ssh_port,
-                username=username,
-                password=password,
-                timeout=timeout,
-            )
-
         login_url = str(options.get("login_url", "")).strip() or target
         if not login_url.startswith(("http://", "https://")):
             login_url = f"https://{login_url.strip('/')}"
@@ -411,6 +409,215 @@ class VulnScannerModule(BaseAttackModule):
         username_param = options.get("username_param", "username")
         password_param = options.get("password_param", "password")
         timeout_s = float(options.get("timeout", timeout or 10))
+
+        # Setup Webmail specific context
+        ssl_ctx = ssl.create_default_context()
+        ssl_ctx.check_hostname = False
+        ssl_ctx.verify_mode = ssl.CERT_NONE
+
+        token_pattern = r'(?:request_token|_token|token|_csrf)'
+
+        def extract_token(body: str):
+            match = re.search(
+                r'name=["\'](' + token_pattern + r')["\'][^>]*value=["\']([^"\']{8,})["\']',
+                body,
+            )
+            if match:
+                return match.group(1), match.group(2)
+
+            match = re.search(
+                r'value=["\']([^"\']{8,})["\'][^>]*name=["\'](' + token_pattern + r')["\']',
+                body,
+            )
+            if match:
+                return match.group(2), match.group(1)
+
+            return token_field_def, None
+
+        fail_markers = [
+            "invalid_login",
+            "login failed",
+            "incorrect password",
+            "authentication failed",
+            "login_failed",
+            "unauthorized",
+        ]
+        pass_markers = [
+            "_task=mail",
+            "_task=contacts",
+            "rcmbody",
+            'id="rcmbody"',
+            "composebody",
+            "mailboxlist",
+            "logout",
+            "dashboard",
+            "welcome",
+        ]
+
+        # Hardcode concurrency to 5 requests at a time
+        semaphore = asyncio.Semaphore(5)
+        
+        async def check_single_webmail(cred: dict) -> List[Finding]:
+            username = str(cred.get("username", "")).strip()
+            password = str(cred.get("password", "")).strip()
+            if not username or not password:
+                return []
+                
+            async with semaphore:
+                await self.emit_event("INFO", f"[WEBMAIL SINGLE CHECK] {login_url} | username={username}")
+                try:
+                    async with aiohttp.ClientSession(connector=aiohttp.TCPConnector(ssl=ssl_ctx)) as session:
+                        async with session.get(
+                            login_url,
+                            timeout=aiohttp.ClientTimeout(total=timeout_s, connect=5),
+                            ssl=ssl_ctx,
+                            allow_redirects=True,
+                        ) as get_resp:
+                            body_get = await get_resp.text(errors="replace")
+                            canonical_url = str(get_resp.url)
+                            is_basic_auth = get_resp.status == 401
+
+                        if is_basic_auth:
+                            auth = aiohttp.BasicAuth(username, password)
+                            async with session.get(
+                                canonical_url,
+                                timeout=aiohttp.ClientTimeout(total=timeout_s, connect=5),
+                                ssl=ssl_ctx,
+                                allow_redirects=False,
+                                auth=auth,
+                            ) as auth_resp:
+                                status = auth_resp.status
+                                final_url = auth_resp.headers.get("Location", "")
+                                body_post = await auth_resp.text(errors="replace")
+                        else:
+                            token_field, token_value = extract_token(body_get)
+                            post_data = {
+                                user_field: username,
+                                pass_field: password,
+                                action_field: action_value,
+                                username_param: username,
+                                password_param: password,
+                            }
+                            if token_value:
+                                post_data[token_field] = token_value
+
+                            async with session.post(
+                                canonical_url,
+                                data=post_data,
+                                timeout=aiohttp.ClientTimeout(total=timeout_s, connect=5),
+                                ssl=ssl_ctx,
+                                allow_redirects=True,
+                            ) as post_resp:
+                                status = post_resp.status
+                                final_url = str(post_resp.url)
+                                body_post = await post_resp.text(errors="replace")
+
+                except asyncio.TimeoutError:
+                    return [
+                        self.finding(
+                            title="Webmail Credential Check Timed Out",
+                            description=f"Timed out checking credential pair for {username} against {login_url}.",
+                            severity=Severity.MEDIUM,
+                            mitre_id="T1110",
+                            evidence=f"Timeout: {timeout_s}s",
+                            remediation="Increase timeout or verify the login URL.",
+                            mode="safe",
+                            evidence_type="bruteforce",
+                        )
+                    ]
+                except Exception as exc:
+                    return [
+                        self.finding(
+                            title="Webmail Credential Check Error",
+                            description=f"Could not check webmail credentials for {username}: {exc}",
+                            severity=Severity.MEDIUM,
+                            mitre_id="T1110",
+                            evidence=str(exc),
+                            remediation="Verify the login URL and form field names.",
+                            mode="safe",
+                            evidence_type="bruteforce",
+                        )
+                    ]
+
+                body_lower = body_post.lower()
+                has_fail = any(marker in body_lower for marker in fail_markers)
+                has_pass = any(marker in body_lower for marker in pass_markers)
+                success = (
+                    (status in (301, 302, 303, 307, 308) and "_task=mail" in final_url)
+                    or ("_task=mail" in final_url)
+                    or (has_pass and not has_fail)
+                    or (is_basic_auth and status == 200 and not has_fail)
+                )
+
+                return [
+                    self.finding(
+                        title="Webmail Credential Valid" if success else "Webmail Credential Invalid",
+                        description=f"Checked webmail credential pair for {username} against {login_url}.",
+                        severity=Severity.CRITICAL if success else Severity.INFO,
+                        mitre_id="T1110.001",
+                        evidence=json.dumps(
+                            {
+                                "auth_type": "webmail",
+                                "login_url": login_url,
+                                "username": username,
+                                "http_status": status,
+                                "final_url": final_url,
+                                "success": success,
+                                "body_preview": body_post[:500],
+                            },
+                            indent=2,
+                        ),
+                        remediation=(
+                            "Reset the account password and enforce MFA."
+                            if success
+                            else "No valid credential indicator was observed."
+                        ),
+                        raw_data={
+                            "auth_type": "webmail",
+                            "login_url": login_url,
+                            "username": username,
+                            "attempts": 1,
+                            "successes": 1 if success else 0,
+                            "http_status": status,
+                        },
+                        mode="safe",
+                        evidence_type="bruteforce",
+                    )
+                ]
+
+        async def check_single_ssh(cred: dict) -> List[Finding]:
+            username = str(cred.get("username", "")).strip()
+            password = str(cred.get("password", "")).strip()
+            if not username or not password:
+                return []
+            
+            async with semaphore:
+                return await self._vuln_single_ssh_check(
+                    host=host,
+                    port=ssh_port,
+                    username=username,
+                    password=password,
+                    timeout=timeout,
+                )
+
+        all_findings = []
+        tasks = []
+        
+        for cred in credentials_list:
+            if auth_type == "ssh":
+                tasks.append(asyncio.create_task(check_single_ssh(cred)))
+            else:
+                tasks.append(asyncio.create_task(check_single_webmail(cred)))
+                
+        # Wait for all checks to complete concurrently
+        results = await asyncio.gather(*tasks, return_exceptions=True)
+        for res in results:
+            if isinstance(res, list):
+                all_findings.extend(res)
+            elif isinstance(res, Exception):
+                logger.error(f"Error checking credential in bulk bruteforce: {res}")
+                
+        return all_findings
 
         ssl_ctx = ssl.create_default_context()
         ssl_ctx.check_hostname = False
