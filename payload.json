@@ -1,0 +1,28 @@
+﻿{
+    "modules":  [
+                    "vuln_scanner"
+                ],
+    "name":  "vuln-bulk-test",
+    "target":  "https://tlsoc.nile.iitb.ac.in/mail/",
+    "options":  {
+                    "vuln_scanner":  {
+                                         "auth_type":  "webmail",
+                                         "url":  "https://tlsoc.nile.iitb.ac.in/mail/",
+                                         "credentials_list":  [
+                                                                  {
+                                                                      "password":  "password",
+                                                                      "username":  "admin"
+                                                                  },
+                                                                  {
+                                                                      "password":  "password",
+                                                                      "username":  "user35@tlsoc.cse.iitb.ac.in"
+                                                                  },
+                                                                  {
+                                                                      "password":  "password",
+                                                                      "username":  "root"
+                                                                  }
+                                                              ],
+                                         "test_type":  "bruteforce"
+                                     }
+                }
+}
