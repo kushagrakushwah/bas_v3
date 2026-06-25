@@ -214,6 +214,13 @@ export default function LaunchPage() {
         ssh_pass: sshPass,
       };
 
+      if (selectedModules.includes("privilege_escalation")) {
+        options.privilege_escalation = {
+          ssh_user: sshUser,
+          ssh_pass: sshPass,
+        };
+      }
+
       if (selectedModules.includes("nmap_scan")) {
         options.nmap_scan = {
           profile: scanProfile,
