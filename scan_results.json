@@ -1,0 +1,2404 @@
+﻿{
+  "id": "4bc56c17-64b9-4248-85f6-be9acde1c9f7",
+  "name": "OWASP Juice Shop Full Scan",
+  "target": "http://172.19.0.6:3000",
+  "modules": [
+    "owasp_web"
+  ],
+  "status": "completed",
+  "module_results": [
+    {
+      "module": "owasp_web",
+      "status": "success",
+      "findings": [
+        {
+          "id": "a8bf5a59-45bb-4458-b258-c56d9cefea45",
+          "title": "Missing Security Headers",
+          "description": "Missing: Content-Security-Policy, Strict-Transport-Security, Referrer-Policy, Permissions-Policy",
+          "severity": "medium",
+          "mitre_id": "T1190",
+          "evidence": "Missing headers: ['Content-Security-Policy', 'Strict-Transport-Security', 'Referrer-Policy', 'Permissions-Policy']",
+          "remediation": "Add security headers to responses.",
+          "raw_data": null,
+          "timestamp": "2026-06-25T07:30:29.748034"
+        },
+        {
+          "id": "e0a30a07-01a5-4827-8d48-941af4f677a6",
+          "title": "HTTP Only (No TLS)",
+          "description": "Service served over plain HTTP.",
+          "severity": "high",
+          "mitre_id": "T1557",
+          "evidence": "URL: http://172.19.0.6:3000",
+          "remediation": "Enforce HTTPS.",
+          "raw_data": null,
+          "timestamp": "2026-06-25T07:30:29.748062"
+        },
+        {
+          "id": "a600b3b1-32c8-43de-8f1f-b5961928b971",
+          "title": "CMD Vulnerability in q",
+          "description": "Parameter 'q' is vulnerable to CMD.",
+          "severity": "critical",
+          "mitre_id": "T1203",
+          "evidence": "Payload: ; ls\nURL: http://172.19.0.6:3000/main.js?q=...",
+          "remediation": "Avoid system calls; use safe APIs.",
+          "raw_data": {
+            "param": "q",
+            "payload": "; ls",
+            "url": "http://172.19.0.6:3000/main.js"
+          },
+          "timestamp": "2026-06-25T07:30:46.457237"
+        },
+        {
+          "id": "5f153aa3-cf84-4ee4-8d51-e499f610c468",
+          "title": "CMD Vulnerability in id",
+          "description": "Parameter 'id' is vulnerable to CMD.",
+          "severity": "critical",
+          "mitre_id": "T1203",
+          "evidence": "Payload: ; ls\nURL: http://172.19.0.6:3000/main.js?id=...",
+          "remediation": "Avoid system calls; use safe APIs.",
+          "raw_data": {
+            "param": "id",
+            "payload": "; ls",
+            "url": "http://172.19.0.6:3000/main.js"
+          },
+          "timestamp": "2026-06-25T07:30:46.457466"
+        },
+        {
+          "id": "516b7ef3-c6e0-4f33-b368-64bd7478604d",
+          "title": "CMD Vulnerability in search",
+          "description": "Parameter 'search' is vulnerable to CMD.",
+          "severity": "critical",
+          "mitre_id": "T1203",
+          "evidence": "Payload: ; ls\nURL: http://172.19.0.6:3000/main.js?search=...",
+          "remediation": "Avoid system calls; use safe APIs.",
+          "raw_data": {
+            "param": "search",
+            "payload": "; ls",
+            "url": "http://172.19.0.6:3000/main.js"
+          },
+          "timestamp": "2026-06-25T07:30:46.455739"
+        },
+        {
+          "id": "e8e9f4af-6251-4e76-b0fb-439e1df926c7",
+          "title": "CMD Vulnerability in user",
+          "description": "Parameter 'user' is vulnerable to CMD.",
+          "severity": "critical",
+          "mitre_id": "T1203",
+          "evidence": "Payload: ; ls\nURL: http://172.19.0.6:3000/main.js?user=...",
+          "remediation": "Avoid system calls; use safe APIs.",
+          "raw_data": {
+            "param": "user",
+            "payload": "; ls",
+            "url": "http://172.19.0.6:3000/main.js"
+          },
+          "timestamp": "2026-06-25T07:30:46.476236"
+        },
+        {
+          "id": "0eba855c-e1ff-4444-a925-e0c6160a6aa1",
+          "title": "CMD Vulnerability in page",
+          "description": "Parameter 'page' is vulnerable to CMD.",
+          "severity": "critical",
+          "mitre_id": "T1203",
+          "evidence": "Payload: ; ls\nURL: http://172.19.0.6:3000/main.js?page=...",
+          "remediation": "Avoid system calls; use safe APIs.",
+          "raw_data": {
+            "param": "page",
+            "payload": "; ls",
+            "url": "http://172.19.0.6:3000/main.js"
+          },
+          "timestamp": "2026-06-25T07:30:46.457663"
+        },
+        {
+          "id": "18bc0375-5907-494e-ab42-a1362748dc63",
+          "title": "CMD Vulnerability in file",
+          "description": "Parameter 'file' is vulnerable to CMD.",
+          "severity": "critical",
+          "mitre_id": "T1203",
+          "evidence": "Payload: ; ls\nURL: http://172.19.0.6:3000/main.js?file=...",
+          "remediation": "Avoid system calls; use safe APIs.",
+          "raw_data": {
+            "param": "file",
+            "payload": "; ls",
+            "url": "http://172.19.0.6:3000/main.js"
+          },
+          "timestamp": "2026-06-25T07:30:46.534037"
+        },
+        {
+          "id": "bc079b37-fdb5-4c1b-b3a7-3c20316935c2",
+          "title": "CMD Vulnerability in path",
+          "description": "Parameter 'path' is vulnerable to CMD.",
+          "severity": "critical",
+          "mitre_id": "T1203",
+          "evidence": "Payload: ; ls\nURL: http://172.19.0.6:3000/main.js?path=...",
+          "remediation": "Avoid system calls; use safe APIs.",
+          "raw_data": {
+            "param": "path",
+            "payload": "; ls",
+            "url": "http://172.19.0.6:3000/main.js"
+          },
+          "timestamp": "2026-06-25T07:30:46.533574"
+        },
+        {
+          "id": "bb73ec52-7a06-4eee-ab25-0a1395c5b525",
+          "title": "CMD Vulnerability in input",
+          "description": "Parameter 'input' is vulnerable to CMD.",
+          "severity": "critical",
+          "mitre_id": "T1203",
+          "evidence": "Payload: ; ls\nURL: http://172.19.0.6:3000/main.js?input=...",
+          "remediation": "Avoid system calls; use safe APIs.",
+          "raw_data": {
+            "param": "input",
+            "payload": "; ls",
+            "url": "http://172.19.0.6:3000/main.js"
+          },
+          "timestamp": "2026-06-25T07:30:46.504363"
+        },
+        {
+          "id": "48fb09f1-1177-4760-85c0-f5abe30d6bf2",
+          "title": "CMD Vulnerability in query",
+          "description": "Parameter 'query' is vulnerable to CMD.",
+          "severity": "critical",
+          "mitre_id": "T1203",
+          "evidence": "Payload: ; ls\nURL: http://172.19.0.6:3000/main.js?query=...",
+          "remediation": "Avoid system calls; use safe APIs.",
+          "raw_data": {
+            "param": "query",
+            "payload": "; ls",
+            "url": "http://172.19.0.6:3000/main.js"
+          },
+          "timestamp": "2026-06-25T07:30:46.582952"
+        },
+        {
+          "id": "78e9260a-ba65-4e89-966e-1171c3a390e5",
+          "title": "CMD Vulnerability in name",
+          "description": "Parameter 'name' is vulnerable to CMD.",
+          "severity": "critical",
+          "mitre_id": "T1203",
+          "evidence": "Payload: ; ls\nURL: http://172.19.0.6:3000/main.js?name=...",
+          "remediation": "Avoid system calls; use safe APIs.",
+          "raw_data": {
+            "param": "name",
+            "payload": "; ls",
+            "url": "http://172.19.0.6:3000/main.js"
+          },
+          "timestamp": "2026-06-25T07:30:46.567823"
+        },
+        {
+          "id": "d868e53d-ceec-40cf-8d6a-e229bb27152d",
+          "title": "CMD Vulnerability in q",
+          "description": "Parameter 'q' is vulnerable to CMD.",
+          "severity": "critical",
+          "mitre_id": "T1203",
+          "evidence": "Payload: ; ls\nURL: http://172.19.0.6:3000/chunk-NWDAIMF4.js?q=...",
+          "remediation": "Avoid system calls; use safe APIs.",
+          "raw_data": {
+            "param": "q",
+            "payload": "; ls",
+            "url": "http://172.19.0.6:3000/chunk-NWDAIMF4.js"
+          },
+          "timestamp": "2026-06-25T07:30:46.645855"
+        },
+        {
+          "id": "be2541b2-e912-4176-bcf8-1e583613fab1",
+          "title": "CMD Vulnerability in id",
+          "description": "Parameter 'id' is vulnerable to CMD.",
+          "severity": "critical",
+          "mitre_id": "T1203",
+          "evidence": "Payload: ; ls\nURL: http://172.19.0.6:3000/chunk-NWDAIMF4.js?id=...",
+          "remediation": "Avoid system calls; use safe APIs.",
+          "raw_data": {
+            "param": "id",
+            "payload": "; ls",
+            "url": "http://172.19.0.6:3000/chunk-NWDAIMF4.js"
+          },
+          "timestamp": "2026-06-25T07:30:46.676860"
+        },
+        {
+          "id": "23e53755-2d97-4fdc-af58-52a8157159aa",
+          "title": "CMD Vulnerability in search",
+          "description": "Parameter 'search' is vulnerable to CMD.",
+          "severity": "critical",
+          "mitre_id": "T1203",
+          "evidence": "Payload: ; ls\nURL: http://172.19.0.6:3000/chunk-NWDAIMF4.js?search=...",
+          "remediation": "Avoid system calls; use safe APIs.",
+          "raw_data": {
+            "param": "search",
+            "payload": "; ls",
+            "url": "http://172.19.0.6:3000/chunk-NWDAIMF4.js"
+          },
+          "timestamp": "2026-06-25T07:30:46.671235"
+        },
+        {
+          "id": "96e93973-4279-4f25-acc6-ee15dcc08cfb",
+          "title": "CMD Vulnerability in user",
+          "description": "Parameter 'user' is vulnerable to CMD.",
+          "severity": "critical",
+          "mitre_id": "T1203",
+          "evidence": "Payload: ; ls\nURL: http://172.19.0.6:3000/chunk-NWDAIMF4.js?user=...",
+          "remediation": "Avoid system calls; use safe APIs.",
+          "raw_data": {
+            "param": "user",
+            "payload": "; ls",
+            "url": "http://172.19.0.6:3000/chunk-NWDAIMF4.js"
+          },
+          "timestamp": "2026-06-25T07:30:46.662830"
+        },
+        {
+          "id": "f277c5cb-4022-4500-b6b0-1493fc147286",
+          "title": "CMD Vulnerability in page",
+          "description": "Parameter 'page' is vulnerable to CMD.",
+          "severity": "critical",
+          "mitre_id": "T1203",
+          "evidence": "Payload: ; ls\nURL: http://172.19.0.6:3000/chunk-NWDAIMF4.js?page=...",
+          "remediation": "Avoid system calls; use safe APIs.",
+          "raw_data": {
+            "param": "page",
+            "payload": "; ls",
+            "url": "http://172.19.0.6:3000/chunk-NWDAIMF4.js"
+          },
+          "timestamp": "2026-06-25T07:30:46.689653"
+        },
+        {
+          "id": "167baebf-6535-4670-a9be-9597c69431aa",
+          "title": "CMD Vulnerability in file",
+          "description": "Parameter 'file' is vulnerable to CMD.",
+          "severity": "critical",
+          "mitre_id": "T1203",
+          "evidence": "Payload: ; ls\nURL: http://172.19.0.6:3000/chunk-NWDAIMF4.js?file=...",
+          "remediation": "Avoid system calls; use safe APIs.",
+          "raw_data": {
+            "param": "file",
+            "payload": "; ls",
+            "url": "http://172.19.0.6:3000/chunk-NWDAIMF4.js"
+          },
+          "timestamp": "2026-06-25T07:30:46.697278"
+        },
+        {
+          "id": "355d06a9-da34-43f7-b343-3f1521acbe79",
+          "title": "CMD Vulnerability in path",
+          "description": "Parameter 'path' is vulnerable to CMD.",
+          "severity": "critical",
+          "mitre_id": "T1203",
+          "evidence": "Payload: ; ls\nURL: http://172.19.0.6:3000/chunk-NWDAIMF4.js?path=...",
+          "remediation": "Avoid system calls; use safe APIs.",
+          "raw_data": {
+            "param": "path",
+            "payload": "; ls",
+            "url": "http://172.19.0.6:3000/chunk-NWDAIMF4.js"
+          },
+          "timestamp": "2026-06-25T07:30:46.683411"
+        },
+        {
+          "id": "3c516cb2-e24e-4466-8858-57c8754cffbe",
+          "title": "CMD Vulnerability in input",
+          "description": "Parameter 'input' is vulnerable to CMD.",
+          "severity": "critical",
+          "mitre_id": "T1203",
+          "evidence": "Payload: ; ls\nURL: http://172.19.0.6:3000/chunk-NWDAIMF4.js?input=...",
+          "remediation": "Avoid system calls; use safe APIs.",
+          "raw_data": {
+            "param": "input",
+            "payload": "; ls",
+            "url": "http://172.19.0.6:3000/chunk-NWDAIMF4.js"
+          },
+          "timestamp": "2026-06-25T07:30:46.677432"
+        },
+        {
+          "id": "6e97d92d-1227-4181-9173-1ecd6e1cd096",
+          "title": "CMD Vulnerability in query",
+          "description": "Parameter 'query' is vulnerable to CMD.",
+          "severity": "critical",
+          "mitre_id": "T1203",
+          "evidence": "Payload: ; ls\nURL: http://172.19.0.6:3000/chunk-NWDAIMF4.js?query=...",
+          "remediation": "Avoid system calls; use safe APIs.",
+          "raw_data": {
+            "param": "query",
+            "payload": "; ls",
+            "url": "http://172.19.0.6:3000/chunk-NWDAIMF4.js"
+          },
+          "timestamp": "2026-06-25T07:30:46.703566"
+        },
+        {
+          "id": "f2deadf4-ac44-40c1-aeb8-fe84b910eff5",
+          "title": "CMD Vulnerability in name",
+          "description": "Parameter 'name' is vulnerable to CMD.",
+          "severity": "critical",
+          "mitre_id": "T1203",
+          "evidence": "Payload: ; ls\nURL: http://172.19.0.6:3000/chunk-NWDAIMF4.js?name=...",
+          "remediation": "Avoid system calls; use safe APIs.",
+          "raw_data": {
+            "param": "name",
+            "payload": "; ls",
+            "url": "http://172.19.0.6:3000/chunk-NWDAIMF4.js"
+          },
+          "timestamp": "2026-06-25T07:30:46.707554"
+        },
+        {
+          "id": "c776305e-2ecb-4f80-91a6-d2c209a9ef7f",
+          "title": "XSS Vulnerability in q",
+          "description": "Parameter 'q' is vulnerable to XSS.",
+          "severity": "high",
+          "mitre_id": "T1059.007",
+          "evidence": "Payload: javascript:alert(1)\nURL: http://172.19.0.6:3000/api?q=...",
+          "remediation": "Encode all user output; implement CSP.",
+          "raw_data": {
+            "param": "q",
+            "payload": "javascript:alert(1)",
+            "url": "http://172.19.0.6:3000/api"
+          },
+          "timestamp": "2026-06-25T07:30:31.881055"
+        },
+        {
+          "id": "f511efaa-8c95-443a-ac09-7b120fa7cd51",
+          "title": "XSS Vulnerability in id",
+          "description": "Parameter 'id' is vulnerable to XSS.",
+          "severity": "high",
+          "mitre_id": "T1059.007",
+          "evidence": "Payload: javascript:alert(1)\nURL: http://172.19.0.6:3000/api?id=...",
+          "remediation": "Encode all user output; implement CSP.",
+          "raw_data": {
+            "param": "id",
+            "payload": "javascript:alert(1)",
+            "url": "http://172.19.0.6:3000/api"
+          },
+          "timestamp": "2026-06-25T07:30:31.903208"
+        },
+        {
+          "id": "325ac9a4-d163-4006-9531-0f9e42731d3e",
+          "title": "XSS Vulnerability in search",
+          "description": "Parameter 'search' is vulnerable to XSS.",
+          "severity": "high",
+          "mitre_id": "T1059.007",
+          "evidence": "Payload: javascript:alert(1)\nURL: http://172.19.0.6:3000/api?search=...",
+          "remediation": "Encode all user output; implement CSP.",
+          "raw_data": {
+            "param": "search",
+            "payload": "javascript:alert(1)",
+            "url": "http://172.19.0.6:3000/api"
+          },
+          "timestamp": "2026-06-25T07:30:31.928792"
+        },
+        {
+          "id": "c8ddd81a-6e62-4dcc-9d5e-c0dbe944bed5",
+          "title": "XSS Vulnerability in user",
+          "description": "Parameter 'user' is vulnerable to XSS.",
+          "severity": "high",
+          "mitre_id": "T1059.007",
+          "evidence": "Payload: javascript:alert(1)\nURL: http://172.19.0.6:3000/api?user=...",
+          "remediation": "Encode all user output; implement CSP.",
+          "raw_data": {
+            "param": "user",
+            "payload": "javascript:alert(1)",
+            "url": "http://172.19.0.6:3000/api"
+          },
+          "timestamp": "2026-06-25T07:30:31.929045"
+        },
+        {
+          "id": "827ce6fe-4fb2-405b-8e1d-b1e483dc8fc6",
+          "title": "XSS Vulnerability in page",
+          "description": "Parameter 'page' is vulnerable to XSS.",
+          "severity": "high",
+          "mitre_id": "T1059.007",
+          "evidence": "Payload: javascript:alert(1)\nURL: http://172.19.0.6:3000/api?page=...",
+          "remediation": "Encode all user output; implement CSP.",
+          "raw_data": {
+            "param": "page",
+            "payload": "javascript:alert(1)",
+            "url": "http://172.19.0.6:3000/api"
+          },
+          "timestamp": "2026-06-25T07:30:31.960632"
+        },
+        {
+          "id": "857ac668-19d6-474e-9899-5455ca520b11",
+          "title": "XSS Vulnerability in file",
+          "description": "Parameter 'file' is vulnerable to XSS.",
+          "severity": "high",
+          "mitre_id": "T1059.007",
+          "evidence": "Payload: javascript:alert(1)\nURL: http://172.19.0.6:3000/api?file=...",
+          "remediation": "Encode all user output; implement CSP.",
+          "raw_data": {
+            "param": "file",
+            "payload": "javascript:alert(1)",
+            "url": "http://172.19.0.6:3000/api"
+          },
+          "timestamp": "2026-06-25T07:30:31.960945"
+        },
+        {
+          "id": "d6c4140a-6fc8-4395-ab1d-ee4be4f7c37f",
+          "title": "XSS Vulnerability in path",
+          "description": "Parameter 'path' is vulnerable to XSS.",
+          "severity": "high",
+          "mitre_id": "T1059.007",
+          "evidence": "Payload: javascript:alert(1)\nURL: http://172.19.0.6:3000/api?path=...",
+          "remediation": "Encode all user output; implement CSP.",
+          "raw_data": {
+            "param": "path",
+            "payload": "javascript:alert(1)",
+            "url": "http://172.19.0.6:3000/api"
+          },
+          "timestamp": "2026-06-25T07:30:31.978444"
+        },
+        {
+          "id": "aab9ff36-38db-4526-ae75-96fffb6c74e8",
+          "title": "XSS Vulnerability in input",
+          "description": "Parameter 'input' is vulnerable to XSS.",
+          "severity": "high",
+          "mitre_id": "T1059.007",
+          "evidence": "Payload: javascript:alert(1)\nURL: http://172.19.0.6:3000/api?input=...",
+          "remediation": "Encode all user output; implement CSP.",
+          "raw_data": {
+            "param": "input",
+            "payload": "javascript:alert(1)",
+            "url": "http://172.19.0.6:3000/api"
+          },
+          "timestamp": "2026-06-25T07:30:31.978733"
+        },
+        {
+          "id": "4a33d000-d301-4fba-b86e-8dd26629e35d",
+          "title": "XSS Vulnerability in query",
+          "description": "Parameter 'query' is vulnerable to XSS.",
+          "severity": "high",
+          "mitre_id": "T1059.007",
+          "evidence": "Payload: javascript:alert(1)\nURL: http://172.19.0.6:3000/api?query=...",
+          "remediation": "Encode all user output; implement CSP.",
+          "raw_data": {
+            "param": "query",
+            "payload": "javascript:alert(1)",
+            "url": "http://172.19.0.6:3000/api"
+          },
+          "timestamp": "2026-06-25T07:30:32.009597"
+        },
+        {
+          "id": "bd357e10-b432-48a5-8dc1-9340ad62a1f8",
+          "title": "XSS Vulnerability in name",
+          "description": "Parameter 'name' is vulnerable to XSS.",
+          "severity": "high",
+          "mitre_id": "T1059.007",
+          "evidence": "Payload: javascript:alert(1)\nURL: http://172.19.0.6:3000/api?name=...",
+          "remediation": "Encode all user output; implement CSP.",
+          "raw_data": {
+            "param": "name",
+            "payload": "javascript:alert(1)",
+            "url": "http://172.19.0.6:3000/api"
+          },
+          "timestamp": "2026-06-25T07:30:32.038242"
+        },
+        {
+          "id": "a0212899-23ac-4041-af08-3aa05f970375",
+          "title": "CMD Vulnerability in q",
+          "description": "Parameter 'q' is vulnerable to CMD.",
+          "severity": "critical",
+          "mitre_id": "T1203",
+          "evidence": "Payload: ; ls\nURL: http://172.19.0.6:3000/chunk-DYXK4NW4.js?q=...",
+          "remediation": "Avoid system calls; use safe APIs.",
+          "raw_data": {
+            "param": "q",
+            "payload": "; ls",
+            "url": "http://172.19.0.6:3000/chunk-DYXK4NW4.js"
+          },
+          "timestamp": "2026-06-25T07:30:47.001796"
+        },
+        {
+          "id": "dec41f4b-b02e-4f91-95a7-02c0605cd1ef",
+          "title": "CMD Vulnerability in id",
+          "description": "Parameter 'id' is vulnerable to CMD.",
+          "severity": "critical",
+          "mitre_id": "T1203",
+          "evidence": "Payload: ; ls\nURL: http://172.19.0.6:3000/chunk-DYXK4NW4.js?id=...",
+          "remediation": "Avoid system calls; use safe APIs.",
+          "raw_data": {
+            "param": "id",
+            "payload": "; ls",
+            "url": "http://172.19.0.6:3000/chunk-DYXK4NW4.js"
+          },
+          "timestamp": "2026-06-25T07:30:47.026588"
+        },
+        {
+          "id": "cdd7e48c-9b6a-42b4-b6ce-47b94db07e2f",
+          "title": "CMD Vulnerability in search",
+          "description": "Parameter 'search' is vulnerable to CMD.",
+          "severity": "critical",
+          "mitre_id": "T1203",
+          "evidence": "Payload: ; ls\nURL: http://172.19.0.6:3000/chunk-DYXK4NW4.js?search=...",
+          "remediation": "Avoid system calls; use safe APIs.",
+          "raw_data": {
+            "param": "search",
+            "payload": "; ls",
+            "url": "http://172.19.0.6:3000/chunk-DYXK4NW4.js"
+          },
+          "timestamp": "2026-06-25T07:30:47.016824"
+        },
+        {
+          "id": "a805c2c1-dca1-4065-be8d-cb271243a445",
+          "title": "CMD Vulnerability in user",
+          "description": "Parameter 'user' is vulnerable to CMD.",
+          "severity": "critical",
+          "mitre_id": "T1203",
+          "evidence": "Payload: ; ls\nURL: http://172.19.0.6:3000/chunk-DYXK4NW4.js?user=...",
+          "remediation": "Avoid system calls; use safe APIs.",
+          "raw_data": {
+            "param": "user",
+            "payload": "; ls",
+            "url": "http://172.19.0.6:3000/chunk-DYXK4NW4.js"
+          },
+          "timestamp": "2026-06-25T07:30:47.023330"
+        },
+        {
+          "id": "1ce75322-dcea-42d2-9b4f-0ce546c66a6e",
+          "title": "CMD Vulnerability in page",
+          "description": "Parameter 'page' is vulnerable to CMD.",
+          "severity": "critical",
+          "mitre_id": "T1203",
+          "evidence": "Payload: ; ls\nURL: http://172.19.0.6:3000/chunk-DYXK4NW4.js?page=...",
+          "remediation": "Avoid system calls; use safe APIs.",
+          "raw_data": {
+            "param": "page",
+            "payload": "; ls",
+            "url": "http://172.19.0.6:3000/chunk-DYXK4NW4.js"
+          },
+          "timestamp": "2026-06-25T07:30:47.052463"
+        },
+        {
+          "id": "0ec15c00-7bbe-4c01-9f28-43cead61acce",
+          "title": "CMD Vulnerability in file",
+          "description": "Parameter 'file' is vulnerable to CMD.",
+          "severity": "critical",
+          "mitre_id": "T1203",
+          "evidence": "Payload: ; ls\nURL: http://172.19.0.6:3000/chunk-DYXK4NW4.js?file=...",
+          "remediation": "Avoid system calls; use safe APIs.",
+          "raw_data": {
+            "param": "file",
+            "payload": "; ls",
+            "url": "http://172.19.0.6:3000/chunk-DYXK4NW4.js"
+          },
+          "timestamp": "2026-06-25T07:30:47.042203"
+        },
+        {
+          "id": "86d71ebd-f246-4779-96d7-57fcee6373f4",
+          "title": "CMD Vulnerability in path",
+          "description": "Parameter 'path' is vulnerable to CMD.",
+          "severity": "critical",
+          "mitre_id": "T1203",
+          "evidence": "Payload: ; ls\nURL: http://172.19.0.6:3000/chunk-DYXK4NW4.js?path=...",
+          "remediation": "Avoid system calls; use safe APIs.",
+          "raw_data": {
+            "param": "path",
+            "payload": "; ls",
+            "url": "http://172.19.0.6:3000/chunk-DYXK4NW4.js"
+          },
+          "timestamp": "2026-06-25T07:30:47.040589"
+        },
+        {
+          "id": "8e54ee8c-257f-4743-832a-b537c78e7b5a",
+          "title": "CMD Vulnerability in input",
+          "description": "Parameter 'input' is vulnerable to CMD.",
+          "severity": "critical",
+          "mitre_id": "T1203",
+          "evidence": "Payload: ; ls\nURL: http://172.19.0.6:3000/chunk-DYXK4NW4.js?input=...",
+          "remediation": "Avoid system calls; use safe APIs.",
+          "raw_data": {
+            "param": "input",
+            "payload": "; ls",
+            "url": "http://172.19.0.6:3000/chunk-DYXK4NW4.js"
+          },
+          "timestamp": "2026-06-25T07:30:47.057066"
+        },
+        {
+          "id": "b7ba9cb9-a59a-4572-8581-5bd1752635ca",
+          "title": "CMD Vulnerability in query",
+          "description": "Parameter 'query' is vulnerable to CMD.",
+          "severity": "critical",
+          "mitre_id": "T1203",
+          "evidence": "Payload: ; ls\nURL: http://172.19.0.6:3000/chunk-DYXK4NW4.js?query=...",
+          "remediation": "Avoid system calls; use safe APIs.",
+          "raw_data": {
+            "param": "query",
+            "payload": "; ls",
+            "url": "http://172.19.0.6:3000/chunk-DYXK4NW4.js"
+          },
+          "timestamp": "2026-06-25T07:30:47.057516"
+        },
+        {
+          "id": "d824c2e7-bbfe-4b62-852a-f5648012b9ea",
+          "title": "CMD Vulnerability in name",
+          "description": "Parameter 'name' is vulnerable to CMD.",
+          "severity": "critical",
+          "mitre_id": "T1203",
+          "evidence": "Payload: ; ls\nURL: http://172.19.0.6:3000/chunk-DYXK4NW4.js?name=...",
+          "remediation": "Avoid system calls; use safe APIs.",
+          "raw_data": {
+            "param": "name",
+            "payload": "; ls",
+            "url": "http://172.19.0.6:3000/chunk-DYXK4NW4.js"
+          },
+          "timestamp": "2026-06-25T07:30:47.033961"
+        },
+        {
+          "id": "df282a04-27be-4395-a097-15a1ddf11147",
+          "title": "XSS Vulnerability in q",
+          "description": "Parameter 'q' is vulnerable to XSS.",
+          "severity": "high",
+          "mitre_id": "T1059.007",
+          "evidence": "Payload: javascript:alert(1)\nURL: http://172.19.0.6:3000/rest/web3?q=...",
+          "remediation": "Encode all user output; implement CSP.",
+          "raw_data": {
+            "param": "q",
+            "payload": "javascript:alert(1)",
+            "url": "http://172.19.0.6:3000/rest/web3"
+          },
+          "timestamp": "2026-06-25T07:30:33.863880"
+        },
+        {
+          "id": "890d2eb5-163a-4af1-b866-b38cbd79eb39",
+          "title": "XSS Vulnerability in id",
+          "description": "Parameter 'id' is vulnerable to XSS.",
+          "severity": "high",
+          "mitre_id": "T1059.007",
+          "evidence": "Payload: javascript:alert(1)\nURL: http://172.19.0.6:3000/rest/web3?id=...",
+          "remediation": "Encode all user output; implement CSP.",
+          "raw_data": {
+            "param": "id",
+            "payload": "javascript:alert(1)",
+            "url": "http://172.19.0.6:3000/rest/web3"
+          },
+          "timestamp": "2026-06-25T07:30:33.873506"
+        },
+        {
+          "id": "1e084fc2-58e3-4b94-a69b-5216de6803a0",
+          "title": "XSS Vulnerability in search",
+          "description": "Parameter 'search' is vulnerable to XSS.",
+          "severity": "high",
+          "mitre_id": "T1059.007",
+          "evidence": "Payload: javascript:alert(1)\nURL: http://172.19.0.6:3000/rest/web3?search=...",
+          "remediation": "Encode all user output; implement CSP.",
+          "raw_data": {
+            "param": "search",
+            "payload": "javascript:alert(1)",
+            "url": "http://172.19.0.6:3000/rest/web3"
+          },
+          "timestamp": "2026-06-25T07:30:33.886971"
+        },
+        {
+          "id": "87f16dec-7e6f-40e5-92e7-674db1fa1492",
+          "title": "XSS Vulnerability in user",
+          "description": "Parameter 'user' is vulnerable to XSS.",
+          "severity": "high",
+          "mitre_id": "T1059.007",
+          "evidence": "Payload: javascript:alert(1)\nURL: http://172.19.0.6:3000/rest/web3?user=...",
+          "remediation": "Encode all user output; implement CSP.",
+          "raw_data": {
+            "param": "user",
+            "payload": "javascript:alert(1)",
+            "url": "http://172.19.0.6:3000/rest/web3"
+          },
+          "timestamp": "2026-06-25T07:30:33.897120"
+        },
+        {
+          "id": "6dcf4d4b-ce0f-4653-bd39-7a8d1d51b843",
+          "title": "XSS Vulnerability in page",
+          "description": "Parameter 'page' is vulnerable to XSS.",
+          "severity": "high",
+          "mitre_id": "T1059.007",
+          "evidence": "Payload: javascript:alert(1)\nURL: http://172.19.0.6:3000/rest/web3?page=...",
+          "remediation": "Encode all user output; implement CSP.",
+          "raw_data": {
+            "param": "page",
+            "payload": "javascript:alert(1)",
+            "url": "http://172.19.0.6:3000/rest/web3"
+          },
+          "timestamp": "2026-06-25T07:30:33.921470"
+        },
+        {
+          "id": "3a927273-86cb-4e49-9dae-c43f34746966",
+          "title": "XSS Vulnerability in file",
+          "description": "Parameter 'file' is vulnerable to XSS.",
+          "severity": "high",
+          "mitre_id": "T1059.007",
+          "evidence": "Payload: javascript:alert(1)\nURL: http://172.19.0.6:3000/rest/web3?file=...",
+          "remediation": "Encode all user output; implement CSP.",
+          "raw_data": {
+            "param": "file",
+            "payload": "javascript:alert(1)",
+            "url": "http://172.19.0.6:3000/rest/web3"
+          },
+          "timestamp": "2026-06-25T07:30:33.921817"
+        },
+        {
+          "id": "3d8815b5-f463-43e7-baed-eb6e29d0daa7",
+          "title": "XSS Vulnerability in path",
+          "description": "Parameter 'path' is vulnerable to XSS.",
+          "severity": "high",
+          "mitre_id": "T1059.007",
+          "evidence": "Payload: javascript:alert(1)\nURL: http://172.19.0.6:3000/rest/web3?path=...",
+          "remediation": "Encode all user output; implement CSP.",
+          "raw_data": {
+            "param": "path",
+            "payload": "javascript:alert(1)",
+            "url": "http://172.19.0.6:3000/rest/web3"
+          },
+          "timestamp": "2026-06-25T07:30:33.929622"
+        },
+        {
+          "id": "f98ed634-74c7-40c1-899d-a101dff8e7e1",
+          "title": "XSS Vulnerability in input",
+          "description": "Parameter 'input' is vulnerable to XSS.",
+          "severity": "high",
+          "mitre_id": "T1059.007",
+          "evidence": "Payload: javascript:alert(1)\nURL: http://172.19.0.6:3000/rest/web3?input=...",
+          "remediation": "Encode all user output; implement CSP.",
+          "raw_data": {
+            "param": "input",
+            "payload": "javascript:alert(1)",
+            "url": "http://172.19.0.6:3000/rest/web3"
+          },
+          "timestamp": "2026-06-25T07:30:33.949263"
+        },
+        {
+          "id": "411bf569-4f73-45d4-b974-a7e5b5c827cf",
+          "title": "XSS Vulnerability in query",
+          "description": "Parameter 'query' is vulnerable to XSS.",
+          "severity": "high",
+          "mitre_id": "T1059.007",
+          "evidence": "Payload: javascript:alert(1)\nURL: http://172.19.0.6:3000/rest/web3?query=...",
+          "remediation": "Encode all user output; implement CSP.",
+          "raw_data": {
+            "param": "query",
+            "payload": "javascript:alert(1)",
+            "url": "http://172.19.0.6:3000/rest/web3"
+          },
+          "timestamp": "2026-06-25T07:30:33.949563"
+        },
+        {
+          "id": "0158d5df-59f9-4ebe-a13d-133b596ba040",
+          "title": "XSS Vulnerability in name",
+          "description": "Parameter 'name' is vulnerable to XSS.",
+          "severity": "high",
+          "mitre_id": "T1059.007",
+          "evidence": "Payload: javascript:alert(1)\nURL: http://172.19.0.6:3000/rest/web3?name=...",
+          "remediation": "Encode all user output; implement CSP.",
+          "raw_data": {
+            "param": "name",
+            "payload": "javascript:alert(1)",
+            "url": "http://172.19.0.6:3000/rest/web3"
+          },
+          "timestamp": "2026-06-25T07:30:33.965371"
+        },
+        {
+          "id": "73f6f145-21cc-49a7-ae8f-401206d2067e",
+          "title": "XSS Vulnerability in q",
+          "description": "Parameter 'q' is vulnerable to XSS.",
+          "severity": "high",
+          "mitre_id": "T1059.007",
+          "evidence": "Payload: javascript:alert(1)\nURL: http://172.19.0.6:3000/rest?q=...",
+          "remediation": "Encode all user output; implement CSP.",
+          "raw_data": {
+            "param": "q",
+            "payload": "javascript:alert(1)",
+            "url": "http://172.19.0.6:3000/rest"
+          },
+          "timestamp": "2026-06-25T07:30:33.988921"
+        },
+        {
+          "id": "41d27912-5b5d-4964-bd96-cf3a3fbd7d7d",
+          "title": "XSS Vulnerability in id",
+          "description": "Parameter 'id' is vulnerable to XSS.",
+          "severity": "high",
+          "mitre_id": "T1059.007",
+          "evidence": "Payload: javascript:alert(1)\nURL: http://172.19.0.6:3000/rest?id=...",
+          "remediation": "Encode all user output; implement CSP.",
+          "raw_data": {
+            "param": "id",
+            "payload": "javascript:alert(1)",
+            "url": "http://172.19.0.6:3000/rest"
+          },
+          "timestamp": "2026-06-25T07:30:34.000187"
+        },
+        {
+          "id": "a9078184-ca2a-4c62-9cbf-b2c372078c6a",
+          "title": "XSS Vulnerability in search",
+          "description": "Parameter 'search' is vulnerable to XSS.",
+          "severity": "high",
+          "mitre_id": "T1059.007",
+          "evidence": "Payload: javascript:alert(1)\nURL: http://172.19.0.6:3000/rest?search=...",
+          "remediation": "Encode all user output; implement CSP.",
+          "raw_data": {
+            "param": "search",
+            "payload": "javascript:alert(1)",
+            "url": "http://172.19.0.6:3000/rest"
+          },
+          "timestamp": "2026-06-25T07:30:34.000438"
+        },
+        {
+          "id": "d805bf4f-89aa-4feb-b9c9-35597f626449",
+          "title": "XSS Vulnerability in user",
+          "description": "Parameter 'user' is vulnerable to XSS.",
+          "severity": "high",
+          "mitre_id": "T1059.007",
+          "evidence": "Payload: javascript:alert(1)\nURL: http://172.19.0.6:3000/rest?user=...",
+          "remediation": "Encode all user output; implement CSP.",
+          "raw_data": {
+            "param": "user",
+            "payload": "javascript:alert(1)",
+            "url": "http://172.19.0.6:3000/rest"
+          },
+          "timestamp": "2026-06-25T07:30:34.010925"
+        },
+        {
+          "id": "4a2dca24-d57f-4379-a0ee-94da06583042",
+          "title": "XSS Vulnerability in page",
+          "description": "Parameter 'page' is vulnerable to XSS.",
+          "severity": "high",
+          "mitre_id": "T1059.007",
+          "evidence": "Payload: javascript:alert(1)\nURL: http://172.19.0.6:3000/rest?page=...",
+          "remediation": "Encode all user output; implement CSP.",
+          "raw_data": {
+            "param": "page",
+            "payload": "javascript:alert(1)",
+            "url": "http://172.19.0.6:3000/rest"
+          },
+          "timestamp": "2026-06-25T07:30:34.025602"
+        },
+        {
+          "id": "feaeae4f-074a-41f3-8e9d-c5863652f43b",
+          "title": "XSS Vulnerability in file",
+          "description": "Parameter 'file' is vulnerable to XSS.",
+          "severity": "high",
+          "mitre_id": "T1059.007",
+          "evidence": "Payload: javascript:alert(1)\nURL: http://172.19.0.6:3000/rest?file=...",
+          "remediation": "Encode all user output; implement CSP.",
+          "raw_data": {
+            "param": "file",
+            "payload": "javascript:alert(1)",
+            "url": "http://172.19.0.6:3000/rest"
+          },
+          "timestamp": "2026-06-25T07:30:34.039512"
+        },
+        {
+          "id": "7937a478-eb37-4dbf-b10f-b46e37706db1",
+          "title": "XSS Vulnerability in path",
+          "description": "Parameter 'path' is vulnerable to XSS.",
+          "severity": "high",
+          "mitre_id": "T1059.007",
+          "evidence": "Payload: javascript:alert(1)\nURL: http://172.19.0.6:3000/rest?path=...",
+          "remediation": "Encode all user output; implement CSP.",
+          "raw_data": {
+            "param": "path",
+            "payload": "javascript:alert(1)",
+            "url": "http://172.19.0.6:3000/rest"
+          },
+          "timestamp": "2026-06-25T07:30:34.039766"
+        },
+        {
+          "id": "ec684dee-30c6-415e-97ef-14d622cc9f87",
+          "title": "XSS Vulnerability in input",
+          "description": "Parameter 'input' is vulnerable to XSS.",
+          "severity": "high",
+          "mitre_id": "T1059.007",
+          "evidence": "Payload: javascript:alert(1)\nURL: http://172.19.0.6:3000/rest?input=...",
+          "remediation": "Encode all user output; implement CSP.",
+          "raw_data": {
+            "param": "input",
+            "payload": "javascript:alert(1)",
+            "url": "http://172.19.0.6:3000/rest"
+          },
+          "timestamp": "2026-06-25T07:30:34.064019"
+        },
+        {
+          "id": "ed13ba4e-a263-4c03-a6e8-cc100b545b9d",
+          "title": "XSS Vulnerability in query",
+          "description": "Parameter 'query' is vulnerable to XSS.",
+          "severity": "high",
+          "mitre_id": "T1059.007",
+          "evidence": "Payload: javascript:alert(1)\nURL: http://172.19.0.6:3000/rest?query=...",
+          "remediation": "Encode all user output; implement CSP.",
+          "raw_data": {
+            "param": "query",
+            "payload": "javascript:alert(1)",
+            "url": "http://172.19.0.6:3000/rest"
+          },
+          "timestamp": "2026-06-25T07:30:34.064333"
+        },
+        {
+          "id": "c90fd28c-bfb3-46aa-b3fb-e8beb505ddb6",
+          "title": "XSS Vulnerability in name",
+          "description": "Parameter 'name' is vulnerable to XSS.",
+          "severity": "high",
+          "mitre_id": "T1059.007",
+          "evidence": "Payload: javascript:alert(1)\nURL: http://172.19.0.6:3000/rest?name=...",
+          "remediation": "Encode all user output; implement CSP.",
+          "raw_data": {
+            "param": "name",
+            "payload": "javascript:alert(1)",
+            "url": "http://172.19.0.6:3000/rest"
+          },
+          "timestamp": "2026-06-25T07:30:34.086097"
+        },
+        {
+          "id": "c84e8f94-450e-4727-9d6c-c2a8248691cd",
+          "title": "XSS Vulnerability in q",
+          "description": "Parameter 'q' is vulnerable to XSS.",
+          "severity": "high",
+          "mitre_id": "T1059.007",
+          "evidence": "Payload: javascript:alert(1)\nURL: http://172.19.0.6:3000/rest/continue-code/apply?q=...",
+          "remediation": "Encode all user output; implement CSP.",
+          "raw_data": {
+            "param": "q",
+            "payload": "javascript:alert(1)",
+            "url": "http://172.19.0.6:3000/rest/continue-code/apply"
+          },
+          "timestamp": "2026-06-25T07:30:34.212589"
+        },
+        {
+          "id": "dd89536b-4c19-4805-b080-bacac0b25487",
+          "title": "XSS Vulnerability in id",
+          "description": "Parameter 'id' is vulnerable to XSS.",
+          "severity": "high",
+          "mitre_id": "T1059.007",
+          "evidence": "Payload: javascript:alert(1)\nURL: http://172.19.0.6:3000/rest/continue-code/apply?id=...",
+          "remediation": "Encode all user output; implement CSP.",
+          "raw_data": {
+            "param": "id",
+            "payload": "javascript:alert(1)",
+            "url": "http://172.19.0.6:3000/rest/continue-code/apply"
+          },
+          "timestamp": "2026-06-25T07:30:34.212809"
+        },
+        {
+          "id": "1bf950da-6df0-4306-b2e6-5798c091c375",
+          "title": "XSS Vulnerability in search",
+          "description": "Parameter 'search' is vulnerable to XSS.",
+          "severity": "high",
+          "mitre_id": "T1059.007",
+          "evidence": "Payload: javascript:alert(1)\nURL: http://172.19.0.6:3000/rest/continue-code/apply?search=...",
+          "remediation": "Encode all user output; implement CSP.",
+          "raw_data": {
+            "param": "search",
+            "payload": "javascript:alert(1)",
+            "url": "http://172.19.0.6:3000/rest/continue-code/apply"
+          },
+          "timestamp": "2026-06-25T07:30:34.243642"
+        },
+        {
+          "id": "5d25e5ef-960c-43f5-bfb6-da35ac0fc199",
+          "title": "XSS Vulnerability in user",
+          "description": "Parameter 'user' is vulnerable to XSS.",
+          "severity": "high",
+          "mitre_id": "T1059.007",
+          "evidence": "Payload: javascript:alert(1)\nURL: http://172.19.0.6:3000/rest/continue-code/apply?user=...",
+          "remediation": "Encode all user output; implement CSP.",
+          "raw_data": {
+            "param": "user",
+            "payload": "javascript:alert(1)",
+            "url": "http://172.19.0.6:3000/rest/continue-code/apply"
+          },
+          "timestamp": "2026-06-25T07:30:34.243886"
+        },
+        {
+          "id": "535b5677-1865-487b-8e0f-dd53b779f538",
+          "title": "XSS Vulnerability in page",
+          "description": "Parameter 'page' is vulnerable to XSS.",
+          "severity": "high",
+          "mitre_id": "T1059.007",
+          "evidence": "Payload: javascript:alert(1)\nURL: http://172.19.0.6:3000/rest/continue-code/apply?page=...",
+          "remediation": "Encode all user output; implement CSP.",
+          "raw_data": {
+            "param": "page",
+            "payload": "javascript:alert(1)",
+            "url": "http://172.19.0.6:3000/rest/continue-code/apply"
+          },
+          "timestamp": "2026-06-25T07:30:34.244051"
+        },
+        {
+          "id": "cadbb460-f21f-4404-9461-a7cdb2657947",
+          "title": "XSS Vulnerability in file",
+          "description": "Parameter 'file' is vulnerable to XSS.",
+          "severity": "high",
+          "mitre_id": "T1059.007",
+          "evidence": "Payload: javascript:alert(1)\nURL: http://172.19.0.6:3000/rest/continue-code/apply?file=...",
+          "remediation": "Encode all user output; implement CSP.",
+          "raw_data": {
+            "param": "file",
+            "payload": "javascript:alert(1)",
+            "url": "http://172.19.0.6:3000/rest/continue-code/apply"
+          },
+          "timestamp": "2026-06-25T07:30:34.267976"
+        },
+        {
+          "id": "0a4e1d80-04ee-454b-a271-433da63d2b2f",
+          "title": "XSS Vulnerability in path",
+          "description": "Parameter 'path' is vulnerable to XSS.",
+          "severity": "high",
+          "mitre_id": "T1059.007",
+          "evidence": "Payload: javascript:alert(1)\nURL: http://172.19.0.6:3000/rest/continue-code/apply?path=...",
+          "remediation": "Encode all user output; implement CSP.",
+          "raw_data": {
+            "param": "path",
+            "payload": "javascript:alert(1)",
+            "url": "http://172.19.0.6:3000/rest/continue-code/apply"
+          },
+          "timestamp": "2026-06-25T07:30:34.268190"
+        },
+        {
+          "id": "f78f41aa-0327-42a2-9145-c6c5ea37754a",
+          "title": "XSS Vulnerability in input",
+          "description": "Parameter 'input' is vulnerable to XSS.",
+          "severity": "high",
+          "mitre_id": "T1059.007",
+          "evidence": "Payload: javascript:alert(1)\nURL: http://172.19.0.6:3000/rest/continue-code/apply?input=...",
+          "remediation": "Encode all user output; implement CSP.",
+          "raw_data": {
+            "param": "input",
+            "payload": "javascript:alert(1)",
+            "url": "http://172.19.0.6:3000/rest/continue-code/apply"
+          },
+          "timestamp": "2026-06-25T07:30:34.281669"
+        },
+        {
+          "id": "0c196077-03ab-43f5-b5a8-71550491c53b",
+          "title": "XSS Vulnerability in query",
+          "description": "Parameter 'query' is vulnerable to XSS.",
+          "severity": "high",
+          "mitre_id": "T1059.007",
+          "evidence": "Payload: javascript:alert(1)\nURL: http://172.19.0.6:3000/rest/continue-code/apply?query=...",
+          "remediation": "Encode all user output; implement CSP.",
+          "raw_data": {
+            "param": "query",
+            "payload": "javascript:alert(1)",
+            "url": "http://172.19.0.6:3000/rest/continue-code/apply"
+          },
+          "timestamp": "2026-06-25T07:30:34.281925"
+        },
+        {
+          "id": "3cda3d22-e4da-4571-b79b-6a2805dd8c6f",
+          "title": "XSS Vulnerability in name",
+          "description": "Parameter 'name' is vulnerable to XSS.",
+          "severity": "high",
+          "mitre_id": "T1059.007",
+          "evidence": "Payload: javascript:alert(1)\nURL: http://172.19.0.6:3000/rest/continue-code/apply?name=...",
+          "remediation": "Encode all user output; implement CSP.",
+          "raw_data": {
+            "param": "name",
+            "payload": "javascript:alert(1)",
+            "url": "http://172.19.0.6:3000/rest/continue-code/apply"
+          },
+          "timestamp": "2026-06-25T07:30:34.297167"
+        },
+        {
+          "id": "53e39e7b-d768-464e-8204-3c11f03f3f54",
+          "title": "XSS Vulnerability in q",
+          "description": "Parameter 'q' is vulnerable to XSS.",
+          "severity": "high",
+          "mitre_id": "T1059.007",
+          "evidence": "Payload: javascript:alert(1)\nURL: http://172.19.0.6:3000/rest/continue-code-fixIt/apply?q=...",
+          "remediation": "Encode all user output; implement CSP.",
+          "raw_data": {
+            "param": "q",
+            "payload": "javascript:alert(1)",
+            "url": "http://172.19.0.6:3000/rest/continue-code-fixIt/apply"
+          },
+          "timestamp": "2026-06-25T07:30:36.019489"
+        },
+        {
+          "id": "fcf301ee-f3c8-4c9b-918f-62cc08fb17d4",
+          "title": "XSS Vulnerability in id",
+          "description": "Parameter 'id' is vulnerable to XSS.",
+          "severity": "high",
+          "mitre_id": "T1059.007",
+          "evidence": "Payload: javascript:alert(1)\nURL: http://172.19.0.6:3000/rest/continue-code-fixIt/apply?id=...",
+          "remediation": "Encode all user output; implement CSP.",
+          "raw_data": {
+            "param": "id",
+            "payload": "javascript:alert(1)",
+            "url": "http://172.19.0.6:3000/rest/continue-code-fixIt/apply"
+          },
+          "timestamp": "2026-06-25T07:30:36.019717"
+        },
+        {
+          "id": "880086bd-e9af-46be-aabf-2760d4907ec4",
+          "title": "XSS Vulnerability in search",
+          "description": "Parameter 'search' is vulnerable to XSS.",
+          "severity": "high",
+          "mitre_id": "T1059.007",
+          "evidence": "Payload: javascript:alert(1)\nURL: http://172.19.0.6:3000/rest/continue-code-fixIt/apply?search=...",
+          "remediation": "Encode all user output; implement CSP.",
+          "raw_data": {
+            "param": "search",
+            "payload": "javascript:alert(1)",
+            "url": "http://172.19.0.6:3000/rest/continue-code-fixIt/apply"
+          },
+          "timestamp": "2026-06-25T07:30:36.019873"
+        },
+        {
+          "id": "6b448bd2-b565-4dd6-8ce1-bbc9d02cca09",
+          "title": "XSS Vulnerability in user",
+          "description": "Parameter 'user' is vulnerable to XSS.",
+          "severity": "high",
+          "mitre_id": "T1059.007",
+          "evidence": "Payload: javascript:alert(1)\nURL: http://172.19.0.6:3000/rest/continue-code-fixIt/apply?user=...",
+          "remediation": "Encode all user output; implement CSP.",
+          "raw_data": {
+            "param": "user",
+            "payload": "javascript:alert(1)",
+            "url": "http://172.19.0.6:3000/rest/continue-code-fixIt/apply"
+          },
+          "timestamp": "2026-06-25T07:30:36.020018"
+        },
+        {
+          "id": "95aae09e-4716-42b3-b6e2-f3510376babc",
+          "title": "XSS Vulnerability in page",
+          "description": "Parameter 'page' is vulnerable to XSS.",
+          "severity": "high",
+          "mitre_id": "T1059.007",
+          "evidence": "Payload: javascript:alert(1)\nURL: http://172.19.0.6:3000/rest/continue-code-fixIt/apply?page=...",
+          "remediation": "Encode all user output; implement CSP.",
+          "raw_data": {
+            "param": "page",
+            "payload": "javascript:alert(1)",
+            "url": "http://172.19.0.6:3000/rest/continue-code-fixIt/apply"
+          },
+          "timestamp": "2026-06-25T07:30:36.020161"
+        },
+        {
+          "id": "3988fead-86ab-4ecd-8144-48326d9974f3",
+          "title": "XSS Vulnerability in file",
+          "description": "Parameter 'file' is vulnerable to XSS.",
+          "severity": "high",
+          "mitre_id": "T1059.007",
+          "evidence": "Payload: javascript:alert(1)\nURL: http://172.19.0.6:3000/rest/continue-code-fixIt/apply?file=...",
+          "remediation": "Encode all user output; implement CSP.",
+          "raw_data": {
+            "param": "file",
+            "payload": "javascript:alert(1)",
+            "url": "http://172.19.0.6:3000/rest/continue-code-fixIt/apply"
+          },
+          "timestamp": "2026-06-25T07:30:36.020302"
+        },
+        {
+          "id": "1ec1350e-f7bf-488a-b04e-a1ac33667939",
+          "title": "XSS Vulnerability in path",
+          "description": "Parameter 'path' is vulnerable to XSS.",
+          "severity": "high",
+          "mitre_id": "T1059.007",
+          "evidence": "Payload: javascript:alert(1)\nURL: http://172.19.0.6:3000/rest/continue-code-fixIt/apply?path=...",
+          "remediation": "Encode all user output; implement CSP.",
+          "raw_data": {
+            "param": "path",
+            "payload": "javascript:alert(1)",
+            "url": "http://172.19.0.6:3000/rest/continue-code-fixIt/apply"
+          },
+          "timestamp": "2026-06-25T07:30:36.020441"
+        },
+        {
+          "id": "a23bfcdc-c10b-45bd-89af-cd6e82eab58a",
+          "title": "XSS Vulnerability in input",
+          "description": "Parameter 'input' is vulnerable to XSS.",
+          "severity": "high",
+          "mitre_id": "T1059.007",
+          "evidence": "Payload: javascript:alert(1)\nURL: http://172.19.0.6:3000/rest/continue-code-fixIt/apply?input=...",
+          "remediation": "Encode all user output; implement CSP.",
+          "raw_data": {
+            "param": "input",
+            "payload": "javascript:alert(1)",
+            "url": "http://172.19.0.6:3000/rest/continue-code-fixIt/apply"
+          },
+          "timestamp": "2026-06-25T07:30:36.020604"
+        },
+        {
+          "id": "b32a4ee6-5948-490d-b221-4642f4c4aa3a",
+          "title": "XSS Vulnerability in query",
+          "description": "Parameter 'query' is vulnerable to XSS.",
+          "severity": "high",
+          "mitre_id": "T1059.007",
+          "evidence": "Payload: javascript:alert(1)\nURL: http://172.19.0.6:3000/rest/continue-code-fixIt/apply?query=...",
+          "remediation": "Encode all user output; implement CSP.",
+          "raw_data": {
+            "param": "query",
+            "payload": "javascript:alert(1)",
+            "url": "http://172.19.0.6:3000/rest/continue-code-fixIt/apply"
+          },
+          "timestamp": "2026-06-25T07:30:36.036521"
+        },
+        {
+          "id": "87cc3faa-8c5e-4e07-a6f8-c9af49eedfb9",
+          "title": "XSS Vulnerability in name",
+          "description": "Parameter 'name' is vulnerable to XSS.",
+          "severity": "high",
+          "mitre_id": "T1059.007",
+          "evidence": "Payload: javascript:alert(1)\nURL: http://172.19.0.6:3000/rest/continue-code-fixIt/apply?name=...",
+          "remediation": "Encode all user output; implement CSP.",
+          "raw_data": {
+            "param": "name",
+            "payload": "javascript:alert(1)",
+            "url": "http://172.19.0.6:3000/rest/continue-code-fixIt/apply"
+          },
+          "timestamp": "2026-06-25T07:30:36.051209"
+        },
+        {
+          "id": "2d614239-8697-42a9-8321-f058b8e37e28",
+          "title": "XSS Vulnerability in q",
+          "description": "Parameter 'q' is vulnerable to XSS.",
+          "severity": "high",
+          "mitre_id": "T1059.007",
+          "evidence": "Payload: javascript:alert(1)\nURL: http://172.19.0.6:3000/rest/continue-code-findIt/apply?q=...",
+          "remediation": "Encode all user output; implement CSP.",
+          "raw_data": {
+            "param": "q",
+            "payload": "javascript:alert(1)",
+            "url": "http://172.19.0.6:3000/rest/continue-code-findIt/apply"
+          },
+          "timestamp": "2026-06-25T07:30:36.635643"
+        },
+        {
+          "id": "35dff399-fa37-4e06-aba9-7b6797224305",
+          "title": "XSS Vulnerability in id",
+          "description": "Parameter 'id' is vulnerable to XSS.",
+          "severity": "high",
+          "mitre_id": "T1059.007",
+          "evidence": "Payload: javascript:alert(1)\nURL: http://172.19.0.6:3000/rest/continue-code-findIt/apply?id=...",
+          "remediation": "Encode all user output; implement CSP.",
+          "raw_data": {
+            "param": "id",
+            "payload": "javascript:alert(1)",
+            "url": "http://172.19.0.6:3000/rest/continue-code-findIt/apply"
+          },
+          "timestamp": "2026-06-25T07:30:36.644643"
+        },
+        {
+          "id": "d2f423ed-d2fd-420c-9a4c-24f54fff3433",
+          "title": "XSS Vulnerability in search",
+          "description": "Parameter 'search' is vulnerable to XSS.",
+          "severity": "high",
+          "mitre_id": "T1059.007",
+          "evidence": "Payload: javascript:alert(1)\nURL: http://172.19.0.6:3000/rest/continue-code-findIt/apply?search=...",
+          "remediation": "Encode all user output; implement CSP.",
+          "raw_data": {
+            "param": "search",
+            "payload": "javascript:alert(1)",
+            "url": "http://172.19.0.6:3000/rest/continue-code-findIt/apply"
+          },
+          "timestamp": "2026-06-25T07:30:36.655587"
+        },
+        {
+          "id": "0aa54df5-3495-435b-ba2f-a71072606ed2",
+          "title": "XSS Vulnerability in user",
+          "description": "Parameter 'user' is vulnerable to XSS.",
+          "severity": "high",
+          "mitre_id": "T1059.007",
+          "evidence": "Payload: javascript:alert(1)\nURL: http://172.19.0.6:3000/rest/continue-code-findIt/apply?user=...",
+          "remediation": "Encode all user output; implement CSP.",
+          "raw_data": {
+            "param": "user",
+            "payload": "javascript:alert(1)",
+            "url": "http://172.19.0.6:3000/rest/continue-code-findIt/apply"
+          },
+          "timestamp": "2026-06-25T07:30:36.665463"
+        },
+        {
+          "id": "8c68a184-c33c-4af1-91db-a217c30eaf37",
+          "title": "XSS Vulnerability in page",
+          "description": "Parameter 'page' is vulnerable to XSS.",
+          "severity": "high",
+          "mitre_id": "T1059.007",
+          "evidence": "Payload: javascript:alert(1)\nURL: http://172.19.0.6:3000/rest/continue-code-findIt/apply?page=...",
+          "remediation": "Encode all user output; implement CSP.",
+          "raw_data": {
+            "param": "page",
+            "payload": "javascript:alert(1)",
+            "url": "http://172.19.0.6:3000/rest/continue-code-findIt/apply"
+          },
+          "timestamp": "2026-06-25T07:30:36.679656"
+        },
+        {
+          "id": "d2facb49-8e4b-44a8-8ad9-51185525c4ad",
+          "title": "XSS Vulnerability in file",
+          "description": "Parameter 'file' is vulnerable to XSS.",
+          "severity": "high",
+          "mitre_id": "T1059.007",
+          "evidence": "Payload: javascript:alert(1)\nURL: http://172.19.0.6:3000/rest/continue-code-findIt/apply?file=...",
+          "remediation": "Encode all user output; implement CSP.",
+          "raw_data": {
+            "param": "file",
+            "payload": "javascript:alert(1)",
+            "url": "http://172.19.0.6:3000/rest/continue-code-findIt/apply"
+          },
+          "timestamp": "2026-06-25T07:30:36.691415"
+        },
+        {
+          "id": "e3437a06-207f-4af0-b358-93ac0b7b6122",
+          "title": "XSS Vulnerability in path",
+          "description": "Parameter 'path' is vulnerable to XSS.",
+          "severity": "high",
+          "mitre_id": "T1059.007",
+          "evidence": "Payload: javascript:alert(1)\nURL: http://172.19.0.6:3000/rest/continue-code-findIt/apply?path=...",
+          "remediation": "Encode all user output; implement CSP.",
+          "raw_data": {
+            "param": "path",
+            "payload": "javascript:alert(1)",
+            "url": "http://172.19.0.6:3000/rest/continue-code-findIt/apply"
+          },
+          "timestamp": "2026-06-25T07:30:36.706835"
+        },
+        {
+          "id": "4f8eda94-c49f-46d8-8c90-2f2bbda296d7",
+          "title": "XSS Vulnerability in input",
+          "description": "Parameter 'input' is vulnerable to XSS.",
+          "severity": "high",
+          "mitre_id": "T1059.007",
+          "evidence": "Payload: javascript:alert(1)\nURL: http://172.19.0.6:3000/rest/continue-code-findIt/apply?input=...",
+          "remediation": "Encode all user output; implement CSP.",
+          "raw_data": {
+            "param": "input",
+            "payload": "javascript:alert(1)",
+            "url": "http://172.19.0.6:3000/rest/continue-code-findIt/apply"
+          },
+          "timestamp": "2026-06-25T07:30:36.718034"
+        },
+        {
+          "id": "4e2a7c74-7a6e-4699-8bfc-1d91da25b168",
+          "title": "XSS Vulnerability in query",
+          "description": "Parameter 'query' is vulnerable to XSS.",
+          "severity": "high",
+          "mitre_id": "T1059.007",
+          "evidence": "Payload: javascript:alert(1)\nURL: http://172.19.0.6:3000/rest/continue-code-findIt/apply?query=...",
+          "remediation": "Encode all user output; implement CSP.",
+          "raw_data": {
+            "param": "query",
+            "payload": "javascript:alert(1)",
+            "url": "http://172.19.0.6:3000/rest/continue-code-findIt/apply"
+          },
+          "timestamp": "2026-06-25T07:30:36.730297"
+        },
+        {
+          "id": "dbf61092-7152-4161-bf9b-fb012ab4f563",
+          "title": "XSS Vulnerability in name",
+          "description": "Parameter 'name' is vulnerable to XSS.",
+          "severity": "high",
+          "mitre_id": "T1059.007",
+          "evidence": "Payload: javascript:alert(1)\nURL: http://172.19.0.6:3000/rest/continue-code-findIt/apply?name=...",
+          "remediation": "Encode all user output; implement CSP.",
+          "raw_data": {
+            "param": "name",
+            "payload": "javascript:alert(1)",
+            "url": "http://172.19.0.6:3000/rest/continue-code-findIt/apply"
+          },
+          "timestamp": "2026-06-25T07:30:36.738315"
+        },
+        {
+          "id": "36e563ea-d32f-4ad7-a20c-1d46b32f879d",
+          "title": "XSS Vulnerability in q",
+          "description": "Parameter 'q' is vulnerable to XSS.",
+          "severity": "high",
+          "mitre_id": "T1059.007",
+          "evidence": "Payload: javascript:alert(1)\nURL: http://172.19.0.6:3000/rest/user/login?q=...",
+          "remediation": "Encode all user output; implement CSP.",
+          "raw_data": {
+            "param": "q",
+            "payload": "javascript:alert(1)",
+            "url": "http://172.19.0.6:3000/rest/user/login"
+          },
+          "timestamp": "2026-06-25T07:30:36.998076"
+        },
+        {
+          "id": "6c92e78d-01e1-40aa-8bbe-4ef6734ffd3e",
+          "title": "XSS Vulnerability in id",
+          "description": "Parameter 'id' is vulnerable to XSS.",
+          "severity": "high",
+          "mitre_id": "T1059.007",
+          "evidence": "Payload: javascript:alert(1)\nURL: http://172.19.0.6:3000/rest/user/login?id=...",
+          "remediation": "Encode all user output; implement CSP.",
+          "raw_data": {
+            "param": "id",
+            "payload": "javascript:alert(1)",
+            "url": "http://172.19.0.6:3000/rest/user/login"
+          },
+          "timestamp": "2026-06-25T07:30:37.007819"
+        },
+        {
+          "id": "d2ea82da-a1e6-48d3-a1b9-65f6a7854379",
+          "title": "XSS Vulnerability in search",
+          "description": "Parameter 'search' is vulnerable to XSS.",
+          "severity": "high",
+          "mitre_id": "T1059.007",
+          "evidence": "Payload: javascript:alert(1)\nURL: http://172.19.0.6:3000/rest/user/login?search=...",
+          "remediation": "Encode all user output; implement CSP.",
+          "raw_data": {
+            "param": "search",
+            "payload": "javascript:alert(1)",
+            "url": "http://172.19.0.6:3000/rest/user/login"
+          },
+          "timestamp": "2026-06-25T07:30:37.021405"
+        },
+        {
+          "id": "4c909aa2-ad76-40b1-b759-4695ec33c821",
+          "title": "XSS Vulnerability in user",
+          "description": "Parameter 'user' is vulnerable to XSS.",
+          "severity": "high",
+          "mitre_id": "T1059.007",
+          "evidence": "Payload: javascript:alert(1)\nURL: http://172.19.0.6:3000/rest/user/login?user=...",
+          "remediation": "Encode all user output; implement CSP.",
+          "raw_data": {
+            "param": "user",
+            "payload": "javascript:alert(1)",
+            "url": "http://172.19.0.6:3000/rest/user/login"
+          },
+          "timestamp": "2026-06-25T07:30:37.035066"
+        },
+        {
+          "id": "0356d046-ce0e-4e8f-96ae-c2fc8b27025c",
+          "title": "XSS Vulnerability in page",
+          "description": "Parameter 'page' is vulnerable to XSS.",
+          "severity": "high",
+          "mitre_id": "T1059.007",
+          "evidence": "Payload: javascript:alert(1)\nURL: http://172.19.0.6:3000/rest/user/login?page=...",
+          "remediation": "Encode all user output; implement CSP.",
+          "raw_data": {
+            "param": "page",
+            "payload": "javascript:alert(1)",
+            "url": "http://172.19.0.6:3000/rest/user/login"
+          },
+          "timestamp": "2026-06-25T07:30:37.041123"
+        },
+        {
+          "id": "73b311c9-1195-4c3d-9bf3-cd7defa14136",
+          "title": "XSS Vulnerability in file",
+          "description": "Parameter 'file' is vulnerable to XSS.",
+          "severity": "high",
+          "mitre_id": "T1059.007",
+          "evidence": "Payload: javascript:alert(1)\nURL: http://172.19.0.6:3000/rest/user/login?file=...",
+          "remediation": "Encode all user output; implement CSP.",
+          "raw_data": {
+            "param": "file",
+            "payload": "javascript:alert(1)",
+            "url": "http://172.19.0.6:3000/rest/user/login"
+          },
+          "timestamp": "2026-06-25T07:30:37.054183"
+        },
+        {
+          "id": "4a144595-bd50-47dd-885d-2b3bbfc1cafe",
+          "title": "XSS Vulnerability in path",
+          "description": "Parameter 'path' is vulnerable to XSS.",
+          "severity": "high",
+          "mitre_id": "T1059.007",
+          "evidence": "Payload: javascript:alert(1)\nURL: http://172.19.0.6:3000/rest/user/login?path=...",
+          "remediation": "Encode all user output; implement CSP.",
+          "raw_data": {
+            "param": "path",
+            "payload": "javascript:alert(1)",
+            "url": "http://172.19.0.6:3000/rest/user/login"
+          },
+          "timestamp": "2026-06-25T07:30:37.064588"
+        },
+        {
+          "id": "311ed7a8-d15c-482a-8b5b-8146604cc43c",
+          "title": "XSS Vulnerability in input",
+          "description": "Parameter 'input' is vulnerable to XSS.",
+          "severity": "high",
+          "mitre_id": "T1059.007",
+          "evidence": "Payload: javascript:alert(1)\nURL: http://172.19.0.6:3000/rest/user/login?input=...",
+          "remediation": "Encode all user output; implement CSP.",
+          "raw_data": {
+            "param": "input",
+            "payload": "javascript:alert(1)",
+            "url": "http://172.19.0.6:3000/rest/user/login"
+          },
+          "timestamp": "2026-06-25T07:30:37.074453"
+        },
+        {
+          "id": "e406b83d-7158-4489-91ea-45262ccf756b",
+          "title": "XSS Vulnerability in query",
+          "description": "Parameter 'query' is vulnerable to XSS.",
+          "severity": "high",
+          "mitre_id": "T1059.007",
+          "evidence": "Payload: javascript:alert(1)\nURL: http://172.19.0.6:3000/rest/user/login?query=...",
+          "remediation": "Encode all user output; implement CSP.",
+          "raw_data": {
+            "param": "query",
+            "payload": "javascript:alert(1)",
+            "url": "http://172.19.0.6:3000/rest/user/login"
+          },
+          "timestamp": "2026-06-25T07:30:37.080857"
+        },
+        {
+          "id": "404f6644-7d5b-4e3a-ab64-f5f716c3e27f",
+          "title": "XSS Vulnerability in name",
+          "description": "Parameter 'name' is vulnerable to XSS.",
+          "severity": "high",
+          "mitre_id": "T1059.007",
+          "evidence": "Payload: javascript:alert(1)\nURL: http://172.19.0.6:3000/rest/user/login?name=...",
+          "remediation": "Encode all user output; implement CSP.",
+          "raw_data": {
+            "param": "name",
+            "payload": "javascript:alert(1)",
+            "url": "http://172.19.0.6:3000/rest/user/login"
+          },
+          "timestamp": "2026-06-25T07:30:37.094095"
+        },
+        {
+          "id": "b5dc9f0e-7e07-4b6b-8f51-c34938135a6e",
+          "title": "XSS Vulnerability in q",
+          "description": "Parameter 'q' is vulnerable to XSS.",
+          "severity": "high",
+          "mitre_id": "T1059.007",
+          "evidence": "Payload: javascript:alert(1)\nURL: http://172.19.0.6:3000/rest/user/reset-password?q=...",
+          "remediation": "Encode all user output; implement CSP.",
+          "raw_data": {
+            "param": "q",
+            "payload": "javascript:alert(1)",
+            "url": "http://172.19.0.6:3000/rest/user/reset-password"
+          },
+          "timestamp": "2026-06-25T07:30:37.258471"
+        },
+        {
+          "id": "367e1b94-5749-474a-90b3-1ee94db35bdd",
+          "title": "XSS Vulnerability in id",
+          "description": "Parameter 'id' is vulnerable to XSS.",
+          "severity": "high",
+          "mitre_id": "T1059.007",
+          "evidence": "Payload: javascript:alert(1)\nURL: http://172.19.0.6:3000/rest/user/reset-password?id=...",
+          "remediation": "Encode all user output; implement CSP.",
+          "raw_data": {
+            "param": "id",
+            "payload": "javascript:alert(1)",
+            "url": "http://172.19.0.6:3000/rest/user/reset-password"
+          },
+          "timestamp": "2026-06-25T07:30:37.277912"
+        },
+        {
+          "id": "31301e89-9b38-49d4-ba97-a76c594fabef",
+          "title": "XSS Vulnerability in search",
+          "description": "Parameter 'search' is vulnerable to XSS.",
+          "severity": "high",
+          "mitre_id": "T1059.007",
+          "evidence": "Payload: javascript:alert(1)\nURL: http://172.19.0.6:3000/rest/user/reset-password?search=...",
+          "remediation": "Encode all user output; implement CSP.",
+          "raw_data": {
+            "param": "search",
+            "payload": "javascript:alert(1)",
+            "url": "http://172.19.0.6:3000/rest/user/reset-password"
+          },
+          "timestamp": "2026-06-25T07:30:37.283636"
+        },
+        {
+          "id": "3984e6e0-feb7-4698-9dfc-e6637a1d69f4",
+          "title": "XSS Vulnerability in user",
+          "description": "Parameter 'user' is vulnerable to XSS.",
+          "severity": "high",
+          "mitre_id": "T1059.007",
+          "evidence": "Payload: javascript:alert(1)\nURL: http://172.19.0.6:3000/rest/user/reset-password?user=...",
+          "remediation": "Encode all user output; implement CSP.",
+          "raw_data": {
+            "param": "user",
+            "payload": "javascript:alert(1)",
+            "url": "http://172.19.0.6:3000/rest/user/reset-password"
+          },
+          "timestamp": "2026-06-25T07:30:37.298238"
+        },
+        {
+          "id": "2dff3f21-526a-48d3-8cfc-ee74d320361e",
+          "title": "XSS Vulnerability in page",
+          "description": "Parameter 'page' is vulnerable to XSS.",
+          "severity": "high",
+          "mitre_id": "T1059.007",
+          "evidence": "Payload: javascript:alert(1)\nURL: http://172.19.0.6:3000/rest/user/reset-password?page=...",
+          "remediation": "Encode all user output; implement CSP.",
+          "raw_data": {
+            "param": "page",
+            "payload": "javascript:alert(1)",
+            "url": "http://172.19.0.6:3000/rest/user/reset-password"
+          },
+          "timestamp": "2026-06-25T07:30:37.324312"
+        },
+        {
+          "id": "212eb224-b5a3-424e-9f39-cfd7baf03b04",
+          "title": "XSS Vulnerability in file",
+          "description": "Parameter 'file' is vulnerable to XSS.",
+          "severity": "high",
+          "mitre_id": "T1059.007",
+          "evidence": "Payload: javascript:alert(1)\nURL: http://172.19.0.6:3000/rest/user/reset-password?file=...",
+          "remediation": "Encode all user output; implement CSP.",
+          "raw_data": {
+            "param": "file",
+            "payload": "javascript:alert(1)",
+            "url": "http://172.19.0.6:3000/rest/user/reset-password"
+          },
+          "timestamp": "2026-06-25T07:30:37.324667"
+        },
+        {
+          "id": "971af7b2-50de-4f40-bcfb-15c24e44f45c",
+          "title": "XSS Vulnerability in path",
+          "description": "Parameter 'path' is vulnerable to XSS.",
+          "severity": "high",
+          "mitre_id": "T1059.007",
+          "evidence": "Payload: javascript:alert(1)\nURL: http://172.19.0.6:3000/rest/user/reset-password?path=...",
+          "remediation": "Encode all user output; implement CSP.",
+          "raw_data": {
+            "param": "path",
+            "payload": "javascript:alert(1)",
+            "url": "http://172.19.0.6:3000/rest/user/reset-password"
+          },
+          "timestamp": "2026-06-25T07:30:37.342714"
+        },
+        {
+          "id": "e47d7bd5-aa23-454d-b28b-15369173aa26",
+          "title": "XSS Vulnerability in input",
+          "description": "Parameter 'input' is vulnerable to XSS.",
+          "severity": "high",
+          "mitre_id": "T1059.007",
+          "evidence": "Payload: javascript:alert(1)\nURL: http://172.19.0.6:3000/rest/user/reset-password?input=...",
+          "remediation": "Encode all user output; implement CSP.",
+          "raw_data": {
+            "param": "input",
+            "payload": "javascript:alert(1)",
+            "url": "http://172.19.0.6:3000/rest/user/reset-password"
+          },
+          "timestamp": "2026-06-25T07:30:37.343151"
+        },
+        {
+          "id": "c5afe8b5-9404-4459-8f28-7275d065c8a0",
+          "title": "XSS Vulnerability in query",
+          "description": "Parameter 'query' is vulnerable to XSS.",
+          "severity": "high",
+          "mitre_id": "T1059.007",
+          "evidence": "Payload: javascript:alert(1)\nURL: http://172.19.0.6:3000/rest/user/reset-password?query=...",
+          "remediation": "Encode all user output; implement CSP.",
+          "raw_data": {
+            "param": "query",
+            "payload": "javascript:alert(1)",
+            "url": "http://172.19.0.6:3000/rest/user/reset-password"
+          },
+          "timestamp": "2026-06-25T07:30:37.362709"
+        },
+        {
+          "id": "bca3410c-aa88-4533-9a39-eebe28253b21",
+          "title": "XSS Vulnerability in name",
+          "description": "Parameter 'name' is vulnerable to XSS.",
+          "severity": "high",
+          "mitre_id": "T1059.007",
+          "evidence": "Payload: javascript:alert(1)\nURL: http://172.19.0.6:3000/rest/user/reset-password?name=...",
+          "remediation": "Encode all user output; implement CSP.",
+          "raw_data": {
+            "param": "name",
+            "payload": "javascript:alert(1)",
+            "url": "http://172.19.0.6:3000/rest/user/reset-password"
+          },
+          "timestamp": "2026-06-25T07:30:37.363037"
+        },
+        {
+          "id": "594c3866-e769-4e4a-b64c-344805453b3f",
+          "title": "XSS Vulnerability in q",
+          "description": "Parameter 'q' is vulnerable to XSS.",
+          "severity": "high",
+          "mitre_id": "T1059.007",
+          "evidence": "Payload: javascript:alert(1)\nURL: http://172.19.0.6:3000/rest/admin?q=...",
+          "remediation": "Encode all user output; implement CSP.",
+          "raw_data": {
+            "param": "q",
+            "payload": "javascript:alert(1)",
+            "url": "http://172.19.0.6:3000/rest/admin"
+          },
+          "timestamp": "2026-06-25T07:30:37.410516"
+        },
+        {
+          "id": "8c1ccd5e-f8de-4d33-8d9c-9a736727d916",
+          "title": "XSS Vulnerability in id",
+          "description": "Parameter 'id' is vulnerable to XSS.",
+          "severity": "high",
+          "mitre_id": "T1059.007",
+          "evidence": "Payload: javascript:alert(1)\nURL: http://172.19.0.6:3000/rest/admin?id=...",
+          "remediation": "Encode all user output; implement CSP.",
+          "raw_data": {
+            "param": "id",
+            "payload": "javascript:alert(1)",
+            "url": "http://172.19.0.6:3000/rest/admin"
+          },
+          "timestamp": "2026-06-25T07:30:37.418701"
+        },
+        {
+          "id": "f2ae6d5a-c6ab-4491-80d2-38d6ae6bab01",
+          "title": "XSS Vulnerability in search",
+          "description": "Parameter 'search' is vulnerable to XSS.",
+          "severity": "high",
+          "mitre_id": "T1059.007",
+          "evidence": "Payload: javascript:alert(1)\nURL: http://172.19.0.6:3000/rest/admin?search=...",
+          "remediation": "Encode all user output; implement CSP.",
+          "raw_data": {
+            "param": "search",
+            "payload": "javascript:alert(1)",
+            "url": "http://172.19.0.6:3000/rest/admin"
+          },
+          "timestamp": "2026-06-25T07:30:37.438023"
+        },
+        {
+          "id": "c9eb1680-9b00-4835-a41b-5ec4baac9926",
+          "title": "XSS Vulnerability in user",
+          "description": "Parameter 'user' is vulnerable to XSS.",
+          "severity": "high",
+          "mitre_id": "T1059.007",
+          "evidence": "Payload: javascript:alert(1)\nURL: http://172.19.0.6:3000/rest/admin?user=...",
+          "remediation": "Encode all user output; implement CSP.",
+          "raw_data": {
+            "param": "user",
+            "payload": "javascript:alert(1)",
+            "url": "http://172.19.0.6:3000/rest/admin"
+          },
+          "timestamp": "2026-06-25T07:30:37.438344"
+        },
+        {
+          "id": "0bb3466e-a281-4406-830d-e9e8d22d7ca2",
+          "title": "XSS Vulnerability in page",
+          "description": "Parameter 'page' is vulnerable to XSS.",
+          "severity": "high",
+          "mitre_id": "T1059.007",
+          "evidence": "Payload: javascript:alert(1)\nURL: http://172.19.0.6:3000/rest/admin?page=...",
+          "remediation": "Encode all user output; implement CSP.",
+          "raw_data": {
+            "param": "page",
+            "payload": "javascript:alert(1)",
+            "url": "http://172.19.0.6:3000/rest/admin"
+          },
+          "timestamp": "2026-06-25T07:30:37.464710"
+        },
+        {
+          "id": "4c4fe089-f124-4657-8879-895498dab69d",
+          "title": "XSS Vulnerability in file",
+          "description": "Parameter 'file' is vulnerable to XSS.",
+          "severity": "high",
+          "mitre_id": "T1059.007",
+          "evidence": "Payload: javascript:alert(1)\nURL: http://172.19.0.6:3000/rest/admin?file=...",
+          "remediation": "Encode all user output; implement CSP.",
+          "raw_data": {
+            "param": "file",
+            "payload": "javascript:alert(1)",
+            "url": "http://172.19.0.6:3000/rest/admin"
+          },
+          "timestamp": "2026-06-25T07:30:37.464992"
+        },
+        {
+          "id": "65a08c98-16e6-43c3-b3be-6659977c6326",
+          "title": "XSS Vulnerability in path",
+          "description": "Parameter 'path' is vulnerable to XSS.",
+          "severity": "high",
+          "mitre_id": "T1059.007",
+          "evidence": "Payload: javascript:alert(1)\nURL: http://172.19.0.6:3000/rest/admin?path=...",
+          "remediation": "Encode all user output; implement CSP.",
+          "raw_data": {
+            "param": "path",
+            "payload": "javascript:alert(1)",
+            "url": "http://172.19.0.6:3000/rest/admin"
+          },
+          "timestamp": "2026-06-25T07:30:37.484093"
+        },
+        {
+          "id": "e74a3172-4555-4653-8fe8-b54bf4126de7",
+          "title": "XSS Vulnerability in input",
+          "description": "Parameter 'input' is vulnerable to XSS.",
+          "severity": "high",
+          "mitre_id": "T1059.007",
+          "evidence": "Payload: javascript:alert(1)\nURL: http://172.19.0.6:3000/rest/admin?input=...",
+          "remediation": "Encode all user output; implement CSP.",
+          "raw_data": {
+            "param": "input",
+            "payload": "javascript:alert(1)",
+            "url": "http://172.19.0.6:3000/rest/admin"
+          },
+          "timestamp": "2026-06-25T07:30:37.484363"
+        },
+        {
+          "id": "e8e4e450-2575-40c8-a07b-5ec4c072b043",
+          "title": "XSS Vulnerability in query",
+          "description": "Parameter 'query' is vulnerable to XSS.",
+          "severity": "high",
+          "mitre_id": "T1059.007",
+          "evidence": "Payload: javascript:alert(1)\nURL: http://172.19.0.6:3000/rest/admin?query=...",
+          "remediation": "Encode all user output; implement CSP.",
+          "raw_data": {
+            "param": "query",
+            "payload": "javascript:alert(1)",
+            "url": "http://172.19.0.6:3000/rest/admin"
+          },
+          "timestamp": "2026-06-25T07:30:37.501973"
+        },
+        {
+          "id": "81287628-c243-4713-b886-7ec7a667708f",
+          "title": "XSS Vulnerability in name",
+          "description": "Parameter 'name' is vulnerable to XSS.",
+          "severity": "high",
+          "mitre_id": "T1059.007",
+          "evidence": "Payload: javascript:alert(1)\nURL: http://172.19.0.6:3000/rest/admin?name=...",
+          "remediation": "Encode all user output; implement CSP.",
+          "raw_data": {
+            "param": "name",
+            "payload": "javascript:alert(1)",
+            "url": "http://172.19.0.6:3000/rest/admin"
+          },
+          "timestamp": "2026-06-25T07:30:37.502231"
+        }
+      ],
+      "error": null,
+      "stats": {
+        "findings_count": 122
+      },
+      "started_at": "2026-06-25T07:30:29.735291",
+      "finished_at": "2026-06-25T07:30:59.064688",
+      "duration_s": 29.329397
+    }
+  ],
+  "error": null,
+  "metadata": {
+    "detection_validation": {
+      "coverage": {
+        "total_findings": 122,
+        "tactics_detected": 3,
+        "coverage": {
+          "Initial Access": 0.82,
+          "Credential Access": 0.82,
+          "Execution": 98.36
+        }
+      },
+      "soc_score": {
+        "soc_score": 0,
+        "rating": "Poor",
+        "coverage_strength": "3 tactics",
+        "critical_findings": 30,
+        "high_findings": 91,
+        "medium_findings": 1,
+        "low_findings": 0,
+        "blind_spots": 11,
+        "coverage": {
+          "Initial Access": 0.82,
+          "Credential Access": 0.82,
+          "Execution": 98.36
+        }
+      },
+      "blindspots": {
+        "coverage_percent": 21.43,
+        "detected_tactics": [
+          "Credential Access",
+          "Execution",
+          "Initial Access"
+        ],
+        "blind_spots": [
+          "Reconnaissance",
+          "Resource Development",
+          "Persistence",
+          "Privilege Escalation",
+          "Defense Evasion",
+          "Discovery",
+          "Lateral Movement",
+          "Collection",
+          "Command and Control",
+          "Exfiltration",
+          "Impact"
+        ],
+        "blind_spot_count": 11,
+        "risk_level": "High"
+      },
+      "sigma_rules": [
+        {
+          "status": "success",
+          "sigma_rule": {
+            "title": "Public Facing Application Exploit",
+            "logsource": {
+              "product": "webserver"
+            },
+            "detection": {
+              "selection": {
+                "http_status": 500
+              },
+              "condition": "selection"
+            },
+            "level": "medium"
+          }
+        },
+        {
+          "status": "unsupported",
+          "message": "No Sigma template for T1557"
+        },
+        {
+          "status": "unsupported",
+          "message": "No Sigma template for T1203"
+        },
+        {
+          "status": "unsupported",
+          "message": "No Sigma template for T1203"
+        },
+        {
+          "status": "unsupported",
+          "message": "No Sigma template for T1203"
+        },
+        {
+          "status": "unsupported",
+          "message": "No Sigma template for T1203"
+        },
+        {
+          "status": "unsupported",
+          "message": "No Sigma template for T1203"
+        },
+        {
+          "status": "unsupported",
+          "message": "No Sigma template for T1203"
+        },
+        {
+          "status": "unsupported",
+          "message": "No Sigma template for T1203"
+        },
+        {
+          "status": "unsupported",
+          "message": "No Sigma template for T1203"
+        },
+        {
+          "status": "unsupported",
+          "message": "No Sigma template for T1203"
+        },
+        {
+          "status": "unsupported",
+          "message": "No Sigma template for T1203"
+        },
+        {
+          "status": "unsupported",
+          "message": "No Sigma template for T1203"
+        },
+        {
+          "status": "unsupported",
+          "message": "No Sigma template for T1203"
+        },
+        {
+          "status": "unsupported",
+          "message": "No Sigma template for T1203"
+        },
+        {
+          "status": "unsupported",
+          "message": "No Sigma template for T1203"
+        },
+        {
+          "status": "unsupported",
+          "message": "No Sigma template for T1203"
+        },
+        {
+          "status": "unsupported",
+          "message": "No Sigma template for T1203"
+        },
+        {
+          "status": "unsupported",
+          "message": "No Sigma template for T1203"
+        },
+        {
+          "status": "unsupported",
+          "message": "No Sigma template for T1203"
+        },
+        {
+          "status": "unsupported",
+          "message": "No Sigma template for T1203"
+        },
+        {
+          "status": "unsupported",
+          "message": "No Sigma template for T1203"
+        },
+        {
+          "status": "unsupported",
+          "message": "No Sigma template for T1059.007"
+        },
+        {
+          "status": "unsupported",
+          "message": "No Sigma template for T1059.007"
+        },
+        {
+          "status": "unsupported",
+          "message": "No Sigma template for T1059.007"
+        },
+        {
+          "status": "unsupported",
+          "message": "No Sigma template for T1059.007"
+        },
+        {
+          "status": "unsupported",
+          "message": "No Sigma template for T1059.007"
+        },
+        {
+          "status": "unsupported",
+          "message": "No Sigma template for T1059.007"
+        },
+        {
+          "status": "unsupported",
+          "message": "No Sigma template for T1059.007"
+        },
+        {
+          "status": "unsupported",
+          "message": "No Sigma template for T1059.007"
+        },
+        {
+          "status": "unsupported",
+          "message": "No Sigma template for T1059.007"
+        },
+        {
+          "status": "unsupported",
+          "message": "No Sigma template for T1059.007"
+        },
+        {
+          "status": "unsupported",
+          "message": "No Sigma template for T1203"
+        },
+        {
+          "status": "unsupported",
+          "message": "No Sigma template for T1203"
+        },
+        {
+          "status": "unsupported",
+          "message": "No Sigma template for T1203"
+        },
+        {
+          "status": "unsupported",
+          "message": "No Sigma template for T1203"
+        },
+        {
+          "status": "unsupported",
+          "message": "No Sigma template for T1203"
+        },
+        {
+          "status": "unsupported",
+          "message": "No Sigma template for T1203"
+        },
+        {
+          "status": "unsupported",
+          "message": "No Sigma template for T1203"
+        },
+        {
+          "status": "unsupported",
+          "message": "No Sigma template for T1203"
+        },
+        {
+          "status": "unsupported",
+          "message": "No Sigma template for T1203"
+        },
+        {
+          "status": "unsupported",
+          "message": "No Sigma template for T1203"
+        },
+        {
+          "status": "unsupported",
+          "message": "No Sigma template for T1059.007"
+        },
+        {
+          "status": "unsupported",
+          "message": "No Sigma template for T1059.007"
+        },
+        {
+          "status": "unsupported",
+          "message": "No Sigma template for T1059.007"
+        },
+        {
+          "status": "unsupported",
+          "message": "No Sigma template for T1059.007"
+        },
+        {
+          "status": "unsupported",
+          "message": "No Sigma template for T1059.007"
+        },
+        {
+          "status": "unsupported",
+          "message": "No Sigma template for T1059.007"
+        },
+        {
+          "status": "unsupported",
+          "message": "No Sigma template for T1059.007"
+        },
+        {
+          "status": "unsupported",
+          "message": "No Sigma template for T1059.007"
+        },
+        {
+          "status": "unsupported",
+          "message": "No Sigma template for T1059.007"
+        },
+        {
+          "status": "unsupported",
+          "message": "No Sigma template for T1059.007"
+        },
+        {
+          "status": "unsupported",
+          "message": "No Sigma template for T1059.007"
+        },
+        {
+          "status": "unsupported",
+          "message": "No Sigma template for T1059.007"
+        },
+        {
+          "status": "unsupported",
+          "message": "No Sigma template for T1059.007"
+        },
+        {
+          "status": "unsupported",
+          "message": "No Sigma template for T1059.007"
+        },
+        {
+          "status": "unsupported",
+          "message": "No Sigma template for T1059.007"
+        },
+        {
+          "status": "unsupported",
+          "message": "No Sigma template for T1059.007"
+        },
+        {
+          "status": "unsupported",
+          "message": "No Sigma template for T1059.007"
+        },
+        {
+          "status": "unsupported",
+          "message": "No Sigma template for T1059.007"
+        },
+        {
+          "status": "unsupported",
+          "message": "No Sigma template for T1059.007"
+        },
+        {
+          "status": "unsupported",
+          "message": "No Sigma template for T1059.007"
+        },
+        {
+          "status": "unsupported",
+          "message": "No Sigma template for T1059.007"
+        },
+        {
+          "status": "unsupported",
+          "message": "No Sigma template for T1059.007"
+        },
+        {
+          "status": "unsupported",
+          "message": "No Sigma template for T1059.007"
+        },
+        {
+          "status": "unsupported",
+          "message": "No Sigma template for T1059.007"
+        },
+        {
+          "status": "unsupported",
+          "message": "No Sigma template for T1059.007"
+        },
+        {
+          "status": "unsupported",
+          "message": "No Sigma template for T1059.007"
+        },
+        {
+          "status": "unsupported",
+          "message": "No Sigma template for T1059.007"
+        },
+        {
+          "status": "unsupported",
+          "message": "No Sigma template for T1059.007"
+        },
+        {
+          "status": "unsupported",
+          "message": "No Sigma template for T1059.007"
+        },
+        {
+          "status": "unsupported",
+          "message": "No Sigma template for T1059.007"
+        },
+        {
+          "status": "unsupported",
+          "message": "No Sigma template for T1059.007"
+        },
+        {
+          "status": "unsupported",
+          "message": "No Sigma template for T1059.007"
+        },
+        {
+          "status": "unsupported",
+          "message": "No Sigma template for T1059.007"
+        },
+        {
+          "status": "unsupported",
+          "message": "No Sigma template for T1059.007"
+        },
+        {
+          "status": "unsupported",
+          "message": "No Sigma template for T1059.007"
+        },
+        {
+          "status": "unsupported",
+          "message": "No Sigma template for T1059.007"
+        },
+        {
+          "status": "unsupported",
+          "message": "No Sigma template for T1059.007"
+        },
+        {
+          "status": "unsupported",
+          "message": "No Sigma template for T1059.007"
+        },
+        {
+          "status": "unsupported",
+          "message": "No Sigma template for T1059.007"
+        },
+        {
+          "status": "unsupported",
+          "message": "No Sigma template for T1059.007"
+        },
+        {
+          "status": "unsupported",
+          "message": "No Sigma template for T1059.007"
+        },
+        {
+          "status": "unsupported",
+          "message": "No Sigma template for T1059.007"
+        },
+        {
+          "status": "unsupported",
+          "message": "No Sigma template for T1059.007"
+        },
+        {
+          "status": "unsupported",
+          "message": "No Sigma template for T1059.007"
+        },
+        {
+          "status": "unsupported",
+          "message": "No Sigma template for T1059.007"
+        },
+        {
+          "status": "unsupported",
+          "message": "No Sigma template for T1059.007"
+        },
+        {
+          "status": "unsupported",
+          "message": "No Sigma template for T1059.007"
+        },
+        {
+          "status": "unsupported",
+          "message": "No Sigma template for T1059.007"
+        },
+        {
+          "status": "unsupported",
+          "message": "No Sigma template for T1059.007"
+        },
+        {
+          "status": "unsupported",
+          "message": "No Sigma template for T1059.007"
+        },
+        {
+          "status": "unsupported",
+          "message": "No Sigma template for T1059.007"
+        },
+        {
+          "status": "unsupported",
+          "message": "No Sigma template for T1059.007"
+        },
+        {
+          "status": "unsupported",
+          "message": "No Sigma template for T1059.007"
+        },
+        {
+          "status": "unsupported",
+          "message": "No Sigma template for T1059.007"
+        },
+        {
+          "status": "unsupported",
+          "message": "No Sigma template for T1059.007"
+        },
+        {
+          "status": "unsupported",
+          "message": "No Sigma template for T1059.007"
+        },
+        {
+          "status": "unsupported",
+          "message": "No Sigma template for T1059.007"
+        },
+        {
+          "status": "unsupported",
+          "message": "No Sigma template for T1059.007"
+        },
+        {
+          "status": "unsupported",
+          "message": "No Sigma template for T1059.007"
+        },
+        {
+          "status": "unsupported",
+          "message": "No Sigma template for T1059.007"
+        },
+        {
+          "status": "unsupported",
+          "message": "No Sigma template for T1059.007"
+        },
+        {
+          "status": "unsupported",
+          "message": "No Sigma template for T1059.007"
+        },
+        {
+          "status": "unsupported",
+          "message": "No Sigma template for T1059.007"
+        },
+        {
+          "status": "unsupported",
+          "message": "No Sigma template for T1059.007"
+        },
+        {
+          "status": "unsupported",
+          "message": "No Sigma template for T1059.007"
+        },
+        {
+          "status": "unsupported",
+          "message": "No Sigma template for T1059.007"
+        },
+        {
+          "status": "unsupported",
+          "message": "No Sigma template for T1059.007"
+        },
+        {
+          "status": "unsupported",
+          "message": "No Sigma template for T1059.007"
+        },
+        {
+          "status": "unsupported",
+          "message": "No Sigma template for T1059.007"
+        },
+        {
+          "status": "unsupported",
+          "message": "No Sigma template for T1059.007"
+        },
+        {
+          "status": "unsupported",
+          "message": "No Sigma template for T1059.007"
+        },
+        {
+          "status": "unsupported",
+          "message": "No Sigma template for T1059.007"
+        },
+        {
+          "status": "unsupported",
+          "message": "No Sigma template for T1059.007"
+        },
+        {
+          "status": "unsupported",
+          "message": "No Sigma template for T1059.007"
+        },
+        {
+          "status": "unsupported",
+          "message": "No Sigma template for T1059.007"
+        },
+        {
+          "status": "unsupported",
+          "message": "No Sigma template for T1059.007"
+        },
+        {
+          "status": "unsupported",
+          "message": "No Sigma template for T1059.007"
+        },
+        {
+          "status": "unsupported",
+          "message": "No Sigma template for T1059.007"
+        },
+        {
+          "status": "unsupported",
+          "message": "No Sigma template for T1059.007"
+        },
+        {
+          "status": "unsupported",
+          "message": "No Sigma template for T1059.007"
+        }
+      ]
+    }
+  },
+  "created_at": "2026-06-25T07:30:29.666056",
+  "updated_at": "2026-06-25T07:31:00.475022",
+  "started_at": "2026-06-25T07:30:29.685357",
+  "finished_at": "2026-06-25T07:31:00.475019"
+}
