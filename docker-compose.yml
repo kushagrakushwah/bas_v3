@@ -52,6 +52,11 @@ services:
       # Admin and Operator credentials for the dashboard
       - ADMIN_PASSWORD=${ADMIN_PASSWORD:-admin123}
       - OPERATOR_PASSWORD=${OPERATOR_PASSWORD:-operator123}
+      # SMTP Alerting Credentials
+      - SMTP_SERVER=${SMTP_SERVER:-}
+      - SMTP_PORT=${SMTP_PORT:-587}
+      - SMTP_USER=${SMTP_USER:-}
+      - SMTP_PASS=${SMTP_PASS:-}
     # M10 fix: removed source volume mount — use image-baked code in production
     depends_on:
       postgres:

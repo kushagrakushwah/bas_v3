@@ -8,7 +8,7 @@ from bas_engine.database.models import IntegrationDB
 router = APIRouter()
 
 # Allowed integration types
-_ALLOWED_TYPES = {"Slack", "Email", "Webhook", "Splunk", "QRadar", "Generic"}
+_ALLOWED_TYPES = {"Slack", "Email", "SMTP", "Webhook", "Splunk", "QRadar", "Generic"}
 
 class IntegrationCreate(BaseModel):
     name: str

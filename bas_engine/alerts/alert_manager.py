@@ -65,7 +65,10 @@ async def send_email_alert(subject, body, recipient):
 
         return True
 
-    except Exception:
+    except Exception as e:
+        import traceback
+        print(f"SMTP EXCEPTION: {e}", flush=True)
+        traceback.print_exc()
         return False
 
 # ---------------------------------------------------

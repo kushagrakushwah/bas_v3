@@ -51,7 +51,7 @@ const navigation = [
   },
 
   {
-    name: "Alerts",
+    name: "Reports and Alerts",
     href: "/dashboard/alerts",
     icon: Bell,
   },

@@ -15,6 +15,7 @@ import {
 
 import { api } from "@/lib/api";
 import { useEvents } from "@/hooks/useEvents";
+import { generateMarkdownReport, generatePDFReport } from "@/lib/reports";
 const mockIntegrations = [
   {
     name: "SOC Slack Channel",
@@ -55,6 +56,8 @@ export default function AlertsPage() {
     useState<any[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [newInt, setNewInt] = useState({ name: "", type: "Webhook", target: "" });
+  const [selectedSims, setSelectedSims] = useState<string[]>([]);
+  const [selectAll, setSelectAll] = useState(false);
   const events = useEvents();
 
   useEffect(() => {
@@ -97,6 +100,23 @@ export default function AlertsPage() {
       console.error(err);
     }
   }
+
+  const handleDownloadMarkdown = () => {
+    const simsToExport = selectAll ? simulations : simulations.filter(s => selectedSims.includes(s.id));
+    const md = generateMarkdownReport(simsToExport);
+    const blob = new Blob([md], { type: "text/markdown" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "SecureForge_Report.md";
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleDownloadPDF = () => {
+    const simsToExport = selectAll ? simulations : simulations.filter(s => selectedSims.includes(s.id));
+    generatePDFReport(simsToExport);
+  };
 
   const generatedAlerts =
     simulations.flatMap(
@@ -186,7 +206,7 @@ export default function AlertsPage() {
         <div>
           <h1 className="text-3xl font-bold tracking-tight text-white flex items-center gap-3">
             <Bell className="w-8 h-8 text-amber-500" />
-            Alerting & Webhooks
+            Reports and Alerts
           </h1>
 
           <p className="text-sm text-zinc-400 mt-1">
@@ -203,6 +223,67 @@ export default function AlertsPage() {
           <Plus className="w-4 h-4" />
           New Integration
         </button>
+      </div>
+
+      {/* Report Generation */}
+      <div className="glass-card p-8">
+        <h2 className="text-2xl font-bold mb-6">Simulation Reports</h2>
+        <div className="flex flex-col gap-4">
+          <div className="flex items-center gap-2">
+            <input 
+              type="checkbox" 
+              id="selectAll" 
+              checked={selectAll}
+              onChange={(e) => {
+                setSelectAll(e.target.checked);
+                if (e.target.checked) setSelectedSims(simulations.map(s => s.id));
+                else setSelectedSims([]);
+              }}
+              className="w-4 h-4 rounded bg-black border-white/10 text-amber-500 focus:ring-amber-500"
+            />
+            <label htmlFor="selectAll" className="text-sm font-medium text-white">Full Report (All Simulations)</label>
+          </div>
+          
+          {!selectAll && (
+            <div className="flex flex-col gap-2 max-h-48 overflow-y-auto bg-black/50 p-4 rounded-xl border border-white/5">
+              {simulations.length === 0 ? (
+                <div className="text-sm text-white/50">No simulations available.</div>
+              ) : (
+                simulations.map(sim => (
+                  <label key={sim.id} className="flex items-center gap-2 text-sm text-zinc-300">
+                    <input 
+                      type="checkbox" 
+                      checked={selectedSims.includes(sim.id)}
+                      onChange={(e) => {
+                        if (e.target.checked) setSelectedSims([...selectedSims, sim.id]);
+                        else setSelectedSims(selectedSims.filter(id => id !== sim.id));
+                      }}
+                      className="w-4 h-4 rounded bg-black border-white/10 text-amber-500 focus:ring-amber-500"
+                    />
+                    {sim.name} ({new Date(sim.started_at.endsWith('Z') ? sim.started_at : sim.started_at + 'Z').toLocaleString('en-US', { timeZone: 'Asia/Kolkata' })})
+                  </label>
+                ))
+              )}
+            </div>
+          )}
+
+          <div className="flex gap-4 mt-2">
+            <button 
+              onClick={handleDownloadPDF}
+              disabled={!selectAll && selectedSims.length === 0}
+              className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-md text-sm font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Export PDF
+            </button>
+            <button 
+              onClick={handleDownloadMarkdown}
+              disabled={!selectAll && selectedSims.length === 0}
+              className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-md text-sm font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Export Markdown (README)
+            </button>
+          </div>
+        </div>
       </div>
 
       {/* Real Security Alerts */}

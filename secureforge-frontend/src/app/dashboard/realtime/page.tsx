@@ -85,24 +85,29 @@ function EventPayloadRenderer({ event }: { event: EventItem }) {
     const meta = payload.metadata || {};
     
     return (
-      <div className="mt-4 space-y-3">
-        <div className="bg-black/40 rounded-xl p-4 border border-white/5 font-mono text-sm">
-          <div className="flex items-center gap-2 mb-2 text-purple-400">
-            <span className="font-bold">[{rawType}]</span>
+      <div className="mt-4">
+        <div className="bg-zinc-950/50 rounded-lg p-3 border border-white/[0.05] flex gap-3 items-start">
+          <div className={`mt-0.5 text-[10px] px-2 py-0.5 rounded font-bold uppercase tracking-wider whitespace-nowrap
+            ${rawType.includes('ERROR') || rawType.includes('FAIL') ? 'bg-red-500/20 text-red-400' : 
+              rawType.includes('WARN') ? 'bg-amber-500/20 text-amber-400' : 
+              rawType.includes('SUCCESS') ? 'bg-emerald-500/20 text-emerald-400' : 
+              'bg-blue-500/20 text-blue-400'}`}>
+            {rawType}
           </div>
-          <p className="text-white/90 whitespace-pre-wrap leading-relaxed">{msg}</p>
-        </div>
-        
-        {Object.keys(meta).length > 0 && (
-          <div className="flex flex-wrap gap-2 mt-3">
-            {Object.entries(meta).map(([k, v]) => (
-              <div key={k} className="bg-white/[0.05] border border-white/10 rounded-md px-3 py-1.5 text-xs flex gap-2 items-center">
-                <span className="text-white/40 uppercase tracking-wider">{k}:</span>
-                <span className="text-white/80 font-mono">{String(v)}</span>
+          <div className="flex-1 min-w-0">
+            <p className="text-white/80 font-mono text-xs whitespace-pre-wrap leading-relaxed">{msg}</p>
+            {Object.keys(meta).length > 0 && (
+              <div className="flex flex-wrap gap-2 mt-2">
+                {Object.entries(meta).map(([k, v]) => (
+                  <div key={k} className="bg-black/50 border border-white/5 rounded px-2 py-1 text-[10px] flex gap-1.5 items-center">
+                    <span className="text-white/40">{k}:</span>
+                    <span className="text-white/70 font-mono truncate max-w-[200px]">{String(v)}</span>
+                  </div>
+                ))}
               </div>
-            ))}
+            )}
           </div>
-        )}
+        </div>
       </div>
     );
   }
@@ -127,34 +132,70 @@ function EventPayloadRenderer({ event }: { event: EventItem }) {
   if (event.type === "vulnerability.found") {
     const details = payload.finding_details || {};
     return (
-      <div className="mt-4 bg-red-500/5 border border-red-500/20 rounded-xl p-4 space-y-3">
-        <div className="flex items-start justify-between">
-          <div>
-            <h4 className="text-red-400 font-bold text-sm">{details.title || "Unknown Vulnerability"}</h4>
-            <p className="text-white/70 text-xs mt-1">{details.description}</p>
+      <div className="mt-4 bg-zinc-950/80 border border-red-500/30 rounded-xl overflow-hidden shadow-[0_0_15px_rgba(239,68,68,0.1)]">
+        {/* Header */}
+        <div className="bg-red-500/10 px-4 py-3 border-b border-red-500/20 flex items-start justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded bg-red-500/20 flex items-center justify-center">
+              <AlertTriangle className="w-4 h-4 text-red-500" />
+            </div>
+            <div>
+              <h4 className="text-red-400 font-bold text-sm tracking-wide">{details.title || "Unknown Vulnerability"}</h4>
+              <div className="flex items-center gap-2 mt-1">
+                <span className="text-xs text-white/50 font-mono">{payload.module || "Unknown Module"}</span>
+                <span className="text-xs text-white/30">•</span>
+                <span className="text-xs text-white/50 font-mono">{payload.target || "N/A"}</span>
+              </div>
+            </div>
           </div>
-          <span className="bg-red-500/20 text-red-300 text-[10px] px-2 py-1 rounded uppercase tracking-wider font-bold">
+          <span className="bg-red-500 text-white text-[10px] px-2.5 py-1 rounded-sm uppercase tracking-widest font-bold shadow-sm shadow-red-500/50">
             {details.severity || "Critical"}
           </span>
         </div>
         
-        <div className="grid grid-cols-2 gap-3 mt-3">
-          <div className="bg-black/30 rounded p-2 text-xs">
-            <span className="text-white/40 block mb-1">MITRE ID</span>
-            <span className="font-mono text-white/80">{details.mitre_id || "N/A"}</span>
-          </div>
-          <div className="bg-black/30 rounded p-2 text-xs">
-            <span className="text-white/40 block mb-1">Target</span>
-            <span className="font-mono text-white/80">{payload.target || "N/A"}</span>
+        <div className="p-4 space-y-4">
+          {/* Payload Evidence - The most important part */}
+          {details.evidence ? (
+            <div className="bg-black rounded-lg border border-zinc-800 p-3">
+              <div className="text-[10px] uppercase tracking-widest text-emerald-500/70 mb-2 font-bold flex items-center gap-2">
+                <Terminal className="w-3 h-3" />
+                Payload Triggered
+              </div>
+              <pre className="font-mono text-xs text-emerald-400 whitespace-pre-wrap leading-relaxed break-all">
+                {details.evidence}
+              </pre>
+            </div>
+          ) : (
+            <div className="bg-black rounded-lg border border-zinc-800 p-3">
+              <div className="text-[10px] uppercase tracking-widest text-emerald-500/70 mb-2 font-bold flex items-center gap-2">
+                <Terminal className="w-3 h-3" />
+                Payload Triggered
+              </div>
+              <pre className="font-mono text-xs text-zinc-500 italic">No explicit payload extracted.</pre>
+            </div>
+          )}
+
+          {/* Description */}
+          <p className="text-white/70 text-xs leading-relaxed">
+            {details.description}
+          </p>
+
+          {/* Info Grid */}
+          <div className="grid grid-cols-2 gap-3">
+            <div className="bg-white/[0.02] border border-white/5 rounded-lg p-3">
+              <span className="text-[10px] uppercase tracking-widest text-white/40 block mb-1">MITRE ID</span>
+              <span className="font-mono text-sm text-white/90">{details.mitre_id || "N/A"}</span>
+            </div>
+            {details.remediation && (
+              <div className="bg-emerald-500/5 border border-emerald-500/10 rounded-lg p-3">
+                <span className="text-[10px] uppercase tracking-widest text-emerald-500/70 block mb-1">Remediation</span>
+                <span className="text-xs text-emerald-100/70 line-clamp-2" title={details.remediation}>
+                  {details.remediation}
+                </span>
+              </div>
+            )}
           </div>
         </div>
-        
-        {details.remediation && (
-          <div className="mt-3 bg-green-500/10 border border-green-500/20 rounded p-3 text-xs">
-            <span className="text-green-400 font-bold block mb-1">Remediation</span>
-            <span className="text-white/80">{details.remediation}</span>
-          </div>
-        )}
       </div>
     );
   }
