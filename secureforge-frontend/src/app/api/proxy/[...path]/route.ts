@@ -65,13 +65,20 @@ async function proxy(
     forwardHeaders.set("Authorization", `Bearer ${token.backendToken}`);
   }
   
-  forwardHeaders.set("Content-Type", "application/json");
+  let hasContentType = false;
 
   request.headers.forEach((value, key) => {
     if (SAFE_HEADERS_TO_FORWARD.has(key.toLowerCase())) {
       forwardHeaders.set(key, value);
+      if (key.toLowerCase() === "content-type") {
+        hasContentType = true;
+      }
     }
   });
+
+  if (!hasContentType) {
+    forwardHeaders.set("Content-Type", "application/json");
+  }
 
   // L6 fix: add request timeout via AbortController
   const controller = new AbortController();

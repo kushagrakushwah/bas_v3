@@ -10,6 +10,9 @@ import aiohttp
 import json
 import logging
 import re
+import socket
+import ipaddress
+import os
 from typing import List, Dict, Any, Optional
 from urllib.parse import urlparse, parse_qs, urlencode, urlunparse
 
@@ -111,18 +114,42 @@ class VulnScannerModule(BaseAttackModule):
         test_type = options.get("test_type", "xss")
         template = DEFAULT_TEMPLATES.get(test_type, DEFAULT_TEMPLATES["xss"])
 
-        # H1 fix: validate options.url against SSRF denylist — same logic as SimulationRequest.validate_target
+        # H1 fix: validate options.url against SSRF denylist
         raw_url = options.get("url", self.target)
-        _lower = (raw_url or "").strip().lower()
-        if (
-            "169.254.169.254" in _lower
-            or "metadata.google.internal" in _lower
-            or _lower.startswith("file://")
-        ) or re.search(r"127\.\d+\.\d+\.\d+", _lower) or "localhost" in _lower:
-            raise ValueError(f"options.url {raw_url!r} is blocked by SSRF policy.")
         target = raw_url
         if "://" not in target:
             target = "http://" + target
+
+        parsed_target = urlparse(target)
+        hostname = parsed_target.hostname or ""
+        
+        # 1. Check basic string blocklist
+        _lower = target.lower()
+        if _lower.startswith("file://") or "localhost" in _lower or "metadata.google.internal" in _lower:
+            raise ValueError(f"options.url {raw_url!r} is blocked by SSRF policy.")
+            
+        # 2. DNS Rebinding and comprehensive IP blocklist
+        try:
+            resolved_ip = socket.gethostbyname(hostname)
+            ip_obj = ipaddress.ip_address(resolved_ip)
+            
+            # Check if it's a lab target
+            lab_targets_env = os.environ.get("LAB_TARGETS", "")
+            lab_targets = [t.strip() for t in lab_targets_env.split(",") if t.strip()]
+
+            if str(ip_obj) not in lab_targets:
+                if ip_obj.is_loopback or ip_obj.is_private or ip_obj.is_link_local or ip_obj.is_multicast:
+                    raise ValueError(f"options.url {raw_url!r} resolved to forbidden IP {resolved_ip} (SSRF policy)")
+                forbidden_ips = {
+                    "169.254.169.254", # AWS, Azure, GCP, DO
+                    "169.63.129.16",   # Azure
+                    "100.100.100.200", # Alibaba
+                }
+                if str(ip_obj) in forbidden_ips:
+                    raise ValueError(f"options.url {raw_url!r} resolved to forbidden metadata IP {resolved_ip}")
+                
+        except socket.gaierror:
+            pass
 
         method = options.get("method", template.get("method", "GET"))
 
@@ -411,9 +438,13 @@ class VulnScannerModule(BaseAttackModule):
         timeout_s = float(options.get("timeout", timeout or 10))
 
         # Setup Webmail specific context
+        ssl_verify = self.options.get("ssl_verify", False)
+        if not ssl_verify:
+            self.logger.warning("⚠️ SSL Verification is disabled for Webmail Scanning")
         ssl_ctx = ssl.create_default_context()
-        ssl_ctx.check_hostname = False
-        ssl_ctx.verify_mode = ssl.CERT_NONE
+        if not ssl_verify:
+            ssl_ctx.check_hostname = False
+            ssl_ctx.verify_mode = ssl.CERT_NONE
 
         token_pattern = r'(?:request_token|_token|token|_csrf)'
 
@@ -619,9 +650,13 @@ class VulnScannerModule(BaseAttackModule):
                 
         return all_findings
 
+        ssl_verify = self.options.get("ssl_verify", False)
+        if not ssl_verify:
+            self.logger.warning("⚠️ SSL Verification is disabled for C2 Fallback Scanning")
         ssl_ctx = ssl.create_default_context()
-        ssl_ctx.check_hostname = False
-        ssl_ctx.verify_mode = ssl.CERT_NONE
+        if not ssl_verify:
+            ssl_ctx.check_hostname = False
+            ssl_ctx.verify_mode = ssl.CERT_NONE
 
         token_pattern = r'(?:request_token|_token|token|_csrf)'
 

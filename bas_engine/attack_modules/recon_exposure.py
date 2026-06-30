@@ -16,6 +16,8 @@ real exploitation techniques, not fabricated narratives.
 import asyncio
 import aiohttp
 import re
+import base64
+import urllib.parse
 from typing import List
 from urllib.parse import urlparse
 from bas_engine.attack_modules.base import BaseAttackModule
@@ -72,6 +74,9 @@ class ReconExposureModule(BaseAttackModule):
         (r"password\s*=\s*['\"]([^'\"]+)['\"]",1, "Hardcoded password"),
         (r"mysql://(\S+):(\S+)@",              2, "MySQL connection string"),
         (r"postgresql://(\S+):(\S+)@",         2, "PostgreSQL connection string"),
+        (r"AKIA[0-9A-Z]{16}",                  1, "AWS Access Key ID"),
+        (r"ghp_[0-9a-zA-Z]{36}",               1, "GitHub Personal Access Token"),
+        (r"eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+", 1, "JWT Token"),
     ]
 
     # Default credentials used in lateral movement (stage 3)
@@ -226,7 +231,10 @@ class ReconExposureModule(BaseAttackModule):
         resolved = await self.resolve_target()
         target = self.build_target_url(resolved, default_scheme="https")
 
-        connector = aiohttp.TCPConnector()  # H5 fix: ssl verification enabled
+        ssl_verify = self.options.get("ssl_verify", False)
+        if not ssl_verify:
+            self.logger.warning("⚠️ SSL Verification is disabled for Recon Exposure")
+        connector = aiohttp.TCPConnector(ssl=ssl_verify)
         timeout   = aiohttp.ClientTimeout(total=10)
 
         async with aiohttp.ClientSession(
@@ -292,15 +300,30 @@ class ReconExposureModule(BaseAttackModule):
                 async with session.get(url, allow_redirects=False) as resp:
                     if resp.status == 200:
                         body = await resp.text(errors="replace")
+                        
+                        decoded_bodies = [body]
+                        try:
+                            decoded_bodies.append(urllib.parse.unquote(body))
+                        except: pass
+                        
+                        try:
+                            b64_pattern = r"(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?"
+                            for b64 in re.findall(b64_pattern, body):
+                                if len(b64) > 20:
+                                    decoded_bodies.append(base64.b64decode(b64).decode('utf-8', errors='ignore'))
+                        except: pass
+
                         extracted = []
                         for pattern, group_idx, desc in self.CREDENTIAL_PATTERNS:
-                            matches = re.findall(pattern, body, re.IGNORECASE)
-                            if matches:
-                                if group_idx == 1:
-                                    secret = matches[0] if isinstance(matches[0], str) else matches[0][0]
-                                else:
-                                    secret = f"{matches[0][0]}:****"
-                                extracted.append((desc, secret, str(matches[:2])))
+                            for test_body in decoded_bodies:
+                                matches = re.findall(pattern, test_body, re.IGNORECASE)
+                                if matches:
+                                    if group_idx == 1:
+                                        secret = matches[0] if isinstance(matches[0], str) else matches[0][0]
+                                    else:
+                                        secret = f"{matches[0][0]}:****"
+                                    extracted.append((desc, secret, str(matches[:2])))
+                                    break # Only report once per pattern across decodings
 
                         if extracted:
                             for desc, secret, raw in extracted:

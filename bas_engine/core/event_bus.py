@@ -5,6 +5,9 @@ Events are also forwarded to ELK via the elk_client when available.
 
 import asyncio
 import logging
+import json
+import os
+import redis.asyncio as redis
 from collections import defaultdict
 from datetime import datetime
 from typing import Callable, Dict, List, Any
@@ -20,6 +23,10 @@ class EventBus:
         self._history:   List[dict] = []
         self._max_history = 1000
         self.repo = EventsRepository()
+        self.redis_client = None
+        redis_url = os.getenv("REDIS_URL")
+        if redis_url:
+            self.redis_client = redis.from_url(redis_url)
 
     def subscribe(self, event_type: str, handler: Callable):
         self._listeners[event_type].append(handler)
@@ -45,6 +52,12 @@ class EventBus:
             self._history.pop(0)
 
         logger.debug(f"Event: {event_type} | {payload}")
+
+        if self.redis_client:
+            try:
+                await self.redis_client.publish("secureforge_events", json.dumps(event))
+            except Exception as e:
+                logger.error(f"Redis publish error: {e}")
 
         # Notify all subscribers
         handlers = self._listeners.get(event_type, []) + self._listeners.get("*", [])

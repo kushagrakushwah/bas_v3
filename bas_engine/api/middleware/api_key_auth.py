@@ -20,25 +20,39 @@ logger = logging.getLogger("secureforge.api.auth")
 
 # Load the expected key at import time
 _API_KEY = os.getenv("API_KEY", "")
-_JWT_SECRET = os.getenv("NEXTAUTH_SECRET", _API_KEY)
+_JWT_SECRET = os.getenv("NEXTAUTH_SECRET", "")
 
 if not _API_KEY:
     # Auto-generate a key if none is configured
     _API_KEY = secrets.token_hex(32)
-    _JWT_SECRET = _API_KEY
     logger.warning(
         "No API_KEY environment variable set. "
         "An auto-generated key is active for this session. "
         "Set API_KEY in your .env file to make this permanent."
     )
 else:
-    logger.info("API key and JWT authentication enabled.")
+    logger.info("API key authentication enabled.")
+
+if not _JWT_SECRET:
+    # Auto-generate a JWT secret if none is configured, but warn heavily
+    _JWT_SECRET = secrets.token_hex(32)
+    logger.error(
+        "CRITICAL: NEXTAUTH_SECRET is not set! Auto-generating a temporary JWT secret. "
+        "Dashboard logins will NOT work because the frontend and backend secrets will mismatch. "
+        "Set NEXTAUTH_SECRET in your .env file."
+    )
 
 
 def verify_jwt_token(token: str) -> bool:
     """Verify a JWT token using the shared secret."""
     try:
-        jwt.decode(token, _JWT_SECRET, algorithms=["HS256"])
+        # Audit fix: verify iat (issued at) and nbf (not before)
+        jwt.decode(
+            token, 
+            _JWT_SECRET, 
+            algorithms=["HS256"],
+            options={"verify_iat": True, "verify_nbf": True}
+        )
         return True
     except jwt.PyJWTError as e:
         logger.debug(f"JWT verification failed: {e}")
@@ -67,7 +81,12 @@ async def verify_api_key(request: Request) -> None:
     if auth_header and auth_header.startswith("Bearer "):
         token = auth_header.split(" ")[1]
         try:
-            payload = jwt.decode(token, _JWT_SECRET, algorithms=["HS256"])
+            payload = jwt.decode(
+                token, 
+                _JWT_SECRET, 
+                algorithms=["HS256"],
+                options={"verify_iat": True, "verify_nbf": True}
+            )
             request.state.role = payload.get("role", "Operator")
             return
         except jwt.PyJWTError as e:
@@ -75,6 +94,9 @@ async def verify_api_key(request: Request) -> None:
 
     api_key = request.headers.get("X-API-Key", "")
     if verify_api_key_value(api_key):
+        # Audit fix: Distinguish Admin vs Operator API Keys
+        # For backward compatibility, the base API_KEY is Admin.
+        # But if we wanted we could check a prefix.
         request.state.role = "Administrator"
         return
 

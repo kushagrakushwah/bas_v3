@@ -13,7 +13,10 @@ async def launch_simulation(request: Request, sim_req: SimulationRequest):
             detail="Administrator privileges required to launch red team modules."
         )
     orchestrator = request.app.state.orchestrator
-    return await orchestrator.launch(sim_req)
+    try:
+        return await orchestrator.launch(sim_req, role=getattr(request.state, "role", "Operator"))
+    except ValueError as e:
+        raise HTTPException(status_code=403, detail=str(e))
 
 @router.get("/", response_model=List[SimulationResult])
 async def list_simulations(request: Request):

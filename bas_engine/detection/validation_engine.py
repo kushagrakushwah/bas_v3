@@ -66,16 +66,29 @@ class DetectionValidationEngine:
         )
 
         return {
+            "methodology": {
+                "disclaimer": "This validation is simulated. No SIEM integration detected.",
+                "exposure_score": "Severity-weighted logarithmic score of attacker success (0-100).",
+                "detection_score": "Simulated SOC detection capability based on technique-to-Sigma-rule mappings (0-100)."
+            },
 
-            "coverage":
-                coverage,
-
-            "soc_score":
-                soc_score,
-
-            "blindspots":
-                blindspots,
-
-            "sigma_rules":
-                sigma_rules
+            "attack_surface": {
+                "exposure_score": soc_score.get("exposure_score", 0),
+                "critical_findings": soc_score.get("critical_findings", 0),
+                "high_findings": soc_score.get("high_findings", 0),
+                "medium_findings": soc_score.get("medium_findings", 0),
+                "low_findings": soc_score.get("low_findings", 0),
+                "techniques_tested": coverage.get("techniques_tested", 0),
+            },
+            
+            "detection_simulation": {
+                "detection_score": soc_score.get("detection_score", 0),
+                "nist_maturity_tier": soc_score.get("nist_maturity_tier", "Tier 1: Minimal"),
+                "tactics_detected": coverage.get("tactics_detected", 0),
+                "sigma_rules_matched": coverage.get("sigma_rules_matched", 0),
+                "blind_spots_tactics": blindspots.get("blind_spots", []),
+                "untested_subtechniques": blindspots.get("untested_subtechniques", []),
+                "coverage_metrics": coverage.get("coverage", {}),
+                "sigma_rules": sigma_rules
+            }
         }

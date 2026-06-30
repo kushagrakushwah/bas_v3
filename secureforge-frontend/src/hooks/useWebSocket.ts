@@ -29,6 +29,7 @@ export function useWebSocket(url: string) {
         if (unmounted.current) return;
         try {
           const payload = JSON.parse(event.data);
+          if (payload.type === "ping") return;
           setMessages((prev) => [...prev, payload]);
         } catch {
           setMessages((prev) => [

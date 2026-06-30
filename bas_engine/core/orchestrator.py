@@ -66,7 +66,10 @@ class AttackOrchestrator:
         self.validation_engine = DetectionValidationEngine()
         logger.info("AttackOrchestrator initialized")
 
-    async def launch(self, request: SimulationRequest) -> SimulationResult:
+    async def launch(self, request: SimulationRequest, role: str = "Operator") -> SimulationResult:
+        if request.detailed_enumeration and role != "Administrator":
+            raise ValueError("Administrator privileges required to launch red team modules.")
+
         sim_id = str(uuid.uuid4())
         now = datetime.utcnow()
 
@@ -89,15 +92,17 @@ class AttackOrchestrator:
         await self.repo.create_simulation(result)
 
 
-        task = asyncio.create_task(self._run_simulation(sim_id, request))
-        self._tasks[sim_id] = task
+        # ----------------------------------------
+        # DISPATCH TO CELERY
+        # ----------------------------------------
+        from bas_engine.worker import run_simulation_task
 
-        def _handle_task_result(t):
-            self._tasks.pop(sim_id, None)
-            if not t.cancelled() and t.exception():
-                logger.error(f"Simulation {sim_id} crashed with unhandled exception: {t.exception()}")
-
-        task.add_done_callback(_handle_task_result)
+        # Convert request to dict and serialize enum models if needed
+        req_data = request.dict()
+        
+        # Dispatch the task to Celery asynchronously
+        # _run_simulation handles DB updates inside the worker
+        run_simulation_task.delay(sim_id, req_data, role)
 
         await self.event_bus.publish(
             "simulation.queued",
@@ -131,7 +136,14 @@ class AttackOrchestrator:
         request: SimulationRequest
     ):
         async with self._semaphore:
-            result = self._store[sim_id]
+            if sim_id in self._store:
+                result = self._store[sim_id]
+            else:
+                db_sim = await self.repo.get_simulation(sim_id)
+                if not db_sim:
+                    raise ValueError(f"Simulation {sim_id} not found in database.")
+                result = db_sim
+                self._store[sim_id] = result
 
             result.status = SimulationState.RUNNING
             result.started_at = datetime.utcnow()
@@ -271,6 +283,9 @@ class AttackOrchestrator:
                     result.status = SimulationState.COMPLETED
                 result.finished_at = datetime.utcnow()
                 result.updated_at = datetime.utcnow()
+                
+                # Update modules list to include any autonomously launched modules
+                result.modules = list(executed_modules)
 
                 # ----------------------------------------
                 # SAVE TO DATABASE
@@ -355,6 +370,7 @@ class AttackOrchestrator:
 
         # (Optional) still inject the flag in case the module wants it anyway
         module_options["detailed_enumeration"] = detailed_enumeration
+        module_options["ssl_verify"] = options.get("ssl_verify", False)
 
         # 3. Instantiate and run
         module_instance = module_cls(

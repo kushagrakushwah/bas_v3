@@ -35,6 +35,20 @@ services:
         limits:
           memory: 1g
 
+  redis:
+    image: redis:7-alpine
+    expose:
+      - "6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    deploy:
+      resources:
+        limits:
+          memory: 256m
+
   bas-engine:
     build: 
       context: ./bas_engine
@@ -43,15 +57,17 @@ services:
     environment:
       - ENVIRONMENT=${ENVIRONMENT:-production}
       - PYTHONPATH=/app
+      - REDIS_URL=redis://redis:6379/0
       - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER:-secureforge}:${POSTGRES_PASSWORD:-secureforge}@postgres:5432/${POSTGRES_DB:-secureforge}
       - ELASTICSEARCH_URL=http://elasticsearch:9200
-      # API_KEY uses a default fallback for instant local development
-      - API_KEY=${API_KEY:-dev-api-key-12345}
+      # API_KEY must be configured in .env
+      - API_KEY=${API_KEY}
+      - NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
       # Lab VM allowlist — private IPs listed here bypass the SSRF block
       - LAB_TARGETS=${LAB_TARGETS:-}
-      # Admin and Operator credentials for the dashboard
-      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-admin123}
-      - OPERATOR_PASSWORD=${OPERATOR_PASSWORD:-operator123}
+      # Admin and Operator credentials for the dashboard (must be configured in .env)
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD}
+      - OPERATOR_PASSWORD=${OPERATOR_PASSWORD}
       # SMTP Alerting Credentials
       - SMTP_SERVER=${SMTP_SERVER:-}
       - SMTP_PORT=${SMTP_PORT:-587}
@@ -63,6 +79,32 @@ services:
         condition: service_healthy
       elasticsearch:
         condition: service_started
+      redis:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          memory: 1g
+
+  celery-worker:
+    build: 
+      context: ./bas_engine
+    command: celery -A bas_engine.worker.celery_app worker --loglevel=info
+    environment:
+      - ENVIRONMENT=${ENVIRONMENT:-production}
+      - PYTHONPATH=/app
+      - REDIS_URL=redis://redis:6379/0
+      - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER:-secureforge}:${POSTGRES_PASSWORD:-secureforge}@postgres:5432/${POSTGRES_DB:-secureforge}
+      - ELASTICSEARCH_URL=http://elasticsearch:9200
+      - API_KEY=${API_KEY}
+      - LAB_TARGETS=${LAB_TARGETS:-}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      elasticsearch:
+        condition: service_started
+      redis:
+        condition: service_healthy
     deploy:
       resources:
         limits:
@@ -76,13 +118,13 @@ services:
     environment:
       - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-http://localhost:8000}
       - INTERNAL_API_URL=http://bas-engine:8000
-      # API_KEY uses a default fallback for instant local development
-      - API_KEY=${API_KEY:-dev-api-key-12345}
+      # API_KEY must match the bas-engine configuration
+      - API_KEY=${API_KEY}
       - ELASTICSEARCH_URL=http://elasticsearch:9200
       # L9 fix: NEXTAUTH_URL must be set per deployment environment
       - NEXTAUTH_URL=${NEXTAUTH_URL:-http://localhost:3001}
       # C4 fix: NEXTAUTH_SECRET must be set in .env — no default value
-      - NEXTAUTH_SECRET=${NEXTAUTH_SECRET:-dev-secret-key-1234567890}
+      - NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
     depends_on:
       - bas-engine
     deploy:

@@ -27,9 +27,10 @@ from bas_engine.api.routes import (
     replay,
     infrastructure,
     integrations,
-    auth
+    auth,
+    reports
 )
-from bas_engine.api.routes.ws import validate_ticket
+from bas_engine.api.routes.ws import validate_ticket, cleanup_tickets_loop
 from bas_engine.core.orchestrator import AttackOrchestrator
 from bas_engine.core.event_bus import EventBus
 from bas_engine.utils.logger import setup_logging
@@ -51,10 +52,18 @@ app = FastAPI(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:3000", "http://localhost:3001"],
-    allow_credentials=False,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_credentials=True,
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type", "X-API-Key", "Accept"],
 )
+
+@app.middleware("http")
+async def enforce_size_limit(request: Request, call_next):
+    MAX_BYTES = 10 * 1024 * 1024  # 10 MB limit
+    content_length = request.headers.get("content-length")
+    if content_length and int(content_length) > MAX_BYTES:
+        return JSONResponse(status_code=413, content={"detail": "Payload Too Large"})
+    return await call_next(request)
 
 # Public paths that bypass API key auth
 PUBLIC_PATH_PREFIXES = (
@@ -79,10 +88,15 @@ async def global_api_key_middleware(request: Request, call_next):
             if verify_jwt_token(token):
                 import jwt
                 try:
-                    payload = jwt.decode(token, _JWT_SECRET, algorithms=["HS256"])
+                    payload = jwt.decode(
+                        token, 
+                        _JWT_SECRET, 
+                        algorithms=["HS256"],
+                        options={"verify_iat": True, "verify_nbf": True}
+                    )
                     request.state.role = payload.get("role", "Operator")
-                except:
-                    pass
+                except jwt.PyJWTError as e:
+                    logger.debug(f"Middleware JWT parse failed: {e}")
                 return await call_next(request)
 
         key = request.headers.get("X-API-Key", "")
@@ -121,6 +135,37 @@ async def startup():
             .values(status=SimulationStatus.FAILED)
         )
         await session.commit()
+        
+    # Start WS ticket cleanup loop
+    import asyncio
+    asyncio.create_task(cleanup_tickets_loop())
+    
+    # --- REDIS EVENT LISTENER ---
+    import json
+    import redis.asyncio as redis_async
+    async def redis_listener():
+        redis_url = os.environ.get("REDIS_URL")
+        if not redis_url: return
+        try:
+            r = redis_async.from_url(redis_url)
+            pubsub = r.pubsub()
+            await pubsub.subscribe("secureforge_events")
+            while True:
+                try:
+                    message = await pubsub.get_message(ignore_subscribe_messages=True, timeout=1.0)
+                    if message and message["type"] == "message":
+                        data = message["data"]
+                        if isinstance(data, bytes):
+                            data = data.decode('utf-8')
+                        event = json.loads(data)
+                        await forward_to_elk(event)
+                except Exception as e:
+                    logger.error(f"Redis get_message error: {e}")
+                await asyncio.sleep(0.1)
+        except Exception as e:
+            logger.error(f"Redis listener error: {e}")
+            
+    asyncio.create_task(redis_listener())
     
     # --- THE MISSING WIRE ---
     # Listen to all internal events and forward them to Logstash
@@ -207,6 +252,12 @@ app.include_router(
     replay.router,
     prefix="/api/v1/replay",
     tags=["Replay"],
+    dependencies=[Depends(verify_api_key)]
+)
+app.include_router(
+    reports.router,
+    prefix="/api/v1",
+    tags=["Reports"],
     dependencies=[Depends(verify_api_key)]
 )
 app.include_router(ws.router)

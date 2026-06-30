@@ -36,6 +36,7 @@ class SimulationRepository:
                 status=simulation.status,
                 modules=simulation.modules,
                 metadata_json=simulation.metadata,
+                created_by=simulation.created_by,
                 created_at=simulation.created_at,
                 updated_at=simulation.updated_at,
                 started_at=simulation.started_at,
@@ -76,6 +77,7 @@ class SimulationRepository:
             db_sim.updated_at = simulation.updated_at
             db_sim.started_at = simulation.started_at
             db_sim.finished_at = simulation.finished_at
+            db_sim.modules = simulation.modules
             # --------------------------------------------
             # DETECTION VALIDATION
             # --------------------------------------------
@@ -206,8 +208,6 @@ class SimulationRepository:
                 .options(
                     selectinload(
                         SimulationDB.module_results
-                    ).selectinload(
-                        ModuleResultDB.findings
                     )
                 )
 
@@ -231,28 +231,31 @@ class SimulationRepository:
         self,
         db_sim
     ):
+        from sqlalchemy.orm.attributes import instance_state
 
         module_results = []
 
         for mod in db_sim.module_results:
 
             findings = []
-
-            for f in mod.findings:
-
-                findings.append(
-                    Finding(
-                        id=f.id,
-                        title=f.title,
-                        description=f.description,
-                        severity=f.severity,
-                        mitre_id=f.mitre_id,
-                        evidence=f.evidence,
-                        remediation=f.remediation,
-                        raw_data=f.raw_data,
-                        timestamp=f.timestamp
+            
+            # Check if findings were eagerly loaded
+            state = instance_state(mod)
+            if "findings" not in state.unloaded:
+                for f in mod.findings:
+                    findings.append(
+                        Finding(
+                            id=f.id,
+                            title=f.title,
+                            description=f.description,
+                            severity=f.severity,
+                            mitre_id=f.mitre_id,
+                            evidence=f.evidence,
+                            remediation=f.remediation,
+                            raw_data=f.raw_data,
+                            timestamp=f.timestamp
+                        )
                     )
-                )
 
             module_results.append(
 
@@ -286,6 +289,7 @@ class SimulationRepository:
             target=db_sim.target,
             modules=db_sim.modules or [],
             status=db_sim.status,
+            created_by=db_sim.created_by,
             module_results=module_results,
             metadata=metadata,
             created_at=db_sim.created_at,

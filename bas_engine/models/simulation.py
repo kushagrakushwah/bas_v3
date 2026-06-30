@@ -158,6 +158,7 @@ class SimulationResult(BaseModel):
     target:         str
     modules:        List[str]
     status:         str
+    created_by:     Optional[str]              = None
     module_results: List[AttackModuleResult]   = []
     error:          Optional[str]              = None
     metadata:       Dict[str, Any]             = {}

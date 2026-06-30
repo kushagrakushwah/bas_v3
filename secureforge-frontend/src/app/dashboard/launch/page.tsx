@@ -106,6 +106,7 @@ export default function LaunchPage() {
   const [parallel, setParallel] = useState(true);
   const [autonomous, setAutonomous] = useState(false);
   const [detailedEnumeration, setDetailedEnumeration] = useState(false);
+  const [sslVerify, setSslVerify] = useState(false);
 
   // ── Nmap options ────────────────────────────────────────────
   const [scanProfile, setScanProfile] = useState("standard");
@@ -212,6 +213,7 @@ export default function LaunchPage() {
       const options: any = {
         ssh_user: sshUser,
         ssh_pass: sshPass,
+        ssl_verify: sslVerify,
       };
 
       if (selectedModules.includes("privilege_escalation")) {
@@ -956,6 +958,16 @@ root,abc
               onChange={() => setDetailedEnumeration(!detailedEnumeration)}
             />
             Danger
+          </label>
+
+          <label className="flex items-center gap-2 text-emerald-400 font-semibold border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 rounded-full cursor-pointer hover:bg-emerald-500/20 transition-colors">
+            <input
+              type="checkbox"
+              className="accent-emerald-500"
+              checked={sslVerify}
+              onChange={() => setSslVerify(!sslVerify)}
+            />
+            SSL Verify
           </label>
         </div>
 

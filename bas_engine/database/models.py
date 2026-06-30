@@ -35,7 +35,9 @@ class SimulationDB(Base):
 
     target = Column(String)
 
-    status = Column(String)
+    status = Column(String, index=True)
+
+    created_by = Column(String)
 
     metadata_json = Column(JSON)
     
@@ -53,7 +55,8 @@ class SimulationDB(Base):
 
     created_at = Column(
         DateTime,
-        default=_utcnow
+        default=_utcnow,
+        index=True
     )
 
     updated_at = Column(

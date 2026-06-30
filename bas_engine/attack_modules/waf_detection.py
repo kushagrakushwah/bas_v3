@@ -27,6 +27,24 @@ WAF_BLOCK_CODES = [
     429
 ]
 
+WAF_SIGNATURES = [
+    "cloudflare",
+    "attention required! | cloudflare",
+    "x-amz-cf-id",
+    "aws waf captcha",
+    "request blocked",
+    "the request could not be satisfied",
+    "access denied",
+    "imperva incapsula",
+    "akamai",
+    "f5 networks",
+    "palo alto networks",
+    "fortinet",
+    "sucuri webSite firewall",
+    "mod_security",
+    "waf block page",
+]
+
 # =========================================================
 # PARAMETERS
 # =========================================================
@@ -226,6 +244,7 @@ class WAFEvasionModule(BaseAttackModule):
             "baseline_status": None,
             "headers": {},
             "classification": {},
+            "baseline_length": 0,
         }
 
         try:
@@ -234,7 +253,7 @@ class WAFEvasionModule(BaseAttackModule):
 
                 target,
 
-                ssl=True,
+                ssl=self.options.get("ssl_verify", False),
 
                 timeout=6,
 
@@ -253,6 +272,9 @@ class WAFEvasionModule(BaseAttackModule):
                 if response.status < 400:
 
                     analysis["baseline_allowed"] = True
+                
+                body = await response.text(errors="replace")
+                analysis["baseline_length"] = len(body)
 
                 analysis["classification"] = (
                     self.classify_headers(
@@ -315,7 +337,7 @@ class WAFEvasionModule(BaseAttackModule):
 
                 url,
 
-                ssl=True,
+                ssl=self.options.get("ssl_verify", False),
 
                 allow_redirects=False,
 
@@ -344,10 +366,26 @@ class WAFEvasionModule(BaseAttackModule):
                 # -----------------------------------------
 
                 else:
+                    body = await response.text(errors="replace")
+                    body_lower = body.lower()
+                    
+                    # Signature based check
+                    sig_match = any(sig in body_lower for sig in WAF_SIGNATURES)
+                    
+                    # Length heuristic check
+                    # If baseline is known, and body is <10% of baseline AND contains generic block words
+                    baseline_len = self.baseline.get("baseline_length", 0) if hasattr(self, "baseline") else 0
+                    length_match = False
+                    if baseline_len > 1000 and len(body) < (baseline_len * 0.1):
+                        if any(w in body_lower for w in ["blocked", "forbidden", "denied", "rejected"]):
+                            length_match = True
 
-                    result["blocked"] = False
-
-                    result["outcome"] = "ALLOWED"
+                    if sig_match or length_match:
+                        result["blocked"] = True
+                        result["outcome"] = "BLOCKED (Page Signature/Length)"
+                    else:
+                        result["blocked"] = False
+                        result["outcome"] = "ALLOWED"
 
         except asyncio.TimeoutError:
 
@@ -388,9 +426,13 @@ class WAFEvasionModule(BaseAttackModule):
         path_block_counter = {}
 
         import ssl
+        ssl_verify = self.options.get("ssl_verify", False)
+        if not ssl_verify:
+            self.logger.warning("⚠️ SSL Verification is disabled for WAF Detection")
         ssl_ctx = ssl.create_default_context()
-        ssl_ctx.check_hostname = False
-        ssl_ctx.verify_mode = ssl.CERT_NONE
+        if not ssl_verify:
+            ssl_ctx.check_hostname = False
+            ssl_ctx.verify_mode = ssl.CERT_NONE
 
         connector = aiohttp.TCPConnector(
             ssl=ssl_ctx
@@ -410,6 +452,7 @@ class WAFEvasionModule(BaseAttackModule):
                 session,
                 target,
             )
+            self.baseline = baseline
 
             print(
                 "\n=== BASELINE ANALYSIS ==="

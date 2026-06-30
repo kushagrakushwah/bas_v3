@@ -42,7 +42,13 @@ class ImpactSimModule(BaseAttackModule):
         findings = []
         discovered = []
 
+        ssl_verify = self.options.get("ssl_verify", False)
+        if not ssl_verify:
+            self.logger.warning("⚠️ SSL Verification is disabled for Impact Sim (Safe)")
+        connector = aiohttp.TCPConnector(ssl=ssl_verify)
+
         async with aiohttp.ClientSession(
+            connector=connector,
             timeout=aiohttp.ClientTimeout(total=10),
             headers={"User-Agent": "SecureForge-BAS/1.0"}
         ) as session:

@@ -101,8 +101,31 @@ export default function AlertsPage() {
     }
   }
 
-  const handleDownloadMarkdown = () => {
+  const handleDownloadMarkdown = async () => {
     const simsToExport = selectAll ? simulations : simulations.filter(s => selectedSims.includes(s.id));
+    
+    if (simsToExport.length === 1) {
+      try {
+        const token = localStorage.getItem("token") || "";
+        const res = await fetch(`/api/proxy/api/v1/reports/${simsToExport[0].id}/markdown`, {
+          headers: { "Authorization": `Bearer ${token}` }
+        });
+        if (!res.ok) throw new Error("Failed to fetch enterprise report");
+        const mdText = await res.text();
+        const blob = new Blob([mdText], { type: "text/markdown" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `SecureForge_Report_${simsToExport[0].name}.md`;
+        a.click();
+        URL.revokeObjectURL(url);
+        return;
+      } catch (err) {
+        console.error("Backend report failed, falling back to basic generation.", err);
+      }
+    }
+    
+    // Fallback for multiple selection or failed backend call
     const md = generateMarkdownReport(simsToExport);
     const blob = new Blob([md], { type: "text/markdown" });
     const url = URL.createObjectURL(blob);

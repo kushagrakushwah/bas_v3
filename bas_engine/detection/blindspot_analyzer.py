@@ -1,7 +1,7 @@
 from bas_engine.detection.coverage_engine import (
     CoverageEngine
 )
-from bas_engine.detection.constants import MITRE_ATTACK_TACTICS
+from bas_engine.detection.constants import MITRE_ATTACK_TACTICS, MITRE_SUBTECHNIQUES
 
 class BlindSpotAnalyzer:
 
@@ -25,7 +25,7 @@ class BlindSpotAnalyzer:
             .calculate_coverage(findings)
         )
 
-        detected = set(
+        detected_tactics = set(
             coverage_data[
                 "coverage"
             ].keys()
@@ -34,12 +34,24 @@ class BlindSpotAnalyzer:
         blind_spots = []
 
         for tactic in MITRE_ATTACK_TACTICS:
-
-            if tactic not in detected:
-
-                blind_spots.append(
-                    tactic
-                )
+            if tactic not in detected_tactics:
+                blind_spots.append(tactic)
+                
+        # --------------------------------------------
+        # SUB-TECHNIQUE ANALYSIS
+        # --------------------------------------------
+        detected_techniques = set()
+        for finding in findings:
+            mid = finding.get("mitre_id")
+            if mid:
+                detected_techniques.add(mid)
+                
+        untested_subtechniques = []
+        for tech, subtechs in MITRE_SUBTECHNIQUES.items():
+            if tech in detected_techniques or any(t.startswith(tech + ".") for t in detected_techniques):
+                for subtech in subtechs:
+                    if subtech not in detected_techniques:
+                        untested_subtechniques.append(subtech)
 
         # --------------------------------------------
         # RISK LEVEL
@@ -66,7 +78,7 @@ class BlindSpotAnalyzer:
         coverage_percent = round(
 
             (
-                len(detected)
+                len(detected_tactics)
                 / len(MITRE_ATTACK_TACTICS)
             ) * 100,
 
@@ -79,13 +91,17 @@ class BlindSpotAnalyzer:
                 coverage_percent,
 
             "detected_tactics":
-                list(detected),
+                list(detected_tactics),
 
             "blind_spots":
                 blind_spots,
 
             "blind_spot_count":
                 count,
+                
+            "untested_subtechniques": untested_subtechniques,
+            
+            "untested_subtechniques_count": len(untested_subtechniques),
 
             "risk_level":
                 risk

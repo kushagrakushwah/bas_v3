@@ -1,10 +1,12 @@
 export const API_BASE = "/api/proxy/api/v1";
 
+const delay = (ms: number) => new Promise(res => setTimeout(res, ms));
+
 async function request<T>(
   endpoint: string,
-  options?: RequestInit
+  options?: RequestInit,
+  retries = 3
 ): Promise<T> {
-  // L6 fix: add 30-second timeout to all API requests
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 30000);
 
@@ -24,32 +26,45 @@ async function request<T>(
     clearTimeout(timeoutId);
 
     if (!response.ok) {
-      throw new Error(
-        `API Error ${response.status}`
-      );
+      if (response.status >= 500 && retries > 0) {
+        // Exponential backoff for 5xx errors
+        const backoff = (4 - retries) * 500;
+        await delay(backoff);
+        return request(endpoint, options, retries - 1);
+      }
+      throw new Error(`API Error ${response.status}`);
     }
 
     return response.json();
   } catch (err: any) {
     clearTimeout(timeoutId);
+    if (err?.name === "AbortError" && retries > 0) {
+       const backoff = (4 - retries) * 500;
+       await delay(backoff);
+       return request(endpoint, options, retries - 1);
+    }
     if (err?.name === "AbortError") {
       throw new Error("Request timed out after 30s");
     }
+    
+    // Network errors
+    if (retries > 0) {
+      const backoff = (4 - retries) * 500;
+      await delay(backoff);
+      return request(endpoint, options, retries - 1);
+    }
+    
     throw err;
   }
 }
 
 export const api = {
   getModules() {
-    return request<any[]>(
-      "/modules/"
-    );
+    return request<any[]>("/modules/");
   },
 
   getSimulations() {
-    return request<any[]>(
-      "/simulations/"
-    );
+    return request<any[]>("/simulations/");
   },
 
   getWebSocketTicket() {
@@ -57,10 +72,16 @@ export const api = {
   },
 
   getWebSocketUrl(ticket: string) {
+    if (process.env.NEXT_PUBLIC_WS_URL) {
+      return `${process.env.NEXT_PUBLIC_WS_URL}?ticket=${ticket}`;
+    }
     if (typeof window === "undefined") {
       return `ws://localhost:8000/ws/events?ticket=${ticket}`;
     }
     const proto = window.location.protocol === "https:" ? "wss" : "ws";
+    if (proto === "ws") {
+      console.warn("Using plaintext WebSocket connection");
+    }
     const host = window.location.host;
     return `${proto}://${host}/ws/events?ticket=${ticket}`;
   },

