@@ -1,7 +1,9 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends, Request
 from pydantic import BaseModel, field_validator
 from sqlalchemy import select
-
+import asyncio
+from bas_engine.api.middleware.api_key_auth import verify_api_key
+from bas_engine.api.middleware.rate_limiter import limiter
 from bas_engine.database.connection import AsyncSessionLocal
 from bas_engine.database.models import IntegrationDB
 
@@ -39,33 +41,47 @@ class IntegrationCreate(BaseModel):
             raise ValueError("target must be between 1 and 2048 characters.")
         
         import urllib.parse
-        import socket
-        import ipaddress
 
         parsed = urllib.parse.urlparse(v)
         hostname = parsed.hostname or v
-        
-        try:
-            ip_str = socket.gethostbyname(hostname)
-            ip_obj = ipaddress.ip_address(ip_str)
-            if (ip_obj.is_private or ip_obj.is_loopback or 
-                ip_obj.is_link_local or ip_obj.is_multicast or 
-                ip_obj.is_unspecified):
-                raise ValueError(f"Target resolves to a prohibited internal or reserved IP address ({ip_str})")
-        except socket.gaierror:
-            # If DNS resolution fails, allow it. It will simply fail to connect during runtime.
-            pass
+        # Synchronous DNS resolution (socket.gethostbyname) is removed from here
+        # because it blocks the event loop (NEW-F). DNS resolution and SSRF
+        # checking are now handled asynchronously in the route handler below.
             
         return v
 
-@router.get("/")
+@router.get("/", dependencies=[Depends(verify_api_key)])
 async def get_integrations():
     async with AsyncSessionLocal() as session:
         result = await session.execute(select(IntegrationDB))
         return result.scalars().all()
 
-@router.post("/")
-async def create_integration(integration: IntegrationCreate):
+@router.post("/", dependencies=[Depends(verify_api_key)])
+@limiter.limit("10/minute")
+async def create_integration(request: Request, integration: IntegrationCreate):
+
+    import urllib.parse
+    import socket
+    import ipaddress
+    import asyncio
+    
+    parsed = urllib.parse.urlparse(integration.target)
+    hostname = parsed.hostname or integration.target
+    
+    # NEW-F: Asynchronous DNS resolution to prevent blocking the event loop
+    try:
+        ip_str = await asyncio.to_thread(socket.gethostbyname, hostname)
+        ip_obj = ipaddress.ip_address(ip_str)
+        if (ip_obj.is_private or ip_obj.is_loopback or 
+            ip_obj.is_link_local or ip_obj.is_multicast or 
+            ip_obj.is_unspecified):
+            raise HTTPException(status_code=400, detail=f"Target resolves to a prohibited internal or reserved IP address ({ip_str})")
+    except socket.gaierror:
+        # NEW-H: We allow DNS failure at validation time (since the target might be temporarily down),
+        # but the runtime execution (send_slack_alert) MUST re-validate DNS immediately before connecting
+        # to prevent DNS rebinding attacks. 
+        pass
+
     async with AsyncSessionLocal() as session:
         db_integration = IntegrationDB(
             name=integration.name,
@@ -77,7 +93,7 @@ async def create_integration(integration: IntegrationCreate):
         await session.refresh(db_integration)
         return db_integration
 
-@router.delete("/{integration_id}")
+@router.delete("/{integration_id}", dependencies=[Depends(verify_api_key)])
 async def delete_integration(integration_id: str):
     async with AsyncSessionLocal() as session:
         result = await session.execute(select(IntegrationDB).where(IntegrationDB.id == integration_id))

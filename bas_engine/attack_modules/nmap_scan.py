@@ -60,7 +60,9 @@ class NmapScanModule(BaseAttackModule):
         else:
             args.extend(["-sV", "--version-intensity", "5"]) # Service fingerprinting
             if ports.startswith("top-ports"):
-                args.extend(["--top-ports", ports.split(" ")[1]])
+                parts = ports.split(" ")
+                top_n = parts[1] if len(parts) > 1 and parts[1].isdigit() else "100"
+                args.extend(["--top-ports", top_n])
             else:
                 args.extend(["-p", ports])
                 

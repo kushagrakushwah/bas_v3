@@ -13,9 +13,7 @@ from bas_engine.api.routes.recon import (
 )
 from fastapi import WebSocket, Depends
 
-from bas_engine.core.events.ws_manager import (
-    manager
-)
+
 from bas_engine.api.routes import (
     simulations,
     modules,
@@ -49,6 +47,18 @@ app = FastAPI(
     version="1.0.0"
 )
 
+# NEW-M: Add SlowAPI rate limiter
+from bas_engine.api.middleware.rate_limiter import limiter
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+from slowapi.middleware import SlowAPIMiddleware
+
+# Rate limiter is imported from bas_engine.api.middleware.rate_limiter
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+app.add_middleware(SlowAPIMiddleware)
+
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:3000", "http://localhost:3001"],
@@ -64,13 +74,6 @@ async def enforce_size_limit(request: Request, call_next):
     if content_length and int(content_length) > MAX_BYTES:
         return JSONResponse(status_code=413, content={"detail": "Payload Too Large"})
     return await call_next(request)
-
-# Public paths that bypass API key auth
-PUBLIC_PATH_PREFIXES = (
-    "/api/v1/health",
-    "/ws/",
-    "/",
-)
 
 @app.middleware("http")
 async def global_api_key_middleware(request: Request, call_next):
@@ -270,30 +273,6 @@ app.include_router(
     tags=["Recon"],
     dependencies=[Depends(verify_api_key)]
 )
-@app.websocket("/ws/global")
-async def global_websocket(
-    websocket: WebSocket,
-    ticket: str = None
-):
-    if not ticket or not validate_ticket(ticket):
-        await websocket.close(code=1008)
-        return
-
-    await websocket.accept()
-    await manager.connect(
-        "global",
-        websocket
-    )
-
-    try:
-        while True:
-            await websocket.receive_text()
-
-    except Exception:
-        manager.disconnect(
-            "global",
-            websocket
-        )
 
 if __name__ == "__main__":
     uvicorn.run("main:app", host=os.getenv("API_HOST", "0.0.0.0"), port=8000, workers=1)  # nosec B104

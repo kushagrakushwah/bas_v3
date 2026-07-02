@@ -16,97 +16,22 @@ from typing import Dict, List
 
 
 PORT_ATTACK_MAP = {
-
-    21: [
-        "ftp_anonymous",
-        "credential_spray",
-    ],
-
-    22: [
-        "ssh_bruteforce",
-        "ssh_enumeration",
-    ],
-
-    23: [
-        "telnet_bruteforce",
-    ],
-
-    25: [
-        "smtp_enum",
-    ],
-
-    53: [
-        "dns_enum",
-    ],
-
-    80: [
-        "waf_evasion",
-        "owasp_web",
-        "apt_killchain",
-    ],
-
-    110: [
-        "pop3_enum",
-    ],
-
-    139: [
-        "smb_enum",
-    ],
-
-    143: [
-        "imap_enum",
-    ],
-
-    389: [
-        "ldap_enum",
-    ],
-
-    443: [
-        "waf_evasion",
-        "apt_killchain",
-        "owasp_web",
-    ],
-
-    445: [
-        "smb_enum",
-        "lateral_movement",
-    ],
-
-    3306: [
-        "mysql_bruteforce",
-    ],
-
-    3389: [
-        "rdp_bruteforce",
-    ],
-
-    5432: [
-        "postgres_enum",
-    ],
-
-    6379: [
-        "redis_misconfig",
-    ],
-
-    8080: [
-        "web_fuzzing",
-        "waf_evasion",
-    ],
+    22: ["ssh_bruteforce", "privilege_escalation"],
+    80: ["waf_evasion", "owasp_web", "apt_killchain", "vuln_scanner"],
+    443: ["waf_evasion", "owasp_web", "apt_killchain", "vuln_scanner"],
+    8080: ["waf_evasion", "owasp_web", "vuln_scanner"],
 }
 
 
 class AttackRecommender:
 
     def recommend_by_port(
-
         self,
         port: int,
     ) -> List[str]:
-
-        return PORT_ATTACK_MAP.get(
-            port,
-            []
-        )
+        from bas_engine.attack_modules.registry import MODULE_REGISTRY
+        attacks = PORT_ATTACK_MAP.get(port, [])
+        return [attack for attack in attacks if attack in MODULE_REGISTRY]
 
     def recommend_for_host(
 

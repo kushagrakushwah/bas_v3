@@ -5,13 +5,16 @@ WORKDIR /app
 # Install dependencies required by asyncssh and general utilities
 RUN apt-get update && apt-get install -y \
     nmap \
-    iputils-ping \
     && rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 # FIX: Copy the files into a specific bas_engine directory
 COPY . /app/bas_engine/
+
+# FIX: Create a non-root user and switch to it
+RUN adduser --disabled-password --no-create-home basuser
+USER basuser
 
 EXPOSE 8000
 

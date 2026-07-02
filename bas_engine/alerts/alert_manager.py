@@ -1,5 +1,8 @@
 import os
 import json
+import socket
+import ipaddress
+import logging
 import aiohttp
 import aiosmtplib
 
@@ -8,30 +11,93 @@ from sqlalchemy import select
 from bas_engine.database.connection import AsyncSessionLocal
 from bas_engine.database.models import IntegrationDB
 
+logger = logging.getLogger("secureforge.alerts")
+
+# ---------------------------------------------------------------------------
+# Internal network ranges — used to block SSRF in outbound webhook calls.
+# This is a RUNTIME guard that complements the Pydantic registration-time
+# validator in integrations.py. An attacker who can modify the DB record
+# directly must still pass this check before we send any bytes outbound.
+# ---------------------------------------------------------------------------
+_INTERNAL_NETS = [
+    ipaddress.ip_network("10.0.0.0/8"),
+    ipaddress.ip_network("172.16.0.0/12"),
+    ipaddress.ip_network("192.168.0.0/16"),
+    ipaddress.ip_network("127.0.0.0/8"),
+    ipaddress.ip_network("169.254.0.0/16"),  # link-local / cloud-metadata
+    ipaddress.ip_network("::1/128"),
+    ipaddress.ip_network("fc00::/7"),         # IPv6 private
+]
+
+
+import asyncio
+
+async def _is_safe_webhook_url(url: str) -> bool:
+    """
+    Return True only when the webhook URL resolves to a public, routable IP.
+    Blocks RFC-1918, loopback, link-local (including AWS/GCP/Azure metadata),
+    and non-HTTP(S) schemes to prevent SSRF and data exfiltration.
+    """
+    try:
+        from urllib.parse import urlparse
+        parsed = urlparse(url)
+        if parsed.scheme not in ("http", "https"):
+            logger.warning(f"Webhook blocked: non-HTTP scheme '{parsed.scheme}' in {url!r}")
+            return False
+        hostname = parsed.hostname or ""
+        if not hostname:
+            return False
+        try:
+            ip_str = await asyncio.to_thread(socket.gethostbyname, hostname)
+            ip_obj = ipaddress.ip_address(ip_str)
+        except socket.gaierror:
+            # DNS failure — allow (will fail at connect time, not our SSRF concern)
+            return True
+        for net in _INTERNAL_NETS:
+            try:
+                if ip_obj in net:
+                    logger.warning(
+                        f"Webhook SSRF blocked: {url!r} resolves to internal IP {ip_obj}"
+                    )
+                    return False
+            except TypeError:
+                pass
+        return True
+    except Exception as exc:
+        logger.error(f"Webhook safety check error: {exc}")
+        return False
+
+
 # ---------------------------------------------------
-# SLACK ALERT
+# SLACK / GENERIC WEBHOOK ALERT
 # ---------------------------------------------------
 
 async def send_slack_alert(message, webhook_url):
-
     if not webhook_url:
         return False
 
-    payload = {
-        "text": message
-    }
+    # Runtime SSRF guard — second gate after the registration-time Pydantic check.
+    if not await _is_safe_webhook_url(webhook_url):
+        logger.error(
+            f"send_slack_alert: outbound request to {webhook_url!r} blocked by SSRF policy"
+        )
+        return False
+
+    payload = {"text": message}
 
     try:
         async with aiohttp.ClientSession() as session:
             async with session.post(
                 webhook_url,
                 json=payload,
-                timeout=5
+                timeout=aiohttp.ClientTimeout(total=5),
             ) as resp:
                 return resp.status == 200
 
-    except Exception:
+    except Exception as exc:
+        logger.warning(f"send_slack_alert failed: {exc}")
         return False
+
 
 # ---------------------------------------------------
 # EMAIL ALERT
@@ -60,16 +126,16 @@ async def send_email_alert(subject, body, recipient):
             username=smtp_user,
             password=smtp_pass,
             use_tls=False,
-            start_tls=True
+            start_tls=True,
         )
 
         return True
 
     except Exception as e:
         import traceback
-        print(f"SMTP EXCEPTION: {e}", flush=True)
-        traceback.print_exc()
+        logger.error(f"SMTP EXCEPTION: {e}\n{traceback.format_exc()}")
         return False
+
 
 # ---------------------------------------------------
 # MAIN ALERT PIPELINE
@@ -77,22 +143,14 @@ async def send_email_alert(subject, body, recipient):
 
 async def process_alert(event):
 
-    event_type = event.get(
-        "type",
-        ""
-    )
-
-    payload = event.get(
-        "payload",
-        {}
-    )
+    event_type = event.get("type", "")
+    payload = event.get("payload", {})
 
     # Only alert on high-value events
     interesting = [
-
         "vulnerability.found",
         "simulation.failed",
-        "module.completed"
+        "module.completed",
     ]
 
     if event_type not in interesting:
@@ -111,11 +169,9 @@ async def process_alert(event):
     except Exception:
         payload_str = str(payload)
 
-    message = f"""
-🚨 SecureForge Alert
+    message = f"""SecureForge Alert
 
-Event:
-{event_type}
+Event: {event_type}
 
 Payload:
 {payload_str}
@@ -134,5 +190,5 @@ Payload:
                 await send_email_alert(
                     f"SecureForge Alert: {event_type}",
                     message,
-                    integration.target
+                    integration.target,
                 )

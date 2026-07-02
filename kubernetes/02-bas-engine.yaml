@@ -1,3 +1,9 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: bas-engine-sa
+  namespace: secureforge
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -13,8 +19,18 @@ spec:
       labels:
         app: bas-engine
     spec:
+      serviceAccountName: bas-engine-sa
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
       containers:
       - name: bas-engine
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop:
+              - ALL
         # Using the image we built locally with docker-compose
         image: secureforge-bas-engine:latest
         imagePullPolicy: IfNotPresent 

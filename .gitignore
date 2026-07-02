@@ -133,3 +133,6 @@ fulldata.txt
 engine_logs.txt
 fix_mojibake.py
 verify_endpoints.py
+
+scripts/
+bas_engine/test_email.py

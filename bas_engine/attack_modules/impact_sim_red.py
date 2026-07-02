@@ -42,7 +42,9 @@ class ImpactSimModule(BaseAttackModule):
         "/uploads", "/files", "/documents", "/backup", "/data",
         "/export", "/images", "/assets", "/media", "/storage"
     ]
-    C2_PATHS = ["/c2/beacon", "/update/check", "/api/register", "/ping"]
+    # /api/register is deliberately excluded — it is a standard REST endpoint
+    # that generates guaranteed false positives on any web application.
+    C2_PATHS = ["/c2/beacon", "/update/check", "/ping"]
 
     async def execute(self) -> List[Finding]:
         findings = []
@@ -66,7 +68,7 @@ class ImpactSimModule(BaseAttackModule):
                 severity=Severity.INFO,
                 mitre_id="T1083",
                 evidence="No paths discovered",
-                remediation="N/A",
+                remediation="Verify target accessibility and ensure file discovery paths exist.",
                 mode="red",
                 evidence_type="ransomware"
             ))
@@ -121,7 +123,7 @@ class ImpactSimModule(BaseAttackModule):
             username=ssh_user,
             password=ssh_pass,
             client_keys=[ssh_key] if ssh_key else None,
-            known_hosts=None
+            known_hosts=()
         ) as conn:
             result = await conn.run(cmd, check=False)
             return result.stdout or ""
@@ -143,7 +145,7 @@ class ImpactSimModule(BaseAttackModule):
                 severity=Severity.INFO,
                 mitre_id="T1490",
                 evidence="Option enable_recovery_inhibition=False (default). No commands run.",
-                remediation="N/A",
+                remediation="Ensure recovery inhibition is deliberately enabled or disabled based on simulation goals.",
                 mode="red",
                 evidence_type="ransomware"
             ))

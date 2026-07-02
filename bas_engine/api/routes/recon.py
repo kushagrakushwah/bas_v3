@@ -3,6 +3,7 @@ from fastapi import APIRouter
 from bas_engine.services.recon_service import (
     ReconService
 )
+from bas_engine.core.recon.network_topology import NetworkTopology
 
 router = APIRouter()
 
@@ -18,14 +19,14 @@ async def discover(
 ):
 
     results = await service.discover_subnet(
-
         target,
         ports
     )
+    
+    topology = NetworkTopology().build_topology(results)
 
     return {
-
         "target": target,
-
-        "results": results
+        "results": results,
+        "topology": topology
     }

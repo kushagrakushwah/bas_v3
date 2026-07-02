@@ -12,6 +12,7 @@ import re
 import ipaddress
 import nmap
 import logging
+import socket
 
 from typing import Dict, List
 
@@ -45,7 +46,7 @@ _INTERNAL_NETS = [
 ]
 
 
-def _validate_target(target: str) -> str:
+async def _validate_target(target: str) -> str:
     """
     Validate the nmap target.  Raises ValueError on:
     - empty / whitespace
@@ -84,6 +85,20 @@ def _validate_target(target: str) -> str:
     if not _HOSTNAME_RE.match(clean):
         raise ValueError(f"Target {target!r} is not a valid hostname or IP address.")
 
+    # Prevent SSRF via DNS resolution
+    try:
+        ip_str = await asyncio.to_thread(socket.gethostbyname, clean)
+        ip_obj = ipaddress.ip_address(ip_str)
+        for internal in _INTERNAL_NETS:
+            if ip_obj in internal:
+                raise ValueError(
+                    f"Target {target!r} resolves to a private/internal range ({ip_str}) "
+                    "and is blocked for SSRF protection."
+                )
+    except socket.gaierror:
+        # If DNS resolution fails, we allow it (will fail at nmap execution)
+        pass
+
     return target
 
 
@@ -117,7 +132,7 @@ class ReconService:
 
         # Validate inputs before passing to nmap — fix C2
         try:
-            target = _validate_target(target)
+            target = await _validate_target(target)
             ports = _validate_ports(ports)
         except ValueError as e:
             logger.warning(f"ReconService rejected invalid input: {e}")
