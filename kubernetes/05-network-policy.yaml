@@ -53,3 +53,7 @@ spec:
           port: 53
         - protocol: TCP
           port: 53
+    # Allow outbound internet traffic (for simulation targets)
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
