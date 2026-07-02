@@ -55,7 +55,15 @@ class EventBus:
 
         if self.redis_client:
             try:
-                await self.redis_client.publish("secureforge_events", json.dumps(event))
+                def _json_default(obj):
+                    if isinstance(obj, datetime):
+                        return obj.isoformat()
+                    import enum
+                    if isinstance(obj, enum.Enum):
+                        return obj.value
+                    return str(obj)
+                    
+                await self.redis_client.publish("secureforge_events", json.dumps(event, default=_json_default))
             except Exception as e:
                 logger.error(f"Redis publish error: {e}")
 

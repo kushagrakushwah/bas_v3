@@ -443,7 +443,7 @@ class SSHBruteForceModule(BaseAttackModule):
                     ),
                     severity=Severity.CRITICAL,
                     mitre_id="T1110.001",
-                    evidence=str([("REDACTED", p) for u, p in self.successes]),
+                    evidence=str([(u, p) for u, p in self.successes]),
                     remediation=(
                         "Disable password auth, enable MFA, deploy fail2ban."
                     ),
@@ -1071,7 +1071,7 @@ class SSHBruteForceModule(BaseAttackModule):
                     ),
                     severity=Severity.CRITICAL,
                     mitre_id="T1110.001",
-                    evidence=str([("REDACTED", p) for u, p in self.successes]),
+                    evidence=str([(u, p) for u, p in self.successes]),
                     remediation=(
                         "Enable MFA on webmail, enforce account lockout, "
                         "rate-limit login endpoint, deploy WAF rules."

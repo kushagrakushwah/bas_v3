@@ -205,9 +205,12 @@ class SimulationRepository:
 
                 select(SimulationDB)
 
+
                 .options(
                     selectinload(
                         SimulationDB.module_results
+                    ).selectinload(
+                        ModuleResultDB.findings
                     )
                 )
 
