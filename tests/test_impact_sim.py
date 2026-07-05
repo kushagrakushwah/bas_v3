@@ -1,35 +1,31 @@
 #!/usr/bin/env python3
 """
-test_ssh_bruteforce.py
-======================
-Tests the ssh_bruteforce attack module against 192.168.56.102 (Metasploitable).
+test_impact_sim.py
+==================
+Tests the impact_sim module against 192.168.56.102.
 
-CONFIRMED: msfadmin:msfadmin works on port 22.
+Simulates post-exploitation impact: checks for reachable C2 beacon paths,
+exposed storage/backup paths, and cloud metadata exposure.
 
 HOW TO USE:
   1. Set API_KEY below.
-  2. Run: python tests/test_ssh_bruteforce.py
+  2. Run: python tests/test_impact_sim.py
 """
 
 import requests
 import time
 
 BASE_URL  = "http://127.0.0.1:8000/api/v1/simulations/"
-TARGET    = "192.168.56.102"
+TARGET    = "http://192.168.56.102"
 API_KEY   = "e21db8c9c690b97861f9ba68d4540d2d2fedf1dffc0d69bf98d826dccb6a3936"   # <-- Set this
 HEADERS   = {"X-API-Key": API_KEY}
 
 PAYLOAD = {
-    "name": "Test-SSHBruteforce",
+    "name": "Test-ImpactSim",
     "target": TARGET,
-    "modules": ["ssh_bruteforce"],
+    "modules": ["impact_sim"],
     "options": {
-        "usernames": ["msfadmin", "root", "admin", "user", "test"],
-        "passwords": ["msfadmin", "root", "password", "admin", "123456", "toor"],
-        "port": 22,
-        "verify_host_keys": False,
-        "timeout": 10,
-        "max_attempts": 30,
+        "ssl_verify": False,
     },
 }
 
@@ -37,8 +33,8 @@ WAIT_SECS = 60
 
 def main():
     print("=" * 60)
-    print("  SecureForge — SSH Brute Force Module Test")
-    print(f"  Target : {TARGET}:22")
+    print("  SecureForge — Impact Simulation Module Test")
+    print(f"  Target : {TARGET}")
     print("=" * 60)
 
     if "REPLACE" in API_KEY:
@@ -61,14 +57,12 @@ def main():
     result = next((s for s in all_sims if (s.get("id") or s.get("simulation_id")) == sid), None)
 
     if not result:
-        print("⚠️  Simulation not found in results."); return
+        print("⚠️  Not found — check dashboard."); return
 
     print(f"\nStatus: {result.get('status','?').upper()}")
-    print(f"Duration: {result.get('duration_seconds', '?')}s\n")
-
     for mod in result.get("module_results", []):
         findings = mod.get("findings", [])
-        print(f"Findings: {len(findings)}")
+        print(f"\nFindings: {len(findings)}")
         for f in findings:
             sev   = f.get("severity","?").upper()
             title = f.get("title","?")

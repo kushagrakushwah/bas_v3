@@ -1,14 +1,20 @@
 import requests
 import time
 import json
+import os
 
 base_url = "http://127.0.0.1:8000/api/v1/simulations/"
 
+# Add your API key here! You can hardcode it or read it from the environment.
+API_KEY = "REPLACE_WITH_OPENSSL_RAND_HEX_32"
+headers = {
+    "X-API-Key": API_KEY
+}
 modules = [
     "ssh_bruteforce",
     "owasp_web",
     "privilege_escalation",
-    "waf_evasion",
+    "waf_detection",
     "recon_exposure",
     "impact_sim",
     "nmap_scan",
@@ -24,7 +30,8 @@ for mod in modules:
         "options": {}
     }
     try:
-        r = requests.post(base_url, json=payload)
+        # Pass the headers containing the API Key
+        r = requests.post(base_url, json=payload, headers=headers)
         r.raise_for_status()
         print(f"Launched {mod}")
     except Exception as e:
@@ -33,7 +40,8 @@ for mod in modules:
 print("Waiting 45 seconds for all modules to finish...")
 time.sleep(45)
 
-response = requests.get(base_url)
+# Pass the headers here too
+response = requests.get(base_url, headers=headers)
 data = response.json()
 data.sort(key=lambda x: x.get("created_at", ""), reverse=True)
 

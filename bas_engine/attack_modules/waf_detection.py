@@ -114,7 +114,7 @@ PAYLOADS = [
 # MODULE
 # =========================================================
 
-class WAFEvasionModule(BaseAttackModule):
+class WAFDetectionModule(BaseAttackModule):
 
     MODULE_NAME = "waf_detection"
 
@@ -321,6 +321,7 @@ class WAFEvasionModule(BaseAttackModule):
             f"{base_url}"
             f"?{parameter}={encoded}"
         )
+        await self.emit_event("INFO", f"[WAF] Sending {category} probe to {url}")
 
         result = {
 

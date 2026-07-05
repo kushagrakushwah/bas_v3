@@ -75,12 +75,25 @@ class NmapScanModule(BaseAttackModule):
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE
         )
-        stdout, stderr = await proc.communicate()
+        
+        stdout_chunks = []
+        while True:
+            line = await proc.stdout.readline()
+            if not line:
+                break
+            decoded_line = line.decode(errors="replace")
+            stdout_chunks.append(decoded_line)
+            # Only stream somewhat meaningful XML lines to avoid flooding with raw XML tags
+            if "portid=" in decoded_line or "<hostname name=" in decoded_line or "state=" in decoded_line:
+                clean_line = decoded_line.strip().replace("<", "[").replace(">", "]")
+                await self.emit_event("INFO", f"[NMAP] {clean_line}")
+
+        _, stderr = await proc.communicate()
         
         if proc.returncode != 0:
-            self.logger.warning(f"Nmap returned non-zero exit code {proc.returncode}. Stderr: {stderr.decode()}")
+            self.logger.warning(f"Nmap returned non-zero exit code {proc.returncode}. Stderr: {stderr.decode(errors='replace')}")
             
-        return stdout.decode(errors="replace")
+        return "".join(stdout_chunks)
 
     def _parse_nmap_xml(self, xml_data: str) -> List[Dict]:
         hosts = []

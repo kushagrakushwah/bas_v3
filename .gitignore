@@ -136,3 +136,13 @@ verify_endpoints.py
 
 scripts/
 bas_engine/test_email.py
+
+node_modules/
+.next/
+dist/
+build/
+venv/
+.venv/
+__pycache__/
+*.pyc
+.env

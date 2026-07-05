@@ -17,9 +17,9 @@ from typing import Dict, List
 
 PORT_ATTACK_MAP = {
     22: ["ssh_bruteforce", "privilege_escalation"],
-    80: ["waf_evasion", "owasp_web", "apt_killchain", "vuln_scanner"],
-    443: ["waf_evasion", "owasp_web", "apt_killchain", "vuln_scanner"],
-    8080: ["waf_evasion", "owasp_web", "vuln_scanner"],
+    80: ["waf_detection", "owasp_web", "apt_killchain", "vuln_scanner"],
+    443: ["waf_detection", "owasp_web", "apt_killchain", "vuln_scanner"],
+    8080: ["waf_detection", "owasp_web", "vuln_scanner"],
 }
 
 

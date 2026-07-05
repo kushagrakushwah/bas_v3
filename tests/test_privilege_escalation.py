@@ -1,14 +1,19 @@
 #!/usr/bin/env python3
 """
-test_ssh_bruteforce.py
-======================
-Tests the ssh_bruteforce attack module against 192.168.56.102 (Metasploitable).
+test_privilege_escalation.py
+============================
+Tests the privilege_escalation module against 192.168.56.102.
 
-CONFIRMED: msfadmin:msfadmin works on port 22.
+This module runs LOCAL privilege escalation enumeration checks:
+SUID binaries, sudo rules, writable cron paths, kernel version, Docker group.
+
+NOTE: This module runs checks on the engine container's OWN OS, not the remote
+target. It's designed to simulate what an attacker would do post-compromise on
+a Linux host. The 'target' field is used for reporting context only.
 
 HOW TO USE:
   1. Set API_KEY below.
-  2. Run: python tests/test_ssh_bruteforce.py
+  2. Run: python tests/test_privilege_escalation.py
 """
 
 import requests
@@ -20,25 +25,18 @@ API_KEY   = "e21db8c9c690b97861f9ba68d4540d2d2fedf1dffc0d69bf98d826dccb6a3936"  
 HEADERS   = {"X-API-Key": API_KEY}
 
 PAYLOAD = {
-    "name": "Test-SSHBruteforce",
+    "name": "Test-PrivEsc",
     "target": TARGET,
-    "modules": ["ssh_bruteforce"],
-    "options": {
-        "usernames": ["msfadmin", "root", "admin", "user", "test"],
-        "passwords": ["msfadmin", "root", "password", "admin", "123456", "toor"],
-        "port": 22,
-        "verify_host_keys": False,
-        "timeout": 10,
-        "max_attempts": 30,
-    },
+    "modules": ["privilege_escalation"],
+    "options": {},
 }
 
-WAIT_SECS = 60
+WAIT_SECS = 45
 
 def main():
     print("=" * 60)
-    print("  SecureForge — SSH Brute Force Module Test")
-    print(f"  Target : {TARGET}:22")
+    print("  SecureForge — Privilege Escalation Module Test")
+    print(f"  Target context : {TARGET}")
     print("=" * 60)
 
     if "REPLACE" in API_KEY:
@@ -61,14 +59,12 @@ def main():
     result = next((s for s in all_sims if (s.get("id") or s.get("simulation_id")) == sid), None)
 
     if not result:
-        print("⚠️  Simulation not found in results."); return
+        print("⚠️  Not found — check dashboard."); return
 
     print(f"\nStatus: {result.get('status','?').upper()}")
-    print(f"Duration: {result.get('duration_seconds', '?')}s\n")
-
     for mod in result.get("module_results", []):
         findings = mod.get("findings", [])
-        print(f"Findings: {len(findings)}")
+        print(f"\nFindings: {len(findings)}")
         for f in findings:
             sev   = f.get("severity","?").upper()
             title = f.get("title","?")

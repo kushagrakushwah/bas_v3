@@ -196,11 +196,15 @@ class VulnScannerModule(BaseAttackModule):
                         headers["Content-Type"] = "application/json"
                     else:
                         raise ValueError("Not JSON")
-                except Exception as e:
-                    # If not JSON, treat as form data
-                    # Need to parse existing form data to retain other fields like submit buttons
+                except Exception:
+                    # Treat as form data
                     parsed_body = parse_qs(body)
                     parsed_body[inject_param] = [payload]
+                    # Merge extra form fields (e.g. Submit=Submit for DVWA, token fields, etc.)
+                    extra_fields = options.get("extra_form_fields", {})
+                    if isinstance(extra_fields, dict):
+                        for k, v in extra_fields.items():
+                            parsed_body[k] = [str(v)]
                     body = urlencode(parsed_body, doseq=True)
                     if "Content-Type" not in headers:
                         headers["Content-Type"] = "application/x-www-form-urlencoded"
@@ -223,16 +227,20 @@ class VulnScannerModule(BaseAttackModule):
                     body = payload
 
             # Send the request
+            await self.emit_event("INFO", f"[SCAN] Probing {test_type.upper()} against {target}")
             async with aiohttp.ClientSession(connector=aiohttp.TCPConnector()) as session:
                 try:
                     start = asyncio.get_running_loop().time()
+                    # Follow redirects for all test types except CSRF (CSRF needs to see the raw response)
+                    follow_redirects = test_type != "csrf"
                     async with session.request(
                         method=method.upper(),
                         url=target,
                         headers=headers,
                         data=body if method.upper() in ("POST", "PUT", "PATCH") else None,
                         timeout=aiohttp.ClientTimeout(total=timeout_sec),
-                        allow_redirects=False
+                        allow_redirects=follow_redirects,
+                        ssl=False,
                     ) as resp:
                         elapsed = asyncio.get_running_loop().time() - start
                         response_body = await resp.text()
@@ -245,49 +253,146 @@ class VulnScannerModule(BaseAttackModule):
                         body_lower = response_body.lower()
                         
                         if test_type == "xss":
-                            # Check if payload is reflected without encoding
-                            is_vulnerable = payload in response_body
+                            # 1. Raw payload reflected unencoded (basic check)
+                            raw_reflected = payload in response_body
+                            # 2. <script tag present in body without HTML encoding
+                            #    (catches cases where payload chars are rearranged but tag is live)
+                            script_live = (
+                                "<script" in body_lower
+                                and "alert" in body_lower
+                                and "&lt;script" not in body_lower
+                            )
+                            # 3. Event handler reflected live (onerror=, onload= etc.)
+                            import re as _re_xss
+                            event_handler = bool(_re_xss.search(r'on(?:error|load|click|mouseover)\s*=', response_body, _re_xss.IGNORECASE))
+                            is_vulnerable = raw_reflected or script_live or event_handler
+
                         elif test_type == "sqli":
-                            sql_errors = ["syntax error", "mysql_fetch", "sqlite3", "ora-", "postgresql", "unclosed quotation", "you have an error in your sql syntax"]
+                            # Error-based detection
+                            sql_errors = [
+                                "syntax error", "mysql_fetch", "sqlite3", "ora-",
+                                "postgresql", "unclosed quotation",
+                                "you have an error in your sql syntax",
+                                "warning: mysql", "invalid query", "sql syntax",
+                                "quoted string not properly terminated",
+                                "mysql_num_rows", "pg_query",
+                                "column count doesn't match", "operand should contain",
+                            ]
                             has_error = any(err in body_lower for err in sql_errors)
-                            # Primary: error string evidence (reliable)
-                            # Secondary: timing ≥ 9s WITHOUT error is suspicious but not conclusive
-                            # — reported as MEDIUM to avoid false CRITICAL on slow servers
-                            is_vulnerable = has_error
-                            timing_only_suspect = (not has_error) and elapsed >= 9.0
+                            # Data-based detection: successful ' OR '1'='1 returns multiple rows
+                            # Look for 2+ email-like strings (user table dump)
+                            import re as _re_sqli
+                            emails_found = _re_sqli.findall(
+                                r'[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+',
+                                response_body
+                            )
+                            data_dumped = len(emails_found) >= 2
+                            # Union-based: injected marker appeared in response
+                            has_union = any(x in body_lower for x in [
+                                "@@version", "information_schema", "user()", "database()"
+                            ])
+                            is_vulnerable = has_error or data_dumped or has_union
+                            timing_only_suspect = (not is_vulnerable) and elapsed >= 9.0
+
                         elif test_type == "cmd_injection":
-                            # Command output markers — require text evidence, not just timing
-                            cmd_markers = ["uid=0", "uid=(", "root:x:0:0", "ttl=", "bytes from", "uid=33"]
+                            # Must have command output text — no timing-only CRITICAL
+                            cmd_markers = [
+                                "uid=0", "uid=(", "root:x:", "root:x:0:0",
+                                "daemon:x:", "bin:x:", "nobody:x:",
+                                "ttl=", "bytes from", "64 bytes", "rtt min",
+                                "uid=33", "/bin/bash", "/bin/sh",
+                                # Windows markers
+                                "volume serial", "directory of", "\\windows\\",
+                            ]
                             has_marker = any(m in body_lower for m in cmd_markers)
-                            # Timing alone at a high threshold as secondary confirmation
-                            is_vulnerable = has_marker or elapsed >= 8.0
-                        elif test_type == "path_traversal" or test_type == "xxe":
-                            # Reading /etc/passwd
-                            is_vulnerable = "root:x:0:0" in response_body or "root:x:0:0" in body_lower
+                            # Timing alone is secondary — only flag as MEDIUM, not CRITICAL
+                            is_vulnerable = has_marker
+                            if not is_vulnerable and elapsed >= 8.0:
+                                timing_only_suspect = True
+
+                        elif test_type == "path_traversal":
+                            # /etc/passwd content patterns
+                            lfi_markers = [
+                                "root:x:0:0", "root:x:", "daemon:x:",
+                                "bin:x:", "nobody:x:", "/bin/bash", "/bin/sh",
+                                "/usr/sbin/nologin",
+                                # Windows
+                                "[boot loader]", "[operating systems]",
+                            ]
+                            is_vulnerable = any(m in body_lower for m in lfi_markers)
+
+                        elif test_type == "xxe":
+                            # /etc/passwd OR internal network content returned
+                            xxe_markers = [
+                                "root:x:0:0", "root:x:", "daemon:x:",
+                                "bin:x:", "nobody:x:", "/bin/bash",
+                                "[boot loader]",  # Windows
+                            ]
+                            is_vulnerable = any(m in body_lower for m in xxe_markers)
+
                         elif test_type == "ssrf":
-                            # Assuming AWS metadata test
-                            is_vulnerable = "ami-id" in body_lower or "instance-id" in body_lower or '"Token"' in response_body
+                            # Cloud metadata markers
+                            cloud_markers = [
+                                "ami-id", "instance-id", "instancetype",
+                                "publicipv4", "local-ipv4", "placement",
+                                '"token"', "computemetadata", "metadata.internal",
+                            ]
+                            has_cloud = any(m in body_lower for m in cloud_markers)
+                            # Generic SSRF: injected a URL and got 200 with non-empty body
+                            # If the target fetched and returned content from an internal URL
+                            injected_url = options.get("payload", "")
+                            fetched_internal = (
+                                resp.status == 200
+                                and len(response_body.strip()) > 100
+                                and any(x in injected_url for x in [
+                                    "169.254", "10.", "192.168.", "172.",
+                                    "127.", "internal", "metadata"
+                                ])
+                            )
+                            is_vulnerable = has_cloud or fetched_internal
+
                         elif test_type == "csrf":
-                            # Improved CSRF detection: inspect headers for CSRF mitigations
-                            # Only flag if server accepted the request AND shows no CSRF protections
+                            # Server must accept the state-changing request (2xx or redirect)
+                            # AND show no CSRF mitigations in headers/body
                             resp_headers_lower = {k.lower(): v.lower() for k, v in resp.headers.items()}
-                            has_samesite = "samesite=strict" in str(resp_headers_lower.get("set-cookie", "")) or \
-                                           "samesite=lax" in str(resp_headers_lower.get("set-cookie", ""))
-                            has_csrf_header = "x-csrf-token" in resp_headers_lower or \
-                                              "x-xsrf-token" in resp_headers_lower or \
-                                              "x-frame-options" in resp_headers_lower
-                            accepted_request = resp.status in (200, 201, 302)
-                            no_rejection_text = "invalid csrf" not in body_lower and \
-                                                "forbidden" not in body_lower and \
-                                                "csrf" not in body_lower
-                            is_vulnerable = accepted_request and no_rejection_text and \
-                                            not has_samesite and not has_csrf_header
+                            has_samesite = (
+                                "samesite=strict" in str(resp_headers_lower.get("set-cookie", ""))
+                                or "samesite=lax" in str(resp_headers_lower.get("set-cookie", ""))
+                            )
+                            has_csrf_header = (
+                                "x-csrf-token" in resp_headers_lower
+                                or "x-xsrf-token" in resp_headers_lower
+                            )
+                            # X-Frame-Options alone is NOT a CSRF mitigation
+                            accepted_request = resp.status in (200, 201, 302, 303, 307, 308)
+                            no_rejection_text = (
+                                "invalid csrf" not in body_lower
+                                and "csrf token" not in body_lower
+                                and "forbidden" not in body_lower
+                                and "access denied" not in body_lower
+                            )
+                            is_vulnerable = (
+                                accepted_request
+                                and no_rejection_text
+                                and not has_samesite
+                                and not has_csrf_header
+                            )
+
                         elif test_type == "ssti":
-                            # Check if template expression evaluated to 49 instead of reflecting {{7*7}}
-                            is_vulnerable = "49" in response_body and "{{7*7}}" not in response_body
+                            payload_used = options.get("payload", template.get("payload", "{{7*7}}"))
+                            # Jinja2 / Twig / Pebble: {{7*7}} → 49
+                            # Freemarker: ${7*7} → 49
+                            # Smarty: {7*7} → 49
+                            has_49 = "49" in response_body and payload_used not in response_body
+                            # Mako / Chameleon: ${7*7} → 49 too
+                            # Detect any arithmetic evaluation with a custom probe if 49 check fails
+                            import re as _re_ssti
+                            eval_match = _re_ssti.search(r'\b49\b', response_body)
+                            is_vulnerable = has_49 or (bool(eval_match) and payload_used not in response_body)
+
                         else:
                             # Fallback generic reflection check
-                            is_vulnerable = payload and payload in response_body
+                            is_vulnerable = bool(payload) and payload in response_body
 
                         evidence = {
                             "test_type": test_type,

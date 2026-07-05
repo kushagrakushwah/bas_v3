@@ -2028,6 +2028,7 @@ class OWASPWebModule(BaseAttackModule):
     async def _get(
         self, session, sem, url: str, allow_redirects: bool = True, auth_headers: dict = None,
     ) -> Optional[tuple]:
+        await self.emit_event("INFO", f"[OWASP] Probing {url}")
         async with sem:
             try:
                 hdrs = auth_headers or {}

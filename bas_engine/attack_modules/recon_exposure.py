@@ -296,6 +296,7 @@ class ReconExposureModule(BaseAttackModule):
 
         for url, source in credential_candidates:
             path = urlparse(url).path or url
+            await self.emit_event("INFO", f"[RECON] Probing path: {path}")
             try:
                 async with session.get(url, allow_redirects=False) as resp:
                     if resp.status == 200:
@@ -406,6 +407,7 @@ class ReconExposureModule(BaseAttackModule):
 
         for url, source in exfil_candidates:
             path = urlparse(url).path or url
+            await self.emit_event("INFO", f"[RECON] Probing path: {path}")
             try:
                 async with session.get(url, allow_redirects=False) as resp:
                     if resp.status == 200:
@@ -522,6 +524,7 @@ class ReconExposureModule(BaseAttackModule):
 
         for url, source in lateral_candidates:
             path = urlparse(url).path or url
+            await self.emit_event("INFO", f"[RECON] Probing path: {path}")
             try:
                 async with session.get(url, allow_redirects=False) as resp:
                     if resp.status == 200:
@@ -624,6 +627,7 @@ class ReconExposureModule(BaseAttackModule):
 
         for url, source in manifest_candidates:
             path = urlparse(url).path or url
+            await self.emit_event("INFO", f"[RECON] Probing path: {path}")
             try:
                 async with session.get(url, allow_redirects=False) as resp:
                     if resp.status == 200:
