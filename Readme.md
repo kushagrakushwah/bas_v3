@@ -1,66 +1,88 @@
-# SecureForge
+# SecureForge 🛡️🔥
 
-**Containerized Breach & Attack Simulation platform for detection validation, SOC scoring, and adversary emulation — built on FastAPI, Next.js, and Kubernetes.**
-
----
-
-## Overview
-
-SecureForge is a self-hosted BAS (Breach & Attack Simulation) platform designed for security teams that need a reliable, repeatable way to test their detection stack without touching production. It orchestrates modular attack simulations, streams telemetry in real time, maps findings to MITRE ATT&CK, and scores SOC coverage — all from a modern web dashboard.
-
-The system runs entirely in containers. The backend (`bas_engine`) handles simulation orchestration, finding storage, and WebSocket event emission. The frontend (`secureforge-frontend`) is a Next.js application that covers the full operator workflow: launching simulations, watching live events, reviewing reports, analyzing findings, and inspecting the cluster.
-
-This is not a SaaS product. It runs on your infrastructure, in your cluster, against your environment — with full visibility into what's being simulated and what was detected.
-
-> **Authorization required.** This platform is intended for use in authorized environments only. See [Disclaimer](#disclaimer).
+> **Containerized Breach & Attack Simulation platform for detection validation, SOC scoring, and adversary emulation — built on FastAPI, Next.js, and Kubernetes.**
 
 ---
 
-## Key Features
+## 📖 Overview
 
-### Simulation Engine
-- Launch attack simulations from a configurable module library.
-- Modular, pluggable attack modules — add new ones without touching core logic.
-- Parallel simulation execution with isolated event streams.
-- Nmap-style subnet discovery: port ranges, scan profiles, timing profiles, banner grabbing.
-- Real-time event emission over WebSockets.
+SecureForge is a highly advanced, self-hosted **BAS (Breach & Attack Simulation) platform** designed specifically for security engineering teams that need a reliable, repeatable way to test their detection stack without touching production systems.
 
-### Detection & Validation
-- Finding collection tied to each simulation run.
-- MITRE ATT&CK ID mapping per finding.
-- SOC validation scoring: coverage rate, blind spots, undetected findings.
-- Alert generation from simulation results.
+Instead of writing custom scripts for every test, SecureForge orchestrates modular attack simulations, streams live telemetry in real-time, maps all findings to the **MITRE ATT&CK® Framework**, and dynamically scores your SOC coverage — all from a beautiful, modern web dashboard.
 
-### Observability
-- Live event stream with replay timeline.
-- ELK stack integration for log forwarding and Kibana visualization (in K8s deployments).
-- Analytics charts: severity distribution, trend lines, execution summaries.
-- Executive summary view with KPI cards.
+The system runs entirely in containers:
+* **The Backend (`bas_engine`)**: A powerful Python/FastAPI engine that handles simulation orchestration, finding storage, asynchronous task execution, and WebSocket event emission.
+* **The Frontend (`secureforge-frontend`)**: A gorgeous, reactive Next.js application that handles the full operator workflow: launching simulations, watching live event streams, reviewing reports, and inspecting the cluster.
 
-### Infrastructure Visibility
-- Kubernetes pod and namespace listing.
-- CPU and memory metrics via metrics-server.
-- Node health and cluster summary.
-- HPA and deployment status.
+Unlike SaaS products, SecureForge runs **on your infrastructure, in your cluster, against your environment** — giving you 100% visibility and zero data exfiltration risks.
+
+> ⚠️ **Authorization Required:** This platform is intended for use in authorized environments only. Please read the [Disclaimer](#-disclaimer) below.
 
 ---
 
-## Architecture
+## ✨ Key Features & Capabilities
+
+### ⚔️ The Attack Simulation Engine
+* **18 Modular Attack Modules:** A completely pluggable architecture allowing you to deploy network scans, brute force attacks, web exploitation, and complex Killchains without touching the core logic.
+* **Parallel Execution:** Launch multiple attacks simultaneously with isolated, non-blocking event streams.
+* **Real-time Telemetry:** Watch the attack unfold live over WebSockets directly in the dashboard.
+
+### 🎯 Detection & Validation
+* **MITRE ATT&CK® Mapping:** Every single finding is mapped to specific MITRE Tactics and Techniques (e.g., T1190, T1059).
+* **SOC Validation Scoring:** Automatically calculate your detection coverage rate, identify blind spots, and flag undetected critical findings.
+* **Smart Alert Generation:** Converts simulation results into actionable alerts for defensive teams.
+
+### 👁️ Observability & Analytics
+* **Live Event Stream:** Watch payloads, HTTP requests, and SSH connection attempts in real-time.
+* **Executive Dashboards:** High-level KPI cards, severity distribution charts, trend lines, and execution summaries for management review.
+* **ELK Stack Integration:** Full support for log forwarding and Kibana visualization in Kubernetes deployments.
+
+---
+
+## 🛠️ The Module Arsenal
+
+SecureForge comes packed with **18 highly detailed attack modules** split across two categories:
+
+### 🔴 Red Team & Network Modules
+1. **APT Killchain (T1110, T1190, T1059):** A terrifying 7-stage autonomous attack that simulates an Advanced Persistent Threat (APT). It automatically chains together Recon, Credential Attacks, Web Exploits, Privilege Escalation, and Persistence probes in one massive simulation.
+2. **Nmap Subnet Scan:** Discovers hosts, open ports, and services across your infrastructure.
+3. **SSH Bruteforce:** Tests credential resilience using customizable dictionary attacks.
+4. **OWASP Web Scanner:** Crawls and analyzes web targets for top OWASP vulnerabilities (missing security headers, exposed server versions, TLS downgrade, etc).
+5. **WAF Detection:** Analyzes the target's response to malicious payloads to identify the presence and type of Web Application Firewall (WAF).
+6. **Recon & Exposure:** Passively aggregates external exposure data and OSINT.
+7. **Privilege Escalation:** Simulates attempts to break out of low-privilege boundaries.
+8. **Impact Simulator:** Tests destructive techniques (safely simulated) like data wiping and encryption staging.
+
+### 🌐 Vulnerability Scanner Modules
+1. **XSS (Cross-Site Scripting):** Probes for reflected and stored JavaScript injection points.
+2. **SQLi (SQL Injection):** Tests both error-based and blind/timing-based SQL injection to extract database content.
+3. **CMD Injection:** Attempts to execute arbitrary OS commands (e.g., `cat /etc/passwd`) via vulnerable inputs.
+4. **Path Traversal (LFI/RFI):** Attempts to break out of web directories to read sensitive local files.
+5. **XXE (XML External Entity):** Injects malicious XML payloads to extract internal data.
+6. **SSRF (Server-Side Request Forgery):** Tricks the server into querying internal cloud metadata endpoints (e.g., AWS `169.254.169.254`).
+7. **CSRF (Cross-Site Request Forgery):** Checks if state-changing endpoints are protected by tokens or SameSite cookies.
+8. **SSTI (Server-Side Template Injection):** Probes templating engines (Jinja2, Twig) for arbitrary code execution.
+9. **Webmail Bruteforce:** Specialized attacks against OWA and custom webmail portals.
+10. **Port Scanner:** A fast, lightweight TCP scanner for specific web infrastructure targets.
+
+---
+
+## 🏗️ Architecture
 
 ```
 ┌──────────────────────────────────────────────────────┐
 │                  secureforge-frontend                │
 │         (Next.js / TypeScript / TailwindCSS)         │
-│  Dashboard │ Launch │ Realtime │ Reports │ Analytics  │
+│  Dashboard │ Launch │ Realtime │ Reports │ Analytics │
 │  Alerts │ MITRE │ SOC │ Infrastructure               │
 └───────────────────┬──────────────────────────────────┘
                     │ HTTP + WebSocket
 ┌───────────────────▼──────────────────────────────────┐
 │                    bas_engine                        │
 │                  (FastAPI / Python)                  │
-│  Attack Orchestrator │ Event Bus │ Finding Store      │
+│  Attack Orchestrator │ Event Bus │ Finding Store     │
 │  Simulation Runner │ Validation │ WS Broadcaster     │
-│  Kubernetes Client │ Metrics API │ ELK Forwarder      │
+│  Kubernetes Client │ Metrics API │ ELK Forwarder     │
 └──────┬─────────────────────────────────┬─────────────┘
        │                                 │
 ┌──────▼──────┐                 ┌────────▼────────┐
@@ -71,60 +93,7 @@ This is not a SaaS product. It runs on your infrastructure, in your cluster, aga
 └─────────────┘                 └─────────────────┘
 ```
 
-The backend exposes a REST API for simulation control and a `/ws` WebSocket endpoint for live event streaming. The frontend connects to both. Infrastructure data is pulled directly from the Kubernetes API server via the in-cluster or kubeconfig client. In Kubernetes environments, events are forwarded to Logstash and queryable in Kibana.
-
----
-
-## Tech Stack
-
-| Layer | Technology |
-|---|---|
-| Frontend | Next.js 14, TypeScript, TailwindCSS, NextAuth |
-| Backend | FastAPI, Python 3.11+ |
-| WebSockets | FastAPI WebSocket, `websockets` |
-| Database | PostgreSQL |
-| Containerization | Docker, Docker Compose |
-| Orchestration | Kubernetes (local or managed) |
-| Observability | Elasticsearch (Docker) / ELK Stack (K8s) |
-
----
-
-## Repository Structure
-
-```
-secureforge/
-├── bas_engine/                  # FastAPI backend — core simulation engine
-│   ├── main.py                  # App entrypoint, router registration
-│   ├── modules/                 # Attack modules (pluggable)
-│   ├── engine/                  # Orchestrator, event bus, runner
-│   └── ...
-│
-├── secureforge-frontend/        # Next.js frontend — primary UI
-│   ├── app/                     # App Router pages (Dashboard, Reports, Analytics, etc.)
-│   ├── components/              # Shared UI components
-│   └── ...
-│
-├── kubernetes/                  # Kubernetes manifests
-│   ├── 00-namespace.yaml
-│   ├── 01-elk-stack.yaml
-│   ├── 02-bas-engine.yaml
-│   ├── 03-hpa.yaml
-│   ├── 04-dashboard.yaml
-│   └── dashboard-svc.yaml
-│
-└── docker-compose.yml           # Docker Compose configuration for local dev
-```
-
----
-
-## Prerequisites
-
-Before you begin, ensure your machine has the following installed:
-1. **Git**: To clone the repository.
-2. **Docker Desktop**: This includes the Docker Engine and Docker Compose.
-   - Ensure Docker Desktop is running before proceeding.
-
-> **Note**: Because SecureForge uses a modern, containerized architecture, you do not need to install Python, Node.js, or complex databases directly on your host machine. Docker will handle everything automatically.
+The backend exposes a **REST API** for simulation control and a `/ws` **WebSocket endpoint** for live event streaming. The frontend connects to both. Infrastructure data is pulled directly from the Kubernetes API server via the in-cluster or kubeconfig client. 
 
 ---
 
@@ -134,8 +103,8 @@ The entire infrastructure (Frontend Dashboard, Python BAS Engine, PostgreSQL Dat
 
 ### 1. Clone the Repository
 ```bash
-git clone https://github.com/your-username/secureforge.git
-cd secureforge
+git clone https://github.com/kushagrakushwah/bas_v3.git
+cd bas_v3
 ```
 
 ### 2. Configure Environment Variables
@@ -148,7 +117,7 @@ copy .env.example .env
 # macOS / Linux
 cp .env.example .env
 ```
-*Note: Open the `.env` file and ensure `NEXTAUTH_SECRET` and database credentials are set before proceeding.*
+*Note: Open the `.env` file and ensure `API_KEY`, `NEXTAUTH_SECRET`, and database credentials are set before proceeding. You can generate random keys using `openssl rand -hex 32`.*
 
 ### 3. Launch the Platform
 From the root directory, run:
@@ -170,52 +139,17 @@ docker-compose down
 
 ---
 
-## Kubernetes Deployment
-
-All manifests are available in `kubernetes/`. Apply them in numerical order:
-
-### 1. Setup Namespace & Logging
-```bash
-kubectl apply -f kubernetes/00-namespace.yaml
-kubectl apply -f kubernetes/01-elk-stack.yaml
-```
-
-### 2. Deploy the Application Stack
-```bash
-kubectl apply -f kubernetes/02-bas-engine.yaml
-kubectl apply -f kubernetes/03-hpa.yaml
-kubectl apply -f kubernetes/04-dashboard.yaml
-kubectl apply -f kubernetes/dashboard-svc.yaml
-```
-
-### 3. Verify Deployment
-```bash
-kubectl get pods -n secureforge
-kubectl get services -n secureforge
-```
-
----
-
-## Important Notes
-
-- **API Authentication**: The backend API is secured via an `X-API-Key` header. The key is read from the `API_KEY` environment variable.
-- **SSRF Protection**: Web attack modules use safe external canary URLs and block internal/loopback IPs (e.g., `127.0.0.1`, `10.x.x.x`) to prevent engine compromise during testing.
-- **Pluggable Modules**: Attack modules reside in `bas_engine/modules/`. New modules can be added without modifying the core orchestrator.
-- **Metrics**: Infrastructure metrics require `metrics-server` to be installed in the Kubernetes cluster.
-
----
-
-## Disclaimer
+## ⚠️ Disclaimer
 
 SecureForge is designed exclusively for use in **authorized environments**. This means:
-- You have explicit written permission to run simulations against the target systems and network.
-- You are operating within a controlled lab, staging environment, or a production system where you have full authorization.
-- You understand that attack simulation generates real network traffic and may trigger security tooling.
+1. You have **explicit written permission** to run simulations against the target systems and network.
+2. You are operating within a controlled lab, staging environment, or a production system where you have full authorization.
+3. You understand that attack simulation generates real network traffic and may trigger security tooling.
 
 **Unauthorized use of this platform against systems you do not own or have permission to test is illegal.** The authors and contributors accept no liability for misuse.
 
 ---
 
-## License
+## 📄 License
 
 Review the `LICENSE` file in the repository root. This software is provided for authorized security testing and research purposes.

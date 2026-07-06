@@ -1,6 +1,0 @@
-admin
-root
-user35@tlsoc.cse.iitb.ac.in
-user
-test
-msfadmin
