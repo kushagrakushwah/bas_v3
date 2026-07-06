@@ -1,10 +1,10 @@
-# SecureForge 🛡️🔥
+# SecureForge
 
 > **Containerized Breach & Attack Simulation platform for detection validation, SOC scoring, and adversary emulation — built on FastAPI, Next.js, and Kubernetes.**
 
 ---
 
-## 📖 Overview
+## Overview
 
 SecureForge is a highly advanced, self-hosted **BAS (Breach & Attack Simulation) platform** designed specifically for security engineering teams that need a reliable, repeatable way to test their detection stack without touching production systems.
 
@@ -16,34 +16,34 @@ The system runs entirely in containers:
 
 Unlike SaaS products, SecureForge runs **on your infrastructure, in your cluster, against your environment** — giving you 100% visibility and zero data exfiltration risks.
 
-> ⚠️ **Authorization Required:** This platform is intended for use in authorized environments only. Please read the [Disclaimer](#-disclaimer) below.
+> **Authorization Required:** This platform is intended for use in authorized environments only. Please read the [Disclaimer](#-disclaimer) below.
 
 ---
 
-## ✨ Key Features & Capabilities
+## Key Features & Capabilities
 
-### ⚔️ The Attack Simulation Engine
+### The Attack Simulation Engine
 * **18 Modular Attack Modules:** A completely pluggable architecture allowing you to deploy network scans, brute force attacks, web exploitation, and complex Killchains without touching the core logic.
 * **Parallel Execution:** Launch multiple attacks simultaneously with isolated, non-blocking event streams.
 * **Real-time Telemetry:** Watch the attack unfold live over WebSockets directly in the dashboard.
 
-### 🎯 Detection & Validation
+### Detection & Validation
 * **MITRE ATT&CK® Mapping:** Every single finding is mapped to specific MITRE Tactics and Techniques (e.g., T1190, T1059).
 * **SOC Validation Scoring:** Automatically calculate your detection coverage rate, identify blind spots, and flag undetected critical findings.
 * **Smart Alert Generation:** Converts simulation results into actionable alerts for defensive teams.
 
-### 👁️ Observability & Analytics
+### Observability & Analytics
 * **Live Event Stream:** Watch payloads, HTTP requests, and SSH connection attempts in real-time.
 * **Executive Dashboards:** High-level KPI cards, severity distribution charts, trend lines, and execution summaries for management review.
 * **ELK Stack Integration:** Full support for log forwarding and Kibana visualization in Kubernetes deployments.
 
 ---
 
-## 🛠️ The Module Arsenal
+## The Module Arsenal
 
 SecureForge comes packed with **18 highly detailed attack modules** split across two categories:
 
-### 🔴 Red Team & Network Modules
+### Red Team & Network Modules
 1. **APT Killchain (T1110, T1190, T1059):** A terrifying 7-stage autonomous attack that simulates an Advanced Persistent Threat (APT). It automatically chains together Recon, Credential Attacks, Web Exploits, Privilege Escalation, and Persistence probes in one massive simulation.
 2. **Nmap Subnet Scan:** Discovers hosts, open ports, and services across your infrastructure.
 3. **SSH Bruteforce:** Tests credential resilience using customizable dictionary attacks.
@@ -53,7 +53,7 @@ SecureForge comes packed with **18 highly detailed attack modules** split across
 7. **Privilege Escalation:** Simulates attempts to break out of low-privilege boundaries.
 8. **Impact Simulator:** Tests destructive techniques (safely simulated) like data wiping and encryption staging.
 
-### 🌐 Vulnerability Scanner Modules
+### Vulnerability Scanner Modules
 1. **XSS (Cross-Site Scripting):** Probes for reflected and stored JavaScript injection points.
 2. **SQLi (SQL Injection):** Tests both error-based and blind/timing-based SQL injection to extract database content.
 3. **CMD Injection:** Attempts to execute arbitrary OS commands (e.g., `cat /etc/passwd`) via vulnerable inputs.
@@ -67,7 +67,7 @@ SecureForge comes packed with **18 highly detailed attack modules** split across
 
 ---
 
-## 🏗️ Architecture
+## Architecture
 
 ```
 ┌──────────────────────────────────────────────────────┐
@@ -97,7 +97,7 @@ The backend exposes a **REST API** for simulation control and a `/ws` **WebSocke
 
 ---
 
-## 🚀 Quick Start (Local Setup)
+## Quick Start (Local Setup)
 
 The entire infrastructure (Frontend Dashboard, Python BAS Engine, PostgreSQL Database, and Elasticsearch) is containerized, allowing you to launch the stack with a single command.
 
@@ -139,7 +139,7 @@ docker-compose down
 
 ---
 
-## ⚠️ Disclaimer
+## Disclaimer
 
 SecureForge is designed exclusively for use in **authorized environments**. This means:
 1. You have **explicit written permission** to run simulations against the target systems and network.
@@ -149,7 +149,4 @@ SecureForge is designed exclusively for use in **authorized environments**. This
 **Unauthorized use of this platform against systems you do not own or have permission to test is illegal.** The authors and contributors accept no liability for misuse.
 
 ---
-
-## 📄 License
-
-Review the `LICENSE` file in the repository root. This software is provided for authorized security testing and research purposes.
+
