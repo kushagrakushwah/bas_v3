@@ -49,7 +49,7 @@ class ImpactSimModule(BaseAttackModule):
     async def execute(self) -> List[Finding]:
         findings = []
         resolved = await self.resolve_target()
-        target = self.build_target_url(resolved, default_scheme="https")
+        target = self.build_target_url(resolved, default_scheme="http")
 
         findings.extend(await self._stage_ransomware(target))
         findings.extend(await self._stage_ddos(target))
@@ -123,7 +123,7 @@ class ImpactSimModule(BaseAttackModule):
             username=ssh_user,
             password=ssh_pass,
             client_keys=[ssh_key] if ssh_key else None,
-            known_hosts=()
+            known_hosts=None
         ) as conn:
             result = await conn.run(cmd, check=False)
             return result.stdout or ""

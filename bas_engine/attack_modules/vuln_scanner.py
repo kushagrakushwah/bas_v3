@@ -961,7 +961,7 @@ class VulnScannerModule(BaseAttackModule):
                     port=port,
                     username=username,
                     password=password,
-                    known_hosts=(),
+                    known_hosts=None,
                     connect_timeout=min(timeout, 5),
                     login_timeout=max(timeout, 10),
                     preferred_auth=["password", "keyboard-interactive"],

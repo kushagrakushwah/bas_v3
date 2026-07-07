@@ -250,7 +250,7 @@ class PrivEscModule(BaseAttackModule):
             username=ssh_user,
             password=ssh_pass,
             client_keys=[ssh_key] if ssh_key else None,
-            known_hosts=()
+            known_hosts=None
         ) as conn:
             result = await conn.run(cmd, check=False)
             return result.stdout or ""

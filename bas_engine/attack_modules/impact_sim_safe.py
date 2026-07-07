@@ -35,7 +35,7 @@ class ImpactSimModule(BaseAttackModule):
     async def execute(self) -> List[Finding]:
         findings = []
         resolved = await self.resolve_target()
-        target = self.build_target_url(resolved, default_scheme="https")
+        target = self.build_target_url(resolved, default_scheme="http")
 
         findings.extend(await self._stage_discovery(target))
         return findings

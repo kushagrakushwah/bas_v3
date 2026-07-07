@@ -289,16 +289,9 @@ export default function RealtimeOperations() {
     return dedupeEvents([...recentEvents, ...liveMessages]).sort((a, b) => {
       const at = new Date(a.timestamp || 0).getTime();
       const bt = new Date(b.timestamp || 0).getTime();
-      return at - bt;
+      return bt - at; // Newest first
     });
   }, [recentEvents, liveMessages]);
-
-  useEffect(() => {
-    terminalRef.current?.scrollTo({
-      top: terminalRef.current.scrollHeight,
-      behavior: "smooth",
-    });
-  }, [allEvents.length]);
 
   const recentCount = recentEvents.length;
   const liveCount = liveMessages.length;
