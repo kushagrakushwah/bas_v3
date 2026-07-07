@@ -3,8 +3,9 @@
 > **Containerized Breach & Attack Simulation platform for detection validation, SOC scoring, and adversary emulation — built on FastAPI, Next.js, and Kubernetes.**
 
 <p align="center">
-  <img src="docs/images/hero-dashboard-1.png" width="48%">
-  <img src="docs/images/hero-dashboard-2.png" width="48%">
+  <img src="docs/images/hero-dashboard-1.png" width="100%">
+  <br><br>
+  <img src="docs/images/hero-dashboard-2.png" width="100%">
 </p>
 
 ---
@@ -34,56 +35,63 @@ SecureForge features a state-of-the-art UI built on Next.js and TailwindCSS. Bel
 ### 2.1 Command Center (Dashboard)
 The Command Center is the executive hub of the platform. It provides a high-level view of all active and historical simulations, aggregate detection scores, and overall MITRE ATT&CK coverage metrics.
 <p align="center">
-  <img src="docs/images/command-center-1.png" width="48%">
-  <img src="docs/images/command-center-2.png" width="48%">
+  <img src="docs/images/hero-dashboard-1.png" width="100%">
+  <br><br>
+  <img src="docs/images/hero-dashboard-2.png" width="100%">
 </p>
 
 ### 2.2 Launch Pad
 The Launch Pad is where operators configure and deploy new attack simulations. It features a dense matrix of available attack modules across various tactics (Reconnaissance, Web Exploitation, Credential Access, etc.). Operators can define targets, select specific modules, and launch the operation asynchronously.
 <p align="center">
-  <img src="docs/images/launch-pad-1.png" width="48%">
-  <img src="docs/images/launch-pad-2.png" width="48%">
+  <img src="docs/images/launch-pad-1.png" width="100%">
+  <br><br>
+  <img src="docs/images/launch-pad-2.png" width="100%">
 </p>
 
 ### 2.3 Live Telemetry (Live Operations)
 Live Operations provides a granular, real-time WebSocket stream of the attack as it happens. Every HTTP request, SSH brute-force attempt, and payload delivery is logged and streamed instantly to the UI, allowing operators to monitor the exact actions the engine is taking against the target.
 <p align="center">
-  <img src="docs/images/live-telemetry-1.png" width="48%">
-  <img src="docs/images/live-telemetry-2.png" width="48%">
+  <img src="docs/images/live-telemetry-1.png" width="100%">
+  <br><br>
+  <img src="docs/images/live-telemetry-2.png" width="100%">
 </p>
 
 ### 2.4 MITRE ATT&CK Heatmap
 This interface visually maps all simulation findings to the official MITRE ATT&CK matrix. Techniques that were successfully exploited are highlighted in red (Critical/High), while mitigated or untested techniques are grayed out. This provides immediate visual feedback on organizational blind spots.
 <p align="center">
-  <img src="docs/images/mitre-heatmap-1.png" width="48%">
-  <img src="docs/images/mitre-heatmap-2.png" width="48%">
+  <img src="docs/images/mitre-heatmap-1.png" width="100%">
+  <br><br>
+  <img src="docs/images/mitre-heatmap-2.png" width="100%">
 </p>
 
 ### 2.5 SOC Scoring & Validation
 The SOC Validation page correlates the results of the attack simulations with your internal defensive posture. It grades the environment based on NIST Maturity Tiers, calculates an overall Detection Score, and provides Sigma rules for any detected blind spots so defenders can immediately implement new SIEM alerts.
 <p align="center">
-  <img src="docs/images/soc-scoring-1.png" width="48%">
-  <img src="docs/images/soc-scoring-2.png" width="48%">
+  <img src="docs/images/soc-scoring-1.png" width="100%">
+  <br><br>
+  <img src="docs/images/soc-scoring-2.png" width="100%">
 </p>
 
 ### 2.6 Analytics
 The Analytics module provides in-depth data interrogation and trend analysis. It tracks historical performance, vulnerability remediation velocity, and recurring systemic weaknesses across multiple simulation campaigns over time.
 <p align="center">
-  <img src="docs/images/analytics-1.png" width="48%">
-  <img src="docs/images/analytics-2.png" width="48%">
+  <img src="docs/images/analytics-1.png" width="100%">
+  <br><br>
+  <img src="docs/images/analytics-2.png" width="100%">
 </p>
 
 ### 2.7 Infrastructure Management
 This page offers configuration management for the platform's distributed architecture. It displays the health of the underlying Kubernetes pods, Celery workers, PostgreSQL database connections, Redis queues, and third-party API integration statuses.
 <p align="center">
-  <img src="docs/images/infrastructure.png" width="80%">
+  <img src="docs/images/infrastructure.png" width="100%">
 </p>
 
 ### 2.8 Reports & Alerts
 The centralized repository for generated compliance and technical reports. This tab also manages asynchronous alert pipelines, allowing operators to configure Slack, Teams, or email notifications for critical simulation findings.
 <p align="center">
-  <img src="docs/images/reports-1.png" width="48%">
-  <img src="docs/images/reports-2.png" width="48%">
+  <img src="docs/images/reports-1.png" width="100%">
+  <br><br>
+  <img src="docs/images/reports-2.png" width="100%">
 </p>
 
 ---
