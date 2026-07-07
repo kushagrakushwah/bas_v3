@@ -201,10 +201,10 @@ export default function DashboardHomePage() {
         <StatBlock label="Total Simulations" value={summary.total}
           sub={`${summary.completed} completed, ${summary.running} running`}
           icon={Shield} accent="purple" />
-        <StatBlock label="Detection Score" value={avgDetectionScore ? `${avgDetectionScore}%` : "N/A"}
+        <StatBlock label="Detection Score" value={simulations.length > 0 ? `${avgDetectionScore}%` : "N/A"}
           sub="avg across all simulations"
           icon={Eye} accent="green" />
-        <StatBlock label="ATT&CK Coverage" value={maxCoverage ? `${maxCoverage}%` : "N/A"}
+        <StatBlock label="ATT&CK Coverage" value={simulations.length > 0 ? `${maxCoverage}%` : "N/A"}
           sub="best coverage across sims"
           icon={Target} accent="blue" />
         <StatBlock label="Total Findings" value={allFindings.length}

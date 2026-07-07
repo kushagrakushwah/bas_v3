@@ -90,5 +90,7 @@ class DetectionValidationEngine:
                 "untested_subtechniques": blindspots.get("untested_subtechniques", []),
                 "coverage_metrics": coverage.get("coverage", {}),
                 "sigma_rules": sigma_rules
-            }
+            },
+            
+            "blindspots": blindspots
         }

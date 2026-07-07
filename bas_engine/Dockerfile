@@ -13,7 +13,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY . /app/bas_engine/
 
 # FIX: Create a non-root user and switch to it
-RUN adduser --disabled-password --no-create-home basuser
+RUN adduser --disabled-password --gecos "" --no-create-home basuser
 USER basuser
 
 EXPOSE 8000

@@ -107,8 +107,8 @@ export default function MitrePage() {
   // Per-tactic summary for the table
   const tableTactics = MITRE_TACTICS.map(t => ({
     ...t,
-    pct: tacticMap[t.id]?.pct ?? 0,
-    covered: !!tacticMap[t.id],
+    pct: tacticMap[t.name]?.pct ?? 0,
+    covered: !!tacticMap[t.name],
   })).sort((a, b) => b.pct - a.pct);
 
   if (loading) {
@@ -161,8 +161,8 @@ export default function MitrePage() {
 
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-2">
           {MITRE_TACTICS.map(tactic => {
-            const covered = !!tacticMap[tactic.id];
-            const pct = tacticMap[tactic.id]?.pct ?? 0;
+            const covered = !!tacticMap[tactic.name];
+            const pct = tacticMap[tactic.name]?.pct ?? 0;
 
             return (
               <div

@@ -81,7 +81,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         <div className="flex flex-col h-full">
           {/* Logo */}
           <div className="px-5 pt-6 pb-4">
-            <div className="flex items-center gap-3">
+            <Link href="/dashboard" className="flex items-center gap-3 hover:opacity-80 transition-opacity">
               <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-500 via-purple-600 to-indigo-700 flex items-center justify-center shadow-lg shadow-purple-500/40 flex-shrink-0">
                 <Shield className="w-5 h-5 text-white" />
               </div>
@@ -89,7 +89,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 <h1 className="font-bold text-base tracking-tight">SecureForge</h1>
                 <p className="text-[10px] text-white/40 uppercase tracking-widest mt-0.5">BAS Platform</p>
               </div>
-            </div>
+            </Link>
           </div>
 
           {/* Status Badge */}
