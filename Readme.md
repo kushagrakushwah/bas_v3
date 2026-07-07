@@ -323,11 +323,33 @@ Represents a single successful exploit or discovered vulnerability.
 
 ---
 
-## 8. Enterprise Deployment & Scaling Guide
+## 8. Quick Start (Local Installation)
+
+To deploy the full SecureForge platform locally for evaluation or development, ensure you have Docker and Docker Compose installed.
+
+```bash
+# 1. Clone the repository
+git clone https://github.com/kushagrakushwah/bas_v3.git
+cd bas_v3
+
+# 2. Configure environment variables
+cp .env.example .env
+
+# 3. Build and launch the containerized stack
+docker-compose up -d --build
+```
+
+Once the containers are successfully built and running, you can access the platform at:
+* **Frontend Dashboard:** `http://localhost:3000`
+* **Backend API & Docs:** `http://localhost:8000/docs`
+
+---
+
+## 9. Enterprise Deployment & Scaling Guide
 
 While the quick start uses a standard `docker-compose.yml`, deploying SecureForge in a production enterprise environment requires a more robust architecture, typically involving Kubernetes (K8s).
 
-### 8.1 Scaling the Celery Worker Fleet
+### 9.1 Scaling the Celery Worker Fleet
 If you are running simulations against thousands of IP addresses, a single Celery worker will become a bottleneck. You can scale the workers horizontally:
 
 **Docker Compose:**
@@ -339,13 +361,13 @@ This will spin up 10 independent worker containers, all pulling from the same Re
 **Kubernetes (HPA):**
 In a K8s environment, the `celery-worker` deployment should be configured with a Horizontal Pod Autoscaler (HPA) targeting CPU utilization. As the Redis queue fills up during a massive simulation, the HPA will automatically spin up additional worker pods to handle the load.
 
-### 8.2 Database Tuning
+### 9.2 Database Tuning
 For large environments, the PostgreSQL database must be tuned to handle high-frequency writes (as findings and logs are continuously streamed in).
 * Increase `max_connections` to at least 500.
 * Increase `shared_buffers` to 25% of available RAM.
 * Increase `work_mem` to prevent complex analytic queries from spilling to disk.
 
-### 8.3 ELK Stack Forwarding
+### 9.3 ELK Stack Forwarding
 To integrate with your existing SIEM:
 1. Ensure the `ELASTICSEARCH_URL` is set in the `.env` file.
 2. The `bas_engine` will automatically instantiate an asynchronous forwarder that pushes all attack telemetry (every HTTP request made, every payload fired) to an index named `secureforge-telemetry-*`.
@@ -353,7 +375,7 @@ To integrate with your existing SIEM:
 
 ---
 
-## 9. Configuration & Environment Variables
+## 10. Configuration & Environment Variables
 
 The entire platform is configured via environment variables, adhering to the 12-Factor App methodology.
 
@@ -368,7 +390,7 @@ The entire platform is configured via environment variables, adhering to the 12-
 
 ---
 
-## 10. Troubleshooting & FAQ
+## 11. Troubleshooting & FAQ
 
 **Q: My simulations are stuck in the `PENDING` state forever. Why?**
 **A:** This indicates that the Celery workers are not running, or they cannot connect to the Redis broker. Check the worker logs using `docker logs secureforge-celery-worker-1`. Ensure `REDIS_URL` is configured correctly.
@@ -384,7 +406,7 @@ The entire platform is configured via environment variables, adhering to the 12-
 
 ---
 
-## 11. Security Considerations for the Platform
+## 12. Security Considerations for the Platform
 
 Deploying an offensive security tool on your network requires careful consideration of the platform's own security posture.
 
@@ -395,7 +417,7 @@ Deploying an offensive security tool on your network requires careful considerat
 
 ---
 
-## 12. Legal Disclaimer
+## 13. Legal Disclaimer
 
 SecureForge is an offensive security tool designed exclusively for authorized testing and educational purposes. Usage of this tool for attacking targets without prior mutual consent is strictly prohibited and likely illegal. It is the end user's responsibility to obey all applicable local, state, and federal laws. The developers, contributors, and affiliated organizations assume no liability and are not responsible for any misuse, damage, or data loss caused by this program. 
 
