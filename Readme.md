@@ -1,6 +1,6 @@
 # SecureForge: Enterprise Breach & Attack Simulation Platform
 
-> **Containerized Breach & Attack Simulation platform for detection validation, SOC scoring, and adversary emulation — built on FastAPI, Next.js, and Kubernetes.**
+> **Containerized Breach & Attack Simulation platform for detection validation, SOC scoring, and adversary emulation   built on FastAPI, Next.js, and Kubernetes.**
 
 <p align="center">
   <img src="docs/images/hero-dashboard-1.png" width="100%">
@@ -16,7 +16,7 @@ SecureForge is a highly advanced, self-hosted **BAS (Breach & Attack Simulation)
 
 In the modern enterprise, deploying Endpoint Detection and Response (EDR), Security Information and Event Management (SIEM), and Web Application Firewalls (WAF) is not enough. The configurations of these tools degrade over time (configuration drift), SIEM rules become deprecated, and log ingestion pipelines fail. SecureForge exists to continuously validate that your multi-million dollar security stack is actually doing its job.
 
-Instead of writing custom scripts for every test or paying for expensive, intermittent penetration testing, SecureForge orchestrates modular attack simulations, streams live telemetry in real-time, maps all findings to the **MITRE ATT&CK® Framework**, and dynamically scores your SOC coverage — all from a beautiful, modern web dashboard.
+Instead of writing custom scripts for every test or paying for expensive, intermittent penetration testing, SecureForge orchestrates modular attack simulations, streams live telemetry in real-time, maps all findings to the **MITRE ATT&CK® Framework**, and dynamically scores your SOC coverage   all from a beautiful, modern web dashboard.
 
 ### 1.1 The SecureForge Philosophy
 SecureForge operates on the principle of **Continuous Security Validation (CSV)**. Security is not a state; it is a process. To ensure that defenses are working, they must be tested under fire. SecureForge automates the "fire." By launching controlled, deterministic attack paths across the cyber kill chain, defenders can verify their alerts fire correctly, their playbooks are actionable, and their mean-time-to-detect (MTTD) is improving.
