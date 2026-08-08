@@ -10,6 +10,149 @@
 
 ---
 
+## Quick Start (Local Installation)
+
+To deploy the full SecureForge platform locally for evaluation or development, ensure you have **Docker** and **Docker Compose** installed.
+
+```bash
+# 1. Clone the repository
+git clone https://github.com/kushagrakushwah/bas_v3.git
+cd bas_v3
+
+# 2. Configure environment variables
+cp .env.example .env
+# → Open .env and fill in all REPLACE_WITH_* values (see guide below)
+
+# 3. Build and launch the containerized stack
+docker compose up -d --build
+```
+
+Once the containers are running, access the platform at:
+
+- **Frontend Dashboard:** `http://localhost:3001`
+- **Backend API & Docs:** `http://localhost:8000/docs`
+
+---
+
+## Environment Variable Setup
+
+> **Before starting the stack you must fill in every `REQUIRED` variable in your `.env` file.**
+> The `.env.example` file contains detailed inline comments for every variable. This section provides a quick reference.
+
+### Step 1 — Generate your secrets
+
+Run the following commands once to generate cryptographically strong values:
+
+```bash
+# Generate API_KEY
+echo "API_KEY=$(openssl rand -hex 32)"
+
+# Generate NEXTAUTH_SECRET
+echo "NEXTAUTH_SECRET=$(openssl rand -base64 32)"
+
+# Generate all passwords
+echo "POSTGRES_PASSWORD=$(openssl rand -base64 32)"
+echo "REDIS_PASSWORD=$(openssl rand -base64 32)"
+echo "ELASTIC_PASSWORD=$(openssl rand -base64 32)"
+echo "ADMIN_PASSWORD=$(openssl rand -base64 32)"
+echo "OPERATOR_PASSWORD=$(openssl rand -base64 32)"
+```
+
+Copy each output value into the corresponding variable in your `.env` file.
+
+---
+
+### Step 2 — Variable Reference
+
+#### Authentication & Sessions
+
+| Variable | Required | Description | How to generate |
+| :--- | :---: | :--- | :--- |
+| `API_KEY` | ✅ Yes | Bearer token for all REST API requests. Used by the frontend and any API clients. Rotating it invalidates all existing clients until updated. | `openssl rand -hex 32` |
+| `NEXTAUTH_SECRET` | ✅ Yes | Signs and verifies NextAuth.js session JWTs. Must be identical in both the `bas-engine` and `dashboard` containers (handled automatically via `.env`). | `openssl rand -base64 32` |
+
+#### Dashboard Login
+
+| Variable | Required | Description | How to generate |
+| :--- | :---: | :--- | :--- |
+| `ADMIN_PASSWORD` | ✅ Yes | Password for the `admin` dashboard user (full access). This is an **application-level** credential, not a database password. | `openssl rand -base64 32` |
+| `OPERATOR_PASSWORD` | ✅ Yes | Password for the `operator` dashboard user (read-only access). | `openssl rand -base64 32` |
+
+#### PostgreSQL Database
+
+| Variable | Required | Description | How to generate |
+| :--- | :---: | :--- | :--- |
+| `POSTGRES_USER` | ✅ Yes | Database username. Default: `secureforge`. Docker creates this user automatically on first run. | Use default or choose a name |
+| `POSTGRES_PASSWORD` | ✅ Yes | Database password. Docker reads this at container creation time to initialize the database. ⚠️ Changing this after the volume exists requires `docker compose down -v`. | `openssl rand -base64 32` |
+| `POSTGRES_DB` | ✅ Yes | Database name. Default: `secureforge`. | Use default or choose a name |
+
+#### Redis Message Broker
+
+| Variable | Required | Description | How to generate |
+| :--- | :---: | :--- | :--- |
+| `REDIS_PASSWORD` | ✅ Yes | Authentication password for Redis. In the default `docker-compose.yml`, Redis runs **without auth** (`xpack` not enabled). To activate it, add `--requirepass ${REDIS_PASSWORD}` to the Redis command and update `REDIS_URL` accordingly. | `openssl rand -base64 32` |
+
+#### Elasticsearch
+
+| Variable | Required | Description | How to generate |
+| :--- | :---: | :--- | :--- |
+| `ELASTIC_PASSWORD` | ✅ Yes (production) | Password for the Elasticsearch built-in `elastic` superuser. ⚠️ In the default config `xpack.security.enabled=false`, so this password is **not enforced**. For production, set `xpack.security.enabled=true` in `docker-compose.yml`. | `openssl rand -base64 32` |
+
+#### Deployment URLs (Optional)
+
+| Variable | Required | Default | Description |
+| :--- | :---: | :--- | :--- |
+| `NEXTAUTH_URL` | ⚙️ Optional | `http://localhost:3001` | Public URL of the dashboard. Change this to your domain in production (e.g. `https://secureforge.example.com`). |
+| `NEXT_PUBLIC_API_URL` | ⚙️ Optional | `http://localhost:8000` | URL the **browser** uses to reach the BAS Engine API. |
+| `ENVIRONMENT` | ⚙️ Optional | `production` | Set to `development` for verbose error tracebacks. |
+
+#### Lab Targets (Optional)
+
+| Variable | Required | Description |
+| :--- | :---: | :--- |
+| `LAB_TARGETS` | ⚙️ Optional | Comma-separated private IPs allowed as attack targets, bypassing the built-in SSRF block. Example: `192.168.56.101,10.0.0.5`. ⚠️ Never include production IPs. |
+
+#### SMTP Alerting (Optional)
+
+| Variable | Required | Description |
+| :--- | :---: | :--- |
+| `SMTP_SERVER` | ⚙️ Optional | SMTP hostname for email alerting. Leave blank to disable. |
+| `SMTP_PORT` | ⚙️ Optional | SMTP port (default: `587`). |
+| `SMTP_USER` | ⚙️ Optional | SMTP username / email address. |
+| `SMTP_PASS` | ⚙️ Optional | SMTP password. |
+
+---
+
+### Step 3 — Which variables must match Docker services?
+
+| Variable | User Generated | Docker Auto-Creates | Must Match Another Service |
+| :--- | :---: | :---: | :--- |
+| `API_KEY` | ✅ | ❌ | `dashboard` ↔ `bas-engine` (same value, handled via `.env`) |
+| `NEXTAUTH_SECRET` | ✅ | ❌ | `dashboard` ↔ `bas-engine` (same value, handled via `.env`) |
+| `POSTGRES_PASSWORD` | ✅ | ❌ | PostgreSQL container (read at init time) |
+| `REDIS_PASSWORD` | ✅ | ❌ | Redis container (only if `--requirepass` enabled in `docker-compose.yml`) |
+| `ELASTIC_PASSWORD` | ✅ | ❌ | Elasticsearch (only if `xpack.security.enabled=true`) |
+| `ADMIN_PASSWORD` | ✅ | ❌ | BAS Engine application only |
+| `OPERATOR_PASSWORD` | ✅ | ❌ | BAS Engine application only |
+
+---
+
+### Common Setup Issues
+
+**Simulations stuck in `PENDING`?** The Celery workers aren't running or can't reach Redis. Check with `docker logs secureforge-celery-worker-1` and verify `REDIS_URL` is correct.
+
+**`403 Forbidden` on all API calls?** Your `API_KEY` in `.env` is missing or doesn't match what the dashboard is sending. Rebuild containers after changing: `docker compose up -d --build`.
+
+**Dashboard login fails immediately?** `NEXTAUTH_SECRET` may be missing or mismatched. Ensure it is set and rebuild the `dashboard` container.
+
+**Live Telemetry stream is blank?** WebSocket connection failure. Make sure your reverse proxy (Nginx, Traefik, or AWS ALB) is configured to allow WebSocket upgrades (`Connection: Upgrade`, `Upgrade: websocket`) on the `/ws` route.
+
+**`asyncpg.exceptions.TooManyConnectionsError`?** You've scaled Celery workers beyond what PostgreSQL can handle. Either reduce worker count or increase `max_connections` in `postgresql.conf`.
+
+**Changed `POSTGRES_PASSWORD` and now the database won't start?** The password is baked into the Docker volume at first initialization. Run `docker compose down -v` to wipe the volume and restart fresh (⚠️ this deletes all stored data).
+
+---
+
 ## 1. Executive Summary & Overview
 
 SecureForge is a highly advanced, self-hosted **BAS (Breach & Attack Simulation) platform** designed specifically for security engineering teams that need a reliable, repeatable way to test their detection stack without touching production systems.
@@ -130,7 +273,7 @@ SecureForge utilizes a deeply decoupled, highly asynchronous microservices archi
 ```
 
 ### 3.1 The Frontend (secureforge-frontend)
-Built on **Next.js 14**, the frontend utilizes React Server Components (RSC) alongside traditional client-side hooks to deliver a blazing-fast user experience. 
+Built on **Next.js 14**, the frontend utilizes React Server Components (RSC) alongside traditional client-side hooks to deliver a blazing-fast user experience.
 - **Styling:** TailwindCSS is used exclusively for utility-first styling, enabling the sleek, dark-mode-first aesthetic (Glassmorphism, deep violets, and emerald accents).
 - **State Management:** React hooks (`useState`, `useEffect`) and context providers manage the complex state required for the MITRE ATT&CK grid and active simulations.
 - **Real-time Engine:** The frontend maintains a persistent WebSocket connection to the backend, rendering streaming logs directly into the terminal UI of the Live Operations page.
@@ -142,7 +285,7 @@ The core API is powered by **FastAPI**. It is an asynchronous, high-throughput g
 - **Validation Engine:** Contains the logic to cross-reference raw findings against the MITRE ATT&CK framework and calculate complex metrics like the SOC Detection Score.
 
 ### 3.3 The Distributed Worker Fleet (Celery & Redis)
-Because network scanning, fuzzing, and brute-forcing are highly I/O bound and computationally expensive, they cannot run within the FastAPI event loop. 
+Because network scanning, fuzzing, and brute-forcing are highly I/O bound and computationally expensive, they cannot run within the FastAPI event loop.
 - **Redis:** Acts as the message broker. When the API receives a simulation request, it pushes the job onto a Redis queue.
 - **Celery Workers:** Independent Python processes running in separate Docker containers. They pull jobs off the Redis queue and execute the actual attack scripts (`owasp_web.py`, `nmap_scan.py`, etc.).
 - **Scalability:** You can easily scale the number of Celery worker containers to run dozens of simulations concurrently across hundreds of targets without degrading the API performance.
@@ -201,7 +344,7 @@ SecureForge comes packed with **18 highly detailed, production-grade attack modu
 
 #### 5.1.5 WAF Evasion & Detection
 **MITRE Tactics:** Defense Evasion (TA0005)
-**Description:** specifically designed to test the efficacy of Web Application Firewalls (like Cloudflare, AWS WAF, or Imperva). It fires a barrage of mutated payloads (e.g., heavily encoded SQLi strings, fragmented HTTP requests, and obfuscated cross-site scripting vectors) to determine exactly which payloads bypass the filter. It fingerprints the WAF based on HTTP response headers and block pages.
+**Description:** Specifically designed to test the efficacy of Web Application Firewalls (like Cloudflare, AWS WAF, or Imperva). It fires a barrage of mutated payloads (e.g., heavily encoded SQLi strings, fragmented HTTP requests, and obfuscated cross-site scripting vectors) to determine exactly which payloads bypass the filter. It fingerprints the WAF based on HTTP response headers and block pages.
 
 #### 5.1.6 Privilege Escalation Simulator
 **MITRE Tactics:** Privilege Escalation (TA0004)
@@ -301,7 +444,7 @@ SecureForge provides a full, unauthenticated REST API for programmatic control o
 
 ## 7. Data Models & Schema
 
-The platform relies on a strict schema implemented via Pydantic (for the API) and SQLAlchemy (for PostgreSQL). 
+The platform relies on a strict schema implemented via Pydantic (for the API) and SQLAlchemy (for PostgreSQL).
 
 ### 7.1 The `Simulation` Entity
 The core entity tracking the lifecycle of an attack campaign.
@@ -323,33 +466,11 @@ Represents a single successful exploit or discovered vulnerability.
 
 ---
 
-## 8. Quick Start (Local Installation)
-
-To deploy the full SecureForge platform locally for evaluation or development, ensure you have Docker and Docker Compose installed.
-
-```bash
-# 1. Clone the repository
-git clone https://github.com/kushagrakushwah/bas_v3.git
-cd bas_v3
-
-# 2. Configure environment variables
-cp .env.example .env
-
-# 3. Build and launch the containerized stack
-docker-compose up -d --build
-```
-
-Once the containers are successfully built and running, you can access the platform at:
-* **Frontend Dashboard:** `http://localhost:3000`
-* **Backend API & Docs:** `http://localhost:8000/docs`
-
----
-
-## 9. Enterprise Deployment & Scaling Guide
+## 8. Enterprise Deployment & Scaling Guide
 
 While the quick start uses a standard `docker-compose.yml`, deploying SecureForge in a production enterprise environment requires a more robust architecture, typically involving Kubernetes (K8s).
 
-### 9.1 Scaling the Celery Worker Fleet
+### 8.1 Scaling the Celery Worker Fleet
 If you are running simulations against thousands of IP addresses, a single Celery worker will become a bottleneck. You can scale the workers horizontally:
 
 **Docker Compose:**
@@ -361,13 +482,13 @@ This will spin up 10 independent worker containers, all pulling from the same Re
 **Kubernetes (HPA):**
 In a K8s environment, the `celery-worker` deployment should be configured with a Horizontal Pod Autoscaler (HPA) targeting CPU utilization. As the Redis queue fills up during a massive simulation, the HPA will automatically spin up additional worker pods to handle the load.
 
-### 9.2 Database Tuning
+### 8.2 Database Tuning
 For large environments, the PostgreSQL database must be tuned to handle high-frequency writes (as findings and logs are continuously streamed in).
 * Increase `max_connections` to at least 500.
 * Increase `shared_buffers` to 25% of available RAM.
 * Increase `work_mem` to prevent complex analytic queries from spilling to disk.
 
-### 9.3 ELK Stack Forwarding
+### 8.3 ELK Stack Forwarding
 To integrate with your existing SIEM:
 1. Ensure the `ELASTICSEARCH_URL` is set in the `.env` file.
 2. The `bas_engine` will automatically instantiate an asynchronous forwarder that pushes all attack telemetry (every HTTP request made, every payload fired) to an index named `secureforge-telemetry-*`.
@@ -375,38 +496,7 @@ To integrate with your existing SIEM:
 
 ---
 
-## 10. Configuration & Environment Variables
-
-The entire platform is configured via environment variables, adhering to the 12-Factor App methodology.
-
-| Variable Name | Required | Default | Description |
-| :--- | :---: | :--- | :--- |
-| `DATABASE_URL` | Yes | `postgresql+asyncpg://...` | Connection string for the PostgreSQL database. Must use `asyncpg`. |
-| `REDIS_URL` | Yes | `redis://redis:6379/0` | Connection string for the Celery message broker. |
-| `API_KEY` | Yes | None | The Bearer token required to access the REST API. |
-| `NEXTAUTH_SECRET` | Yes | None | 32-byte secure random string used to sign JWTs in the frontend. |
-| `LOG_LEVEL` | No | `INFO` | Set to `DEBUG` for verbose Celery task tracing. |
-| `MAX_CONCURRENT_ATTACKS`| No | `50` | Hard limit on the number of concurrent asynchronous requests a single module can make. |
-
----
-
-## 11. Troubleshooting & FAQ
-
-**Q: My simulations are stuck in the `PENDING` state forever. Why?**
-**A:** This indicates that the Celery workers are not running, or they cannot connect to the Redis broker. Check the worker logs using `docker logs secureforge-celery-worker-1`. Ensure `REDIS_URL` is configured correctly.
-
-**Q: The Live Telemetry stream is blank, but the simulation is running.**
-**A:** This is a WebSocket connection failure. Ensure that your reverse proxy (Nginx, Traefik, or AWS ALB) is configured to allow WebSocket upgrades (`Connection: Upgrade`, `Upgrade: websocket`) on the `/ws` route.
-
-**Q: I'm getting `asyncpg.exceptions.TooManyConnectionsError`.**
-**A:** You have scaled your Celery workers too high without increasing the PostgreSQL `max_connections` setting. Either decrease the worker count or tune the `postgresql.conf` file.
-
-**Q: Does SecureForge test internal networks or just external?**
-**A:** Both. SecureForge tests whatever it has routing access to. If you deploy it inside your DMZ, it will attack the DMZ. If you deploy it on an internal corporate VLAN, it will test internal segmentation.
-
----
-
-## 12. Security Considerations for the Platform
+## 9. Security Considerations for the Platform
 
 Deploying an offensive security tool on your network requires careful consideration of the platform's own security posture.
 
@@ -417,9 +507,9 @@ Deploying an offensive security tool on your network requires careful considerat
 
 ---
 
-## 13. Legal Disclaimer
+## 10. Legal Disclaimer
 
-SecureForge is an offensive security tool designed exclusively for authorized testing and educational purposes. Usage of this tool for attacking targets without prior mutual consent is strictly prohibited and likely illegal. It is the end user's responsibility to obey all applicable local, state, and federal laws. The developers, contributors, and affiliated organizations assume no liability and are not responsible for any misuse, damage, or data loss caused by this program. 
+SecureForge is an offensive security tool designed exclusively for authorized testing and educational purposes. Usage of this tool for attacking targets without prior mutual consent is strictly prohibited and likely illegal. It is the end user's responsibility to obey all applicable local, state, and federal laws. The developers, contributors, and affiliated organizations assume no liability and are not responsible for any misuse, damage, or data loss caused by this program.
 
 **By deploying this software, you acknowledge that you have explicit authorization to test the target environments and understand the risks associated with automated breach and attack simulation.**
 
