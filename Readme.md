@@ -12,7 +12,7 @@
 
 ## Quick Start (Local Installation)
 
-To deploy the full SecureForge platform locally for evaluation or development, ensure you have **Docker** and **Docker Compose** installed.
+> **Prerequisites:** Docker and Docker Compose must be installed.
 
 ```bash
 # 1. Clone the repository
@@ -23,7 +23,9 @@ cd bas_v3
 cp .env.example .env
 # → Open .env and fill in all REPLACE_WITH_* values (see guide below)
 
-# 3. Build and launch the containerized stack
+# 3. Fill in all REQUIRED values in .env (see Environment Variable Setup section below)
+
+# 4. Build and launch the containerized stack
 docker compose up -d --build
 ```
 
@@ -33,6 +35,7 @@ Once the containers are running, access the platform at:
 - **Backend API & Docs:** `http://localhost:8000/docs`
 
 ---
+
 
 ## Environment Variable Setup
 
@@ -139,7 +142,7 @@ Copy each output value into the corresponding variable in your `.env` file.
 
 ### Common Setup Issues
 
-**Simulations stuck in `PENDING`?** The Celery workers aren't running or can't reach Redis. Check with `docker logs secureforge-celery-worker-1` and verify `REDIS_URL` is correct.
+**Simulations stuck in `PENDING`?** The Celery workers aren't running or can't reach Redis. Check with `docker logs secureforge-celery-worker-1` and verify `REDIS_URL` and `REDIS_PASSWORD` are correct.
 
 **`403 Forbidden` on all API calls?** Your `API_KEY` in `.env` is missing or doesn't match what the dashboard is sending. Rebuild containers after changing: `docker compose up -d --build`.
 
